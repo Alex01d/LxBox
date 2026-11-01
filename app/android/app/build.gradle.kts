@@ -6,12 +6,22 @@ plugins {
 }
 
 import java.io.FileInputStream
+import java.io.File
 import java.util.Properties
 
 val keystorePropertiesFile = rootProject.file("key.properties")
 val keystoreProperties = Properties()
 if (keystorePropertiesFile.exists()) {
     keystoreProperties.load(FileInputStream(keystorePropertiesFile))
+}
+
+// Task 700: opt-in local engineering core; never overwrite the published AAR.
+val localLibboxAar = System.getenv("LXBOX_LIBBOX_AAR")?.takeIf { it.isNotBlank() }?.let {
+    val candidate = File(it)
+    require(candidate.isAbsolute && candidate.isFile && candidate.canRead() && candidate.extension == "aar") {
+        "LXBOX_LIBBOX_AAR must name an absolute readable .aar file"
+    }
+    candidate
 }
 
 fun hasReleaseKeystore(): Boolean =
@@ -136,6 +146,7 @@ android {
             // §624 — sora-editor: jcodings/joni/tm4e ищут классы по имени,
             // без keep-правил release падает при открытии редактора.
             proguardFiles("proguard-sora.pro")
+            proguardFiles("proguard-tailscale-awg.pro")
         }
     }
 
@@ -145,11 +156,12 @@ android {
 }
 
 dependencies {
+    testImplementation("junit:junit:4.13.2")
     // §104 — ядро: собственный fork sing-box-lx (AWG2 + XHTTP, §097).
     // AAR не в git (~73MB, libs/ в .gitignore): его кладёт
     // scripts/fetch-libbox.sh (пин версии — app/android/libbox.version),
     // вызывается из build-local-apk.sh и CI (ci.yml → "Fetch sing-box-lx core").
-    implementation(files("libs/libbox.aar"))
+    implementation(files(localLibboxAar ?: file("libs/libbox.aar")))
     implementation("androidx.core:core-ktx:1.12.0")
     implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.7.0")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3")

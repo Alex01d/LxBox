@@ -388,6 +388,7 @@ class VpnPlugin : FlutterPlugin, MethodChannel.MethodCallHandler, ActivityAware,
                 val uptime = if (started > 0L) SystemClock.elapsedRealtime() - started else 0L
                 result.success(uptime)
             }
+            "getCoreCapabilities" -> result.success(TailscaleAwgBridge.coreCapabilities())
             "getCoreVersion" -> {
                 // Libbox.version() — статический Go-side метод; возвращает
                 // строку вида "1.13.11". Используется в About screen.

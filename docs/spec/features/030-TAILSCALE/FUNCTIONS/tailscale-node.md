@@ -25,8 +25,8 @@ Direction lists.
 
 | What | Value |
 |------|-------|
-| Wizard fields | Tag (optional, empty → `tailscale`, emoji 🕸️ added), Auth key (required, masked), Control URL, Hostname (prefilled `LxBox-<model>`), Ephemeral, Accept routes, Exit node |
-| Body written by the wizard | `auth_key` plus only the filled fields; booleans only as `true` |
+| Wizard fields | Tag (optional, empty → `tailscale`, emoji 🕸️ added), Auth key (optional, masked), Control URL, Hostname (prefilled `LxBox-<model>`), Ephemeral, Accept routes, Exit node |
+| Body written by the wizard | `auth_key` only when filled, plus the other filled fields; booleans only as `true` |
 | Body from JSON | as is, minus `type`, `tag`, `detour`; unknown keys kept with the `json_field_unknown` code |
 | Registry checks | `exit_node` conflicts with `advertise_exit_node`; `exit_node_allow_lan_access` requires `exit_node`; a default route in `advertise_routes` is dropped with `tailscale_default_route_advertised` |
 | Core gate | build tag `with_tailscale`; missing → the node is dropped with `tailscale_core_unsupported` |
@@ -109,3 +109,10 @@ Direction to route the internet through it).
 | 6 | [585](../../../tasks/585-unknown-node-type-accepted.md) | Implemented | Unknown node types accepted; endpoint list in code |
 | 7 | [586](../../../tasks/586-endpoint-types-from-registry.md) | Implemented | The endpoint section comes from the registry's `kind`, not from code |
 | 8 | [608](../../../tasks/608-tailscale-exit-node-in-node-row.md) | Implemented | Node row: exit node name, `exit offline`, key expiry |
+
+## Task 700 revision
+
+Interactive Headscale login is available without an auth key. The peer transport
+profile editor is also available before VPN/login; editing the existing record
+preserves its identity. See [peer transport](peer-transport.md). Device acceptance
+is pending.

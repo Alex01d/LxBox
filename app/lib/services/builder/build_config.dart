@@ -36,6 +36,7 @@ import 'registry_gate.dart';
 import 'rule_set_registry.dart';
 import 'server_list_build.dart';
 import 'source_replace_build.dart';
+import 'tailscale_protected.dart';
 import 'validator.dart';
 
 /// Результат сборки — готовый JSON + валидация + warnings + generated-vars
@@ -43,10 +44,12 @@ import 'validator.dart';
 /// — рандомизируются здесь на первом запуске).
 class BuildResult {
   final String configJson;
-  final Map<String, dynamic> config; // тот же config, но как Map (для тестов/debug)
+  final Map<String, dynamic>
+  config; // тот же config, но как Map (для тестов/debug)
   final ValidationResult validation;
   final List<String> emitWarnings;
-  final Map<String, String> generatedVars; // подмножество vars, которые сгенерились в процессе
+  final Map<String, String>
+  generatedVars; // подмножество vars, которые сгенерились в процессе
 
   /// §274 — display-имена Направлений, у которых непустой node_filter отсёк все
   /// ноды (Направление живёт на fallback-опциях: block-default, либо
@@ -322,19 +325,23 @@ Future<BuildResult?> _buildConfig({
     // §643 (D-132) — `internal`: значение состояния не читается, действует
     // `default_value`; `unique` у `text_list` — значение без дублей.
     final raw = applyVarUnique(
-        v,
-        v.isInternal
-            ? v.defaultValue
-            : (settings.userVars[v.name] ?? v.defaultValue));
+      v,
+      v.isInternal
+          ? v.defaultValue
+          : (settings.userVars[v.name] ?? v.defaultValue),
+    );
     // §161 backstop: пустое required-поле с непустым default → default. Ловит
     // источники в обход UI (импорт бэкапа/пресета, legacy-state с пустым
     // значением — напр. стёртый tolerance). ДО _substituteVars, не трогает
     // #if-логику. secret/optional (required:false) исключены — для них пусто
     // легитимно.
     vars[v.name] =
-        (raw.isEmpty && v.required && v.defaultValue.isNotEmpty && v.type != 'secret')
-            ? v.defaultValue
-            : raw;
+        (raw.isEmpty &&
+            v.required &&
+            v.defaultValue.isNotEmpty &&
+            v.type != 'secret')
+        ? v.defaultValue
+        : raw;
     byName[v.name] = v;
   }
   // §580 (TEMPLATE_LANG §6.8) — сохранённое вне границ (правка файла руками,
@@ -374,13 +381,12 @@ Future<BuildResult?> _buildConfig({
     // непустой пароль — иначе users отсутствует (защита 067 от [{"":""}]).
     vars['proxy_auth'] =
         (vpnMode.effectiveAuth && vpnMode.proxyPassword.isNotEmpty)
-            ? 'true'
-            : 'false';
+        ? 'true'
+        : 'false';
     // §629 — системный HTTP-прокси VPN-сети: без TUN объявлять нечего.
-    vars['sys_proxy'] =
-        (vpnMode.systemProxyEnabled && vpnMode.mode != 'proxy')
-            ? 'true'
-            : 'false';
+    vars['sys_proxy'] = (vpnMode.systemProxyEnabled && vpnMode.mode != 'proxy')
+        ? 'true'
+        : 'false';
     vars['sys_proxy_port'] = '${vpnMode.effectiveSystemProxyPort}';
   } else {
     vars['vpn_mode'] = 'vpn'; // degrade к tun-only (иначе пустой inbounds[])
@@ -416,7 +422,10 @@ Future<BuildResult?> _buildConfig({
   final directions = settings.directions.isNotEmpty
       ? settings.directions
       : _directionsFromTemplate(
-          template.groupTemplates, settings.enabledGroups, resolve);
+          template.groupTemplates,
+          settings.enabledGroups,
+          resolve,
+        );
 
   // buildConfig — тонкий оркестратор. ServerList.build(ctx) сам решает
   // политику, аллоцирует теги через ctx, регистрирует в selector/auto.
@@ -459,7 +468,9 @@ Future<BuildResult?> _buildConfig({
   // не собирается, источник идёт несвёрнутым, код в отчёте сборки.
   final replaceConflicts = findReplaceTagConflicts(
     lists,
-    directionNames: {for (final c in directions) ...[c.tag, c.autoTag]},
+    directionNames: {
+      for (final c in directions) ...[c.tag, c.autoTag],
+    },
     systemNames: {
       ...kReservedDirectionTags,
       for (final raw in (config['outbounds'] as List<dynamic>? ?? const []))
@@ -480,6 +491,12 @@ Future<BuildResult?> _buildConfig({
   for (final list in lists) {
     list.build(ctx);
   }
+  // Atomic requirements must be judged before any detour or node pruning.
+  assertCoreBuildSupported(
+    [...ctx.outbounds, ...ctx.endpoints],
+    coreVersion: settings.coreVersion,
+    coreBuildTags: settings.coreBuildTags,
+  );
   // Фича 565 фаза B — имя свёртки, у которой на сборке есть члены, —
   // корневая цель ссылок (detour `{tag}`). Свёртка без членов группы не даст,
   // и ссылка на неё обязана не разрешиться (fail-closed), а не уйти напрямую.
@@ -528,14 +545,20 @@ Future<BuildResult?> _buildConfig({
   final conflictNames = {
     for (final c in replaceConflicts) c.warning.params['tag'],
   };
-  replaceBuild.dropped.addAll(replaceNames.where((n) =>
-      !replaceBuild.emitted.contains(n) && !conflictNames.contains(n)));
+  replaceBuild.dropped.addAll(
+    replaceNames.where(
+      (n) => !replaceBuild.emitted.contains(n) && !conflictNames.contains(n),
+    ),
+  );
 
   // §74 п.4 — detour на свёртку, опустевшую только ПОСЛЕ отбраковок (ссылка
   // разрешилась корневым именем, а группа не написана): носитель выпадает
   // (fail-closed), каскадом — кто ходил через него; напрямую он не идёт.
   final foldDetourLines = _dropCarriersOfDroppedReplaces(
-      ctx, replaceBuild.dropped, linkTargets);
+    ctx,
+    replaceBuild.dropped,
+    linkTargets,
+  );
 
   // Warnings собираем отдельно прямым обходом (ctx их не знает).
   // §435 — кроме строк, которые `ServerList.build` отдал через `ctx.warn`.
@@ -562,8 +585,9 @@ Future<BuildResult?> _buildConfig({
     };
     // §400 — та же карта идентичностей от полного списка, что и в билдере:
     // иначе фильтры warnings и эмиссии разошлись бы на узлах-тёзках.
-    final identities =
-        disabledHashes == null ? null : sourceNodeIdentities(list.nodes);
+    final identities = disabledHashes == null
+        ? null
+        : sourceNodeIdentities(list.nodes);
     for (final node in list.nodes) {
       final identity = identities?[node];
       if (identity != null && disabledHashes!.containsKey(identity)) {
@@ -698,8 +722,10 @@ Future<BuildResult?> _buildConfig({
       if (cur is String && cur.isNotEmpty) continue;
       final name = dirByTag[ep.tag];
       if (name == null && stateDirs != null) {
-        AppLog.I.warning('Tailscale node "${ep.tag}" has no state record, '
-            'directory named by its final tag');
+        AppLog.I.warning(
+          'Tailscale node "${ep.tag}" has no state record, '
+          'directory named by its final tag',
+        );
       }
       ep.map['state_directory'] =
           '$stateRoot/tailscale/${name ?? tailscaleStateDirName(ep.tag)}';
@@ -728,6 +754,12 @@ Future<BuildResult?> _buildConfig({
     [...settings.customRules],
     template.selectableRules,
     template,
+  );
+  final tailscaleProtection = validateTailscaleProtection(
+    customRules,
+    template.selectableRules,
+    presetNodes,
+    globalVars: vars,
   );
 
   // Pre-resolve srs local paths (sing-box получает file:// — rule set
@@ -767,7 +799,10 @@ Future<BuildResult?> _buildConfig({
       if (rs['type'] != 'remote') continue;
       final tag = rs['tag'];
       if (tag is! String || tag.isEmpty) continue;
-      final path = await RuleSetDownloader.cachedPathForPreset(cr.presetId, tag);
+      final path = await RuleSetDownloader.cachedPathForPreset(
+        cr.presetId,
+        tag,
+      );
       if (path != null) {
         presetSrsPaths['${cr.presetId}|$tag'] = path;
       }
@@ -790,8 +825,9 @@ Future<BuildResult?> _buildConfig({
   final activePresetIdsWithDnsRule = <String>{
     for (final cr in customRules)
       if (cr is CustomRulePreset && cr.enabled && cr.presetId.isNotEmpty)
-        if (template.selectableRules
-            .any((p) => p.presetId == cr.presetId && p.dnsRules.isNotEmpty))
+        if (template.selectableRules.any(
+          (p) => p.presetId == cr.presetId && p.dnsRules.isNotEmpty,
+        ))
           cr.presetId,
   };
 
@@ -880,7 +916,8 @@ Future<BuildResult?> _buildConfig({
     var finalTag = settings.routeFinal;
     if (!validFinals.contains(finalTag)) {
       emitWarnings.add(
-          'Route final "$finalTag" no longer exists — switched to vpn-1.');
+        'Route final "$finalTag" no longer exists — switched to vpn-1.',
+      );
       finalTag = 'vpn-1';
     }
     route['final'] = finalTag;
@@ -890,17 +927,19 @@ Future<BuildResult?> _buildConfig({
   // (ноль узлов): цель подменяется на `route.final`, если он жив, иначе
   // правило снимается. Включённое правило с целью в никуда роняет конфиг.
   if (replaceBuild.dropped.isNotEmpty) {
-    emitWarnings.addAll(retargetRulesOffDroppedReplaces(
-      route,
-      replaceBuild.dropped,
-      liveFinals: {
-        kDirectOutboundTag,
-        kBlockOutboundTag,
-        for (final o in presetOutbounds)
-          if (o['tag'] is String) o['tag'] as String,
-        ...replaceBuild.emitted,
-      },
-    ));
+    emitWarnings.addAll(
+      retargetRulesOffDroppedReplaces(
+        route,
+        replaceBuild.dropped,
+        liveFinals: {
+          kDirectOutboundTag,
+          kBlockOutboundTag,
+          for (final o in presetOutbounds)
+            if (o['tag'] is String) o['tag'] as String,
+          ...replaceBuild.emitted,
+        },
+      ),
+    );
   }
 
   // Контракт 1.1.65 — поля, уступающие дописанному сборкой `detour`
@@ -915,8 +954,9 @@ Future<BuildResult?> _buildConfig({
         if (e.authored) e.map,
     ]);
   for (final w in applyDetourYields(config, authored: authoredBodies)) {
-    emitWarnings
-        .add(w.applied ? w.renderEn() : '${w.renderEn()} (not applied)');
+    emitWarnings.add(
+      w.applied ? w.renderEn() : '${w.renderEn()} (not applied)',
+    );
     if (w.ownerTag.isNotEmpty) {
       registryReport.warningsByEmittedTag
           .putIfAbsent(w.ownerTag, () => [])
@@ -977,8 +1017,9 @@ Future<BuildResult?> _buildConfig({
   if (healedPrefixes.isNotEmpty) {
     final shown = healedPrefixes.take(5).map((h) => '${h.from} → ${h.to}');
     emitWarnings.add(
-        'Preset tags migrated to namespaced form (${healedPrefixes.length}): '
-        '${shown.join(', ')}${healedPrefixes.length > 5 ? ', …' : ''}');
+      'Preset tags migrated to namespaced form (${healedPrefixes.length}): '
+      '${shown.join(', ')}${healedPrefixes.length > 5 ? ', …' : ''}',
+    );
   }
 
   // §247 — деградация битых `server`-ссылок у resolve-правил (симметрично
@@ -988,8 +1029,9 @@ Future<BuildResult?> _buildConfig({
   final healedResolve = healDanglingResolveServers(config);
   for (final h in healedResolve) {
     emitWarnings.add(
-        'Resolve server removed: route rule #${h.ruleIndex} referenced '
-        'missing DNS server "${h.target}" — falling back to DNS routing.');
+      'Resolve server removed: route rule #${h.ruleIndex} referenced '
+      'missing DNS server "${h.target}" — falling back to DNS routing.',
+    );
   }
 
   // §680 — `domain_resolver` DNS-сервера на тег вне `dns.servers` (новый
@@ -1009,8 +1051,9 @@ Future<BuildResult?> _buildConfig({
   for (final h in healedResolvers) {
     generatedVars[h.varName] = h.to;
     emitWarnings.add(
-        '${h.field} reset to "${h.to}": DNS server "${h.from}" '
-        'is not in the list.');
+      '${h.field} reset to "${h.to}": DNS server "${h.from}" '
+      'is not in the list.',
+    );
   }
 
   // §246 hotfix — легаси `strategy` в dns.rules × query_type/ip_version
@@ -1020,22 +1063,26 @@ Future<BuildResult?> _buildConfig({
   final healedDnsStrategy = healLegacyDnsStrategy(config);
   if (healedDnsStrategy.isNotEmpty) {
     emitWarnings.add(
-        'DNS rule strategy removed on rules ${healedDnsStrategy.join(", ")}: '
-        'incompatible with query_type/ip_version DNS rules (e.g. FakeIP or '
-        'Force IPv4) — kernel would reject the config. Resolution falls back '
-        'to the global DNS strategy.');
+      'DNS rule strategy removed on rules ${healedDnsStrategy.join(", ")}: '
+      'incompatible with query_type/ip_version DNS rules (e.g. FakeIP or '
+      'Force IPv4) — kernel would reject the config. Resolution falls back '
+      'to the global DNS strategy.',
+    );
   }
 
   // §281 — неизвестный uTLS fingerprint = fatal у ядра при создании outbound
   // («unknown uTLS fingerprint») — конфиг не встаёт целиком. Парсер уже
   // канонизирует на входе (xray-псевдонимы hellochrome_* → chrome, мусор →
   // chrome); этот post-step — страховка для путей мимо парсера.
-  final healedFingerprints = healUnknownUtlsFingerprints(config,
-      authored: authoredBodies);
+  final healedFingerprints = healUnknownUtlsFingerprints(
+    config,
+    authored: authoredBodies,
+  );
   for (final h in healedFingerprints) {
     emitWarnings.add(
-        'Fingerprint replaced: outbound "${h.owner}" had unknown uTLS '
-        'fingerprint "${h.original}" — using "chrome" instead.');
+      'Fingerprint replaced: outbound "${h.owner}" had unknown uTLS '
+      'fingerprint "${h.original}" — using "chrome" instead.',
+    );
   }
 
   // §343 — битый REALITY-блок (short_id нечётный/не-hex/>16, public_key не
@@ -1045,11 +1092,13 @@ Future<BuildResult?> _buildConfig({
   // деградирует — VPN стартует.
   final healedReality = healInvalidReality(config, authored: authoredBodies);
   for (final h in healedReality) {
-    emitWarnings.add(h.field == 'short_id'
-        ? 'REALITY short_id cleared: outbound "${h.owner}" had invalid '
-            'hex "${h.original}" — kernel would reject the whole config.'
-        : 'REALITY removed: outbound "${h.owner}" had invalid public_key '
-            '"${h.original}" — node degraded to plain TLS.');
+    emitWarnings.add(
+      h.field == 'short_id'
+          ? 'REALITY short_id cleared: outbound "${h.owner}" had invalid '
+                'hex "${h.original}" — kernel would reject the whole config.'
+          : 'REALITY removed: outbound "${h.owner}" had invalid public_key '
+                '"${h.original}" — node degraded to plain TLS.',
+    );
   }
 
   // §393 A4 — ФИНАЛЬНЫЙ граф-санитайзер. Последняя точка, где виден весь
@@ -1063,13 +1112,15 @@ Future<BuildResult?> _buildConfig({
   // остаётся последним рубежом на неразруленное.
   final graphCodes = <RegistryWarning>[];
   final detourThroughGroup = <(String, String)>[];
-  emitWarnings.addAll(sanitizeOutboundGraph(
-    config,
-    directionTags: {for (final c in directions) c.tag},
-    onDefaultDropped: graphCodes.add,
-    onDetourThroughGroup: (node, group) =>
-        detourThroughGroup.add((node, group)),
-  ));
+  emitWarnings.addAll(
+    sanitizeOutboundGraph(
+      config,
+      directionTags: {for (final c in directions) c.tag},
+      onDefaultDropped: graphCodes.add,
+      onDetourThroughGroup: (node, group) =>
+          detourThroughGroup.add((node, group)),
+    ),
+  );
   // §612 (контракт 1.1.113) — `node_detour_through_group`: одна запись на
   // пару (источник, группа), адресат — источник узла; запись ложится и в
   // предупреждения каждого выброшенного из состава узла.
@@ -1112,10 +1163,13 @@ Future<BuildResult?> _buildConfig({
   // совпадений, тип цели, дубль тега) — fatal-issue: конфиг не собирается.
   final mixed = applyMixins(config, settings.mixins);
   final built = mixed.config;
+  // Static private transport guards are enforced after raw mixins.
+  enforceTailscaleProtection(built, tailscaleProtection);
   final checked = validateConfig(built);
   final validation = mixed.issues.isEmpty
       ? checked
       : ValidationResult([...mixed.issues, ...checked.issues]);
+
   // §555 — записи template_degraded идут первыми (паритет с «Итогом» desktop).
   final templateItems = templateWarnings.items;
   return BuildResult(
@@ -1148,32 +1202,33 @@ Future<BuildResult?> _buildConfig({
 /// `skip_tailscale_presets`, `allow_local`, `allow_lan`, `allow_gateway`) —
 /// у своего сервера или члена папки; у узла подписки записи нет — `false`.
 List<PresetNode> _collectPresetNodes(List<ServerList> lists, _BuildCtx ctx) {
-  final record = <NodeSpec, PresetNode Function(String, Map<String, dynamic>)>{};
+  final record =
+      <NodeSpec, PresetNode Function(String, Map<String, dynamic>)>{};
   for (final list in lists) {
     switch (list) {
       case UserServer u:
         for (final n in u.nodes) {
           record[n] = (tag, body) => PresetNode(
-                tag: tag,
-                body: body,
-                skipTailscalePresets: u.skipTailscalePresets,
-                allowLocal: u.allowLocal,
-                allowLan: u.allowLan,
-                allowGateway: u.allowGateway,
-              );
+            tag: tag,
+            body: body,
+            skipTailscalePresets: u.skipTailscalePresets,
+            allowLocal: u.allowLocal,
+            allowLan: u.allowLan,
+            allowGateway: u.allowGateway,
+          );
         }
       case FolderServers f:
         for (final m in f.members) {
           final node = m.node;
           if (node == null) continue;
           record[node] = (tag, body) => PresetNode(
-                tag: tag,
-                body: body,
-                skipTailscalePresets: m.skipTailscalePresets,
-                allowLocal: m.allowLocal,
-                allowLan: m.allowLan,
-                allowGateway: m.allowGateway,
-              );
+            tag: tag,
+            body: body,
+            skipTailscalePresets: m.skipTailscalePresets,
+            allowLocal: m.allowLocal,
+            allowLan: m.allowLan,
+            allowGateway: m.allowGateway,
+          );
         }
       case SubscriptionServers():
         break;
@@ -1185,8 +1240,7 @@ List<PresetNode> _collectPresetNodes(List<ServerList> lists, _BuildCtx ctx) {
   return [
     for (final e in <SingboxEntry>[...ctx.outbounds, ...ctx.endpoints])
       if (nodeByTag[e.tag] case final NodeSpec node)
-        record[node]?.call(e.tag, e.map) ??
-            PresetNode(tag: e.tag, body: e.map),
+        record[node]?.call(e.tag, e.map) ?? PresetNode(tag: e.tag, body: e.map),
   ];
 }
 
@@ -1220,9 +1274,7 @@ List<(RegistryWarning, List<String>)> _nodeDetourThroughGroupCodes(
     final key = (src?.id ?? '', group);
     final tags = byKey.putIfAbsent(key, () => []);
     if (!tags.contains(node)) tags.add(node);
-    ownerOf[key] = src == null
-        ? ''
-        : (src.name.isNotEmpty ? src.name : src.id);
+    ownerOf[key] = src == null ? '' : (src.name.isNotEmpty ? src.name : src.id);
   }
   return [
     for (final e in byKey.entries)
@@ -1249,9 +1301,11 @@ class _BuildCtx implements EmitContext {
     String coreVersion = '',
     this.linkTargets,
     Set<String> blockedReplaces = const {},
-  })  : _coreVersion = coreVersion,
-        _blockedReplaces = blockedReplaces {
-    _taken.addAll(reservedTags); // §351 — теги Направлений, эмитятся мимо аллокатора
+  }) : _coreVersion = coreVersion,
+       _blockedReplaces = blockedReplaces {
+    _taken.addAll(
+      reservedTags,
+    ); // §351 — теги Направлений, эмитятся мимо аллокатора
   }
 
   final Set<String> _blockedReplaces;
@@ -1277,8 +1331,9 @@ class _BuildCtx implements EmitContext {
     endpoints.removeWhere(gone);
     selectorEntries.removeWhere(gone);
     autoEntries.removeWhere(gone);
-    emittedTagByNode
-        .removeWhere((node, _) => report.droppedNodes.contains(node));
+    emittedTagByNode.removeWhere(
+      (node, _) => report.droppedNodes.contains(node),
+    );
   }
 
   /// §460 — убрать записи, снятые гардом реестра (`drop_node`): их тело ядро
@@ -1299,6 +1354,7 @@ class _BuildCtx implements EmitContext {
     emittedTagByNode.removeWhere((_, tag) => tags.contains(tag));
     emittedTagAliases.removeWhere((tag, _) => tags.contains(tag));
   }
+
   final TemplateVars _vars;
   final RuleSetRegistry _ruleSets;
   final String _coreVersion;
@@ -1369,10 +1425,12 @@ class _BuildCtx implements EmitContext {
 
   @override
   void code(RegistryWarning w) {
-    if (!codes.any((c) =>
-        c.code == w.code &&
-        c.ownerTag == w.ownerTag &&
-        _sameParams(c.params, w.params))) {
+    if (!codes.any(
+      (c) =>
+          c.code == w.code &&
+          c.ownerTag == w.ownerTag &&
+          _sameParams(c.params, w.params),
+    )) {
       codes.add(w);
     }
   }
@@ -1431,7 +1489,8 @@ List<Map<String, dynamic>> _buildDirectionGroups({
   Set<String> selectorOnlyTags = const {},
   required List<Map<String, dynamic>> nodeEntries,
   required List<String> emitWarnings,
-  required List<String> directionsWithoutNodes, // §274 — display-имена, out-параметр
+  required List<String>
+  directionsWithoutNodes, // §274 — display-имена, out-параметр
   // §393 C4 — «тег цепочки → её позиции». Пусто = цепочек нет, и весь блок
   // T9 схлопывается в no-op: конфиги без цепочек собираются как раньше.
   Map<String, List<String>> chainHops = const {},
@@ -1468,8 +1527,11 @@ List<Map<String, dynamic>> _buildDirectionGroups({
   for (final c in active) {
     final filtered = nodesFor(c);
     filteredCounts.add(filtered.length);
-    final (:kept, :dropped) =
-        dropChainsThroughDirection(filtered, c.tag, chainHops);
+    final (:kept, :dropped) = dropChainsThroughDirection(
+      filtered,
+      c.tag,
+      chainHops,
+    );
     memberSets.add(kept);
     if (dropped.isNotEmpty) {
       emitWarnings.add(chainCycleThroughDirectionLine(c.displayLabel, dropped));
@@ -1525,8 +1587,9 @@ List<Map<String, dynamic>> _buildDirectionGroups({
         continue;
       }
       emitWarnings.add(
-          'Direction "${c.displayLabel}" (${c.tag}): option "$t" dropped — '
-          'it must be another direction listed above this one (and enabled).');
+        'Direction "${c.displayLabel}" (${c.tag}): option "$t" dropped — '
+        'it must be another direction listed above this one (and enabled).',
+      );
     }
 
     // §393 A3 — ПОРЯДОК СОСТАВА нормативен (corpus/direction/README.md
@@ -1584,8 +1647,9 @@ List<Map<String, dynamic>> _buildDirectionGroups({
         filteredCounts[i] == 0 && // §393 C4 — не винить фильтр за вычет T9
         c.nodeFilter.isNotEmpty &&
         selectorTags.isNotEmpty) {
-      final effective =
-          emptyFallback ? kBlockOutboundTag : selectorOutbounds.first;
+      final effective = emptyFallback
+          ? kBlockOutboundTag
+          : selectorOutbounds.first;
       // §393 A3 — исход зависит от того, ЧТО стало первой опцией: block
       // (пустой fallback), direct-out (юзер включил галку — трафик идёт мимо
       // VPN, врать «blocked» нельзя) или другое Направление из `include`,
@@ -1596,9 +1660,10 @@ List<Map<String, dynamic>> _buildDirectionGroups({
         _ => 'traffic falls back to "$effective"',
       };
       emitWarnings.add(
-          'Direction "${c.displayLabel}" (${c.tag}): node filter matched no '
-          'nodes — $outcome. '
-          'Check its node filter.');
+        'Direction "${c.displayLabel}" (${c.tag}): node filter matched no '
+        'nodes — $outcome. '
+        'Check its node filter.',
+      );
       // §393 A3 — SnackBar «Направления без узлов» гейтится УЖЕ ИСХОДОМ, а не
       // фактом пустого node-set. Список `directionsWithoutNodes` в UI зовёт
       // пользователя чинить фильтр СРОЧНО, потому что Направление
@@ -1607,8 +1672,9 @@ List<Map<String, dynamic>> _buildDirectionGroups({
       // рабочих участников — Направление живое, трафик идёт узлами цели, и
       // поднимать тревогу не за что. Текст в AppLog остаётся в обоих
       // случаях: он информирует, а не требует действия.
-      final onlyMagic = selectorOutbounds
-          .every((t) => t == kDirectOutboundTag || t == kBlockOutboundTag);
+      final onlyMagic = selectorOutbounds.every(
+        (t) => t == kDirectOutboundTag || t == kBlockOutboundTag,
+      );
       if (emptyFallback || onlyMagic) {
         directionsWithoutNodes.add(c.displayLabel);
       }
@@ -1664,11 +1730,9 @@ List<Map<String, dynamic>> _buildDirectionGroups({
     // round_robin, пустой sticky_hash → sentinel ["none"]) — одна форма с
     // автовыбором свёртки (`buildAutoGroup`).
     if (emitAuto) {
-      result.add(buildAutoGroup(
-        tag: c.autoTag,
-        outbounds: autoNodes,
-        a: c.auto!,
-      ));
+      result.add(
+        buildAutoGroup(tag: c.autoTag, outbounds: autoNodes, a: c.auto!),
+      );
     }
     // §393 A5 — ПОРЯДОК ЭМИССИИ нормативен (corpus/direction/README.md:
     // «сначала auto-группа, потом само Направление»), поэтому селектор
@@ -1710,12 +1774,12 @@ List<Direction> _directionsFromTemplate(
   String? s(String name) => resolve(name)?.toString();
 
   DirectionAuto seedAuto() => DirectionAuto(
-        url: s('urltest_url') ?? fallback.url,
-        interval: s('urltest_interval') ?? fallback.interval,
-        tolerance: int.tryParse(s('urltest_tolerance') ?? '') ?? fallback.tolerance,
-        idleTimeout: fallback.idleTimeout,
-        interruptExistConnections: fallback.interruptExistConnections,
-      );
+    url: s('urltest_url') ?? fallback.url,
+    interval: s('urltest_interval') ?? fallback.interval,
+    tolerance: int.tryParse(s('urltest_tolerance') ?? '') ?? fallback.tolerance,
+    idleTimeout: fallback.idleTimeout,
+    interruptExistConnections: fallback.interruptExistConnections,
+  );
 
   final hasAuto = gt.direction.include.contains('auto');
   final out = <Direction>[];
@@ -1723,11 +1787,12 @@ List<Direction> _directionsFromTemplate(
     final enabled = dc.tag == 'vpn-1'
         ? true
         : (enabledGroupTags.isEmpty
-            ? dc.defaultEnabled
-            : enabledGroupTags.contains(dc.tag));
+              ? dc.defaultEnabled
+              : enabledGroupTags.contains(dc.tag));
     final auto = hasAuto ? seedAuto() : null;
     out.add(
-        Direction.seedFromDefault(dc, gt.direction, enabled: enabled, auto: auto));
+      Direction.seedFromDefault(dc, gt.direction, enabled: enabled, auto: auto),
+    );
   }
   return out;
 }
@@ -1788,9 +1853,11 @@ List<String> _dropCarriersOfDroppedReplaces(
       final root = dropped.contains(d)
           ? d
           : carriersBy.entries
-                  .firstWhere((c) => c.value.contains(d),
-                      orElse: () => MapEntry(d, const []))
-                  .key;
+                .firstWhere(
+                  (c) => c.value.contains(d),
+                  orElse: () => MapEntry(d, const []),
+                )
+                .key;
       carriersBy.putIfAbsent(root, () => []).add(e.tag);
       changed = true;
     }

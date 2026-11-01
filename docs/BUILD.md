@@ -13,6 +13,11 @@
 
 ## The Flutter app
 
+For the separate task-700 AWG/Tailscale engineering AAR and debug APK, see
+[ANDROID_AWG_ENGINEERING.md](ANDROID_AWG_ENGINEERING.md). Its explicit
+`LXBOX_LIBBOX_AAR` override preserves the default AAR and production pin; it is
+not the release procedure. Physical-device acceptance is pending.
+
 The **`app/`** directory is the L×Box project. Dependencies come from `flutter pub get`. The native VPN lives in `app/android/app/src/main/kotlin/com/leadaxe/lxbox/vpn/` (our own `BoxVpnService`, not a Flutter plugin). libbox on Android is the **[`Leadaxe/sing-box-lx`](https://github.com/Leadaxe/sing-box-lx)** fork (branch `lx-1.14`): AWG/AWG2 (AmneziaWG) + native XHTTP ([§097](spec/tasks/097F-awg2-amneziawg2/spec.md)) + MASQUE / idle-suspend / balancer. The AAR is wired in as the file `app/android/app/libs/libbox.aar` (a relative `files("libs/libbox.aar")` in `build.gradle`); downloading it and pinning the version is [§104](spec/tasks/104-libbox-fork-ci-fetch.md) — see [“The sing-box-lx core (libbox)”](#the-sing-box-lx-core-libbox). Pin history: stock `com.github.singbox-android:libbox:1.13.11` from JitPack ([task §060](spec/tasks/060-libbox-1-13-migration/spec.md)) ← `io.github.sagernet:libbox:1.12.12`.
 
 Config import via the **Read** button accepts **JSON** or **JSON5/JSONC** (`//` and `/* */` comments — the `json5` parser; `#` to the end of the line, as the core reads it, is stripped before it); canonical JSON is then handed to the core. The source is either the clipboard or the system file picker.

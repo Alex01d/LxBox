@@ -1,0 +1,2 @@
+# Synthetic AWG profiles; no machine identity or production key.
+{"endpoints":[{"type":"tailscale","tag":"ts-awg2","control_url":"https://headscale.example.invalid","awg":{"version":2,"profile_id":"synthetic-v2","parameters":{"s1":64,"h1":"100000-199999","h2":"200000-299999","h3":"300000-399999","h4":"400000-499999"}}},{"type":"tailscale","tag":"ts-awg3","underlay_mode":"derp","awg":{"version":3,"profile_id":"synthetic-v3","parameters":{"header_protection_key":"AQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQE=","content_padding_addition":"10-40"}}}]}

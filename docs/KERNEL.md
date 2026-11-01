@@ -27,6 +27,15 @@ milliseconds. `startTailscaleSSHSession` is not used.
 
 ## Where the AAR comes from
 
+Task 700 adds an optional engineering AAR with embedded Tailscale AWG. It is
+selected only by `LXBOX_LIBBOX_AAR`; the production pin below stays unchanged.
+`Libbox.tailscaleAWGSupported()` is positive compiled capability evidence, exposed
+by the existing MethodChannel `getCoreCapabilities`. Old AARs return false via
+the optional reflection bridge. `TailscaleEndpointStatus.getTransport()` adds
+configured/applied mode, profile label/fingerprint, applied flag and a safe
+error to both existing Tailscale status paths. See
+[ANDROID_AWG_ENGINEERING.md](ANDROID_AWG_ENGINEERING.md) for pins and acceptance.
+
 | | |
 |---|---|
 | Version pin | `app/android/libbox.version` — the single source of truth (local and CI) |

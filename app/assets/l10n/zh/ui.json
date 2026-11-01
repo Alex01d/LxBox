@@ -6577,5 +6577,65 @@
     "value": {
       "other": "✓ %d 个匹配"
     }
+  },
+  "Tailscale peer transport": {
+    "value": "Tailscale 节点间传输"
+  },
+  "Ordinary Tailscale (WireGuard)": {
+    "value": "普通 Tailscale（WireGuard）"
+  },
+  "Unsupported profile": {
+    "value": "不支持的配置文件"
+  },
+  "Import profile": {
+    "value": "导入配置文件"
+  },
+  "Paste profile": {
+    "value": "粘贴配置文件"
+  },
+  "Export profile": {
+    "value": "导出配置文件"
+  },
+  "Copy profile": {
+    "value": "复制配置文件"
+  },
+  "Profile label (optional)": {
+    "value": "配置文件标签（可选）"
+  },
+  "AWG parameters (JSON)": {
+    "value": "AWG 参数（JSON）"
+  },
+  "Both peers must use a compatible profile. Export may contain a shared key; it never includes this device's identity.": {
+    "value": "两端节点必须使用兼容的配置文件。导出内容可能包含共享密钥，但绝不会包含此设备的身份信息。"
+  },
+  "Invalid AWG profile. Check its version, label and typed parameters.": {
+    "value": "AWG 配置文件无效。请检查版本、标签和参数值的类型。"
+  },
+  "Select an AWG mode before exporting a profile.": {
+    "value": "导出配置文件前，请先选择 AWG 模式。"
+  },
+  "Profile exported": {
+    "value": "配置文件已导出"
+  },
+  "Auth key (optional)": {
+    "value": "认证密钥（可选）"
+  },
+  "Leave empty to sign in interactively from the Network tab. A one-time key is consumed on first login; clearing app data registers a new device.": {
+    "value": "留空即可通过“网络”选项卡进行交互式登录。一次性密钥会在首次登录时使用；清除应用数据后将注册为新设备。"
+  },
+  "Peer transport": {
+    "value": "节点间传输"
+  },
+  "Configured: %s": {
+    "value": "已配置：%s"
+  },
+  "Applied: %s": {
+    "value": "已应用：%s"
+  },
+  "Applied mode unavailable": {
+    "value": "无法获取已应用的模式"
+  },
+  "Copy sign-in link": {
+    "value": "复制登录链接"
   }
 }

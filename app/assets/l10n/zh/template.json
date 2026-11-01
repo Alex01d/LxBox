@@ -742,5 +742,29 @@
  },
  "fe80::/10 · IPv6 link-local": {
   "value": "fe80::/10 · IPv6 链路本地"
+ },
+ "Protected Tailscale networks": {
+  "value": "受保护的 Tailscale 网络"
+ },
+ "Keep these networks and private names on the selected Tailscale endpoint, including before login and during outages. Choose the endpoint explicitly.": {
+  "value": "始终通过所选 Tailscale 端点访问这些网络和私有域名，包括登录前及发生故障时。请明确选择端点。"
+ },
+ "Tailscale endpoint": {
+  "value": "Tailscale 端点"
+ },
+ "Select the Tailscale endpoint that owns these networks.": {
+  "value": "选择可访问这些网络的 Tailscale 端点。"
+ },
+ "Protected CIDRs": {
+  "value": "受保护的 CIDR"
+ },
+ "One CIDR per line. These networks must never fall back to direct or VLESS.": {
+  "value": "每行一个 CIDR。这些网络的流量绝不能回退到直连或 VLESS。"
+ },
+ "Private DNS suffixes": {
+  "value": "私有 DNS 后缀"
+ },
+ "One suffix per line. Resolve these names through the selected endpoint without public DNS fallback.": {
+  "value": "每行一个后缀。通过所选端点解析这些域名，不回退到公共 DNS。"
  }
 }

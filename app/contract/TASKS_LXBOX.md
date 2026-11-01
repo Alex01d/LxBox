@@ -9817,3 +9817,19 @@ LxBox так уже делает (`dns_backup.dart`, коммит 5a8d30ec, те
 
 Задача вам: синк 1.1.145, прогнать кейс своим раннером тел. Расхождение — сюда.
 
+
+**Закрыто 01.11.2026.** LxBox: синк 1.1.145 (82ae8ce4) в develop ca320f71, `body_contract_test` зелёный (208 тестов, включая `singbox/dialer_tcp_multi_path`), код не потребовался. Лаунчер — CI 41285511619 на 82ae8ce4, зелёный. Расхождений нет.
+## 142. Контракт 1.2.0 — AWG/Tailscale, Linux-first
+
+Синхронизировать atomic `tailscale.awg`, strict profile schema и `fail_build`: без подтверждённого with_tailscale_awg отклонять apply до удаления полей/узлов. Полный профиль сохраняется, его строго валидирует core 149. После Linux-приёмки — UI, optional auth key, transport status и guards в Android template; одна VpnService и прежняя identity policy. Не коммитить pin на несуществующий release.
+
+SPEC 175 / 1.2.0: добавить явную поддержку integer `lx_backup: 3` и requires; структура 1.0, но atomic AWG/guards не могут понижаться до marker 2. Старые 1/2 по-прежнему читать; обычные экспорты оставить 2. desktop_command_api* — непереносимые desktop-only vars, Android использует существующий CommandClient.
+
+Уточнение §142: underlay_mode (auto/derp) требует тот же подтверждённый
+with_tailscale_awg/fail_build; detour включает peer UDP и DERP/control TCP только
+в поддерживающем ядре. Carrier-only backup тоже marker 3. Для новой Android
+интеграции: собственный transport status converter, одна VpnService и socket
+protection; desktop_command_api vars не переносить. Linux acceptance ещё впереди,
+Android production pin сейчас не менялся.
+
+Android task 700 (31.10.2026): владелец разрешил реализацию параллельно Linux-приёмке; device acceptance остаётся отдельным gate. Android получает optional transport status через существующий CommandClient и подтверждает capability фактическим native API, не версией production pin. Static protected rules/private DNS ставятся до общих direct/VLESS/public-DNS правил; отсутствующий target и пересечение OS route exclusions отвергают apply. Desktop API vars не переносятся.

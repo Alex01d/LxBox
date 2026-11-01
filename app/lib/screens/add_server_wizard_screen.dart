@@ -19,6 +19,7 @@ import '../services/l10n/locale_controller.dart';
 import '../services/subscription/subscription_identity.dart';
 import '../widgets/safe_bottom.dart';
 import '../models/tailscale_bundle.dart';
+import '../widgets/tailscale_awg_form.dart';
 
 // SocksSpec.emit() требует TemplateVars — для wizard-created SOCKS5 без
 // substitution используем пустые. Это match'ит manual UserServer pattern
@@ -108,6 +109,8 @@ class _AddServerWizardScreenState extends State<AddServerWizardScreen>
   final _tsHostname = TextEditingController();
   final _tsExitNode = TextEditingController();
   final _tsFormKey = GlobalKey<FormState>();
+  final _tsAwgFormKey = GlobalKey<TailscaleAwgFormState>();
+  Map<String, dynamic> _tsAwgBody = {};
   bool _tsEphemeral = false;
   bool _tsAcceptRoutes = false;
   bool _tsShowKey = false;
@@ -192,6 +195,10 @@ class _AddServerWizardScreenState extends State<AddServerWizardScreen>
   /// делает сборка).
   Future<void> _submitTailscale() async {
     if (!(_tsFormKey.currentState?.validate() ?? false)) return;
+    if (!await (_tsAwgFormKey.currentState?.validate() ?? Future.value(true))) {
+      return;
+    }
+    if (!mounted) return;
     final tagInput = _tsTag.text.trim();
     final tag = tagInput.isNotEmpty ? tagInput : _kDefaultTailscaleTag;
     final controlUrl = _tsControlUrl.text.trim();
@@ -203,7 +210,9 @@ class _AddServerWizardScreenState extends State<AddServerWizardScreen>
       tag: tag,
       label: tag,
       body: {
-        'auth_key': _tsAuthKey.text.trim(),
+        if (_tsAuthKey.text.trim().isNotEmpty)
+          'auth_key': _tsAuthKey.text.trim(),
+        if (_tsAwgBody.containsKey('awg')) 'awg': _tsAwgBody['awg'],
         if (controlUrl.isNotEmpty) 'control_url': controlUrl,
         if (hostname.isNotEmpty) 'hostname': hostname,
         if (_tsEphemeral) 'ephemeral': true,
@@ -462,7 +471,12 @@ class _AddServerWizardScreenState extends State<AddServerWizardScreen>
       color: Theme.of(context).colorScheme.onSurfaceVariant,
     );
     return SingleChildScrollView(
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 32).withSafeBottom(context),
+      padding: const EdgeInsets.fromLTRB(
+        16,
+        16,
+        16,
+        32,
+      ).withSafeBottom(context),
       child: Form(
         key: _tsFormKey,
         autovalidateMode: AutovalidateMode.onUserInteraction,
@@ -485,7 +499,13 @@ class _AddServerWizardScreenState extends State<AddServerWizardScreen>
               style: hintStyle,
             ),
             const SizedBox(height: 12),
-            _label(getLocalText.s("Auth key")),
+            TailscaleAwgForm(
+              key: _tsAwgFormKey,
+              body: _tsAwgBody,
+              onChanged: (body) => _tsAwgBody = body,
+            ),
+            const SizedBox(height: 12),
+            _label(getLocalText.s("Auth key (optional)")),
             TextFormField(
               controller: _tsAuthKey,
               obscureText: !_tsShowKey,
@@ -503,14 +523,11 @@ class _AddServerWizardScreenState extends State<AddServerWizardScreen>
                   onPressed: () => setState(() => _tsShowKey = !_tsShowKey),
                 ),
               ),
-              validator: (v) => (v == null || v.trim().isEmpty)
-                  ? getLocalText.s("Auth key required")
-                  : null,
             ),
             const SizedBox(height: 6),
             Text(
               getLocalText.s(
-                "A one-time key is consumed on the first login; the device identity then lives in the state directory. Clearing the app data registers a new device.",
+                "Leave empty to sign in interactively from the Network tab. A one-time key is consumed on first login; clearing app data registers a new device.",
               ),
               style: hintStyle,
             ),
@@ -597,16 +614,21 @@ class _AddServerWizardScreenState extends State<AddServerWizardScreen>
       color: Theme.of(context).colorScheme.onSurfaceVariant,
     );
     return SingleChildScrollView(
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 32).withSafeBottom(context),
+      padding: const EdgeInsets.fromLTRB(
+        16,
+        16,
+        16,
+        32,
+      ).withSafeBottom(context),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           _label(getLocalText.s("Tag (optional)")),
           TextFormField(
             controller: _ocTag,
-            decoration: _input(
-              _kDefaultOcTag,
-            ).copyWith(suffixIcon: EmojiPickerButton(onPick: _insertOcTagEmoji)),
+            decoration: _input(_kDefaultOcTag).copyWith(
+              suffixIcon: EmojiPickerButton(onPick: _insertOcTagEmoji),
+            ),
           ),
           const SizedBox(height: 6),
           Text(
@@ -644,7 +666,12 @@ class _AddServerWizardScreenState extends State<AddServerWizardScreen>
 
   Widget _buildSocksForm(BuildContext context) {
     return SingleChildScrollView(
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 32).withSafeBottom(context),
+      padding: const EdgeInsets.fromLTRB(
+        16,
+        16,
+        16,
+        32,
+      ).withSafeBottom(context),
       child: Form(
         key: _socksFormKey,
         autovalidateMode: AutovalidateMode.onUserInteraction,
@@ -729,7 +756,12 @@ class _AddServerWizardScreenState extends State<AddServerWizardScreen>
 
   Widget _buildHttpForm(BuildContext context) {
     return SingleChildScrollView(
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 32).withSafeBottom(context),
+      padding: const EdgeInsets.fromLTRB(
+        16,
+        16,
+        16,
+        32,
+      ).withSafeBottom(context),
       child: Form(
         key: _httpFormKey,
         autovalidateMode: AutovalidateMode.onUserInteraction,

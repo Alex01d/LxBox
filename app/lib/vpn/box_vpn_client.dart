@@ -42,8 +42,8 @@ class BoxVpnClient {
   factory BoxVpnClient() => I;
 
   BoxVpnClient._({MethodChannel? methods, EventChannel? events})
-      : _methods = methods ?? const MethodChannel(_kMethodsChannel),
-        _events = events ?? const EventChannel(_kStatusChannel);
+    : _methods = methods ?? const MethodChannel(_kMethodsChannel),
+      _events = events ?? const EventChannel(_kStatusChannel);
 
   /// Production singleton. По стилю `AppLog.I`, `HapticService.I`.
   static final BoxVpnClient I = BoxVpnClient._();
@@ -54,8 +54,7 @@ class BoxVpnClient {
   factory BoxVpnClient.forTest({
     MethodChannel? methods,
     EventChannel? events,
-  }) =>
-      BoxVpnClient._(methods: methods, events: events);
+  }) => BoxVpnClient._(methods: methods, events: events);
 
   // §141 P2.4e — алиасы на централизованные имена (`PlatformChannels`).
   static const _kMethodsChannel = PlatformChannels.methods;
@@ -669,6 +668,28 @@ class BoxVpnClient {
     return v ?? '';
   }
 
+  /// Positive capability evidence from the embedded AAR, never inferred from
+  /// its release name. Older native bridges and timeouts return unknown.
+  Future<Map<String, bool>?> getCoreCapabilities() async {
+    try {
+      final result = await _invoke<Map<dynamic, dynamic>>(
+        _Methods.getCoreCapabilities,
+        timeout: _Timeouts.settings,
+        onTimeoutValue: null,
+      );
+      if (result == null) return null;
+      return {
+        for (final entry in result.entries)
+          if (entry.key is String && entry.value is bool)
+            entry.key as String: entry.value as bool,
+      };
+    } on MissingPluginException {
+      return null;
+    } on PlatformException {
+      return null;
+    }
+  }
+
   /// Разбивка памяти процесса приложения (native `ActivityManager`
   /// `getProcessMemoryInfo`, §507; `Debug.getMemoryInfo` — запас). Ядро
   /// sing-box живёт в этом же процессе, поэтому native heap включает его
@@ -879,19 +900,22 @@ class BoxVpnClient {
   /// `asBroadcastStream()` даёт один underlying controller с несколькими
   /// Dart-listener'ами; `late final` кэширует его. `onListen` на native
   /// вызывается ровно один раз, `statusSink` стабилен.
-  late final Stream<TunnelStatusEvent> _statusStream =
-      _events.receiveBroadcastStream().map((event) {
-    if (event is Map) return TunnelStatusEvent.fromNative(event);
-    return TunnelStatusEvent.unknownEmpty;
-  }).handleError((Object e) {
-    // §141 P1.9d — EventChannel может прислать error (PlatformException и т.п.).
-    // Без обработчика он распространился бы на ВСЕХ listener'ов как unhandled
-    // async error; `HomeController._statusSub` подписан без onError → зомби.
-    // Гасим (broadcast-подписка остаётся живой для следующих data-событий),
-    // логируем для диагностики. Не маппим в data-событие: ложный «disconnected»
-    // от транзиентной ошибки канала хуже, чем пропуск одного тика.
-    AppLog.I.error('[vpn] status stream error: $e');
-  }).asBroadcastStream();
+  late final Stream<TunnelStatusEvent> _statusStream = _events
+      .receiveBroadcastStream()
+      .map((event) {
+        if (event is Map) return TunnelStatusEvent.fromNative(event);
+        return TunnelStatusEvent.unknownEmpty;
+      })
+      .handleError((Object e) {
+        // §141 P1.9d — EventChannel может прислать error (PlatformException и т.п.).
+        // Без обработчика он распространился бы на ВСЕХ listener'ов как unhandled
+        // async error; `HomeController._statusSub` подписан без onError → зомби.
+        // Гасим (broadcast-подписка остаётся живой для следующих data-событий),
+        // логируем для диагностики. Не маппим в data-событие: ложный «disconnected»
+        // от транзиентной ошибки канала хуже, чем пропуск одного тика.
+        AppLog.I.error('[vpn] status stream error: $e');
+      })
+      .asBroadcastStream();
 
   Stream<TunnelStatusEvent> get onStatusChanged => _statusStream;
 
@@ -909,7 +933,8 @@ class BoxVpnClient {
   /// (`name`, `args`) и роутит на shared action-handlers. Идемпотентно —
   /// повторный вызов перезаписывает handler.
   void registerAutomationActionHandler(
-      void Function(String name, Map<String, dynamic> args) handler) {
+    void Function(String name, Map<String, dynamic> args) handler,
+  ) {
     _onAutomationAction = handler;
     _methods.setMethodCallHandler(_handleNativeCall);
   }
@@ -955,21 +980,23 @@ class BoxVpnClient {
     List<String>? nodes,
     List<String>? groups,
   }) {
-    unawaited(_invoke<void>(
-      _Methods.setAutomationActiveState,
-      args: <String, dynamic>{
-        'node': node,
-        'group': group,
-        // null-aware element: ключ пропускается когда список null (native по
-        // отсутствию ключа не трогает кеш — обновляем только активное состояние).
-        'nodes': ?nodes,
-        'groups': ?groups,
-      },
-      timeout: _Timeouts.settings,
-      onTimeoutValue: null,
-    ).catchError((Object e) {
-      AppLog.I.error('[automation] setAutomationActiveState failed: $e');
-    }));
+    unawaited(
+      _invoke<void>(
+        _Methods.setAutomationActiveState,
+        args: <String, dynamic>{
+          'node': node,
+          'group': group,
+          // null-aware element: ключ пропускается когда список null (native по
+          // отсутствию ключа не трогает кеш — обновляем только активное состояние).
+          'nodes': ?nodes,
+          'groups': ?groups,
+        },
+        timeout: _Timeouts.settings,
+        onTimeoutValue: null,
+      ).catchError((Object e) {
+        AppLog.I.error('[automation] setAutomationActiveState failed: $e');
+      }),
+    );
   }
 
   /// Outgoing emit: отправить automation-broadcast наружу. Открыт всем
@@ -978,14 +1005,18 @@ class BoxVpnClient {
   void sendAutomationBroadcast(String action, Map<String, Object?> extras) {
     // Не await'им: emit вызывается из синхронных state-mutation точек
     // (контроллеры), блокировать их нельзя. Ошибки гасим в логах.
-    unawaited(_invoke<void>(
-      _Methods.sendAutomationBroadcast,
-      args: {'action': action, 'extras': extras},
-      timeout: _Timeouts.settings,
-      onTimeoutValue: null,
-    ).catchError((Object e) {
-      AppLog.I.error('[automation] sendAutomationBroadcast($action) failed: $e');
-    }));
+    unawaited(
+      _invoke<void>(
+        _Methods.sendAutomationBroadcast,
+        args: {'action': action, 'extras': extras},
+        timeout: _Timeouts.settings,
+        onTimeoutValue: null,
+      ).catchError((Object e) {
+        AppLog.I.error(
+          '[automation] sendAutomationBroadcast($action) failed: $e',
+        );
+      }),
+    );
   }
 
   // ---------------------------------------------------------------------------
@@ -1003,9 +1034,7 @@ class BoxVpnClient {
     required T? onTimeoutValue,
   }) async {
     try {
-      return await _methods
-          .invokeMethod<T>(method, args)
-          .timeout(timeout);
+      return await _methods.invokeMethod<T>(method, args).timeout(timeout);
     } on TimeoutException {
       AppLog.I.error(
         'BoxVpnClient: $method timed out after ${timeout.inSeconds}s',
@@ -1053,20 +1082,19 @@ class MemoryInfo {
   static int _int(Object? v) => v is int ? v : (v is num ? v.toInt() : 0);
 
   factory MemoryInfo.fromMap(Map<dynamic, dynamic> m) => MemoryInfo(
-        totalPss: _int(m['totalPss']),
-        totalSwap: _int(m['totalSwap']),
-        javaHeap: _int(m['javaHeap']),
-        nativeHeap: _int(m['nativeHeap']),
-        code: _int(m['code']),
-        stack: _int(m['stack']),
-        graphics: _int(m['graphics']),
-        privateOther: _int(m['privateOther']),
-        system: _int(m['system']),
-        nativeHeapAllocated: _int(m['nativeHeapAllocated']),
-        nativeHeapSize: _int(m['nativeHeapSize']),
-      );
+    totalPss: _int(m['totalPss']),
+    totalSwap: _int(m['totalSwap']),
+    javaHeap: _int(m['javaHeap']),
+    nativeHeap: _int(m['nativeHeap']),
+    code: _int(m['code']),
+    stack: _int(m['stack']),
+    graphics: _int(m['graphics']),
+    privateOther: _int(m['privateOther']),
+    system: _int(m['system']),
+    nativeHeapAllocated: _int(m['nativeHeapAllocated']),
+    nativeHeapSize: _int(m['nativeHeapSize']),
+  );
 }
-
 
 /// §455 — вердикт `Libbox.checkConfig()`: [ok] — ядро приняло; иначе [error]
 /// — отказ словами ядра (unknown field, отвергнутая опция, битый ключ).

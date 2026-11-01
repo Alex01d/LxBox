@@ -2808,6 +2808,29 @@
       "desc": "Контракт 1.1.63, SPEC 142 C9: `item_forbidden` у tailscale advertise_routes — `0.0.0.0/0` и `::/0` после normalize cidr_masked. Ядро: protocol/tailscale/endpoint.go NewEndpoint — «`advertise_routes` cannot be default, use `advertise_exit_node` instead.», отказ всего конфига. Прежде элемент отбивала только форма добавления узла, и вход singbox/бэкап несли его в ядро.",
       "dart": null,
       "go": "правило реестра contract/registry/protocols/tailscale.json body.fields.advertise_routes.item_forbidden; исполнение — core/config/nodeflow/sanitize.go:sanitizer.filterItems"
+    },
+    "tailscale_awg_core_unsupported": {
+      "severity": "error",
+      "params": [
+        "reason"
+      ],
+      "title_en": "AWG/Tailscale is unavailable in this core",
+      "title_ru": "AWG/Tailscale недоступен в этом ядре",
+      "text_en": "The AWG profile requires a confirmed with_tailscale_awg capability ({reason}). The entire configuration was rejected and the previous configuration was retained.",
+      "text_ru": "Профилю AWG нужна подтверждённая capability with_tailscale_awg ({reason}). Конфигурация целиком отклонена, прежняя сохранена.",
+      "cause_en": "The new integration cannot be inferred from with_awg and with_tailscale alone. Removing an endpoint or profile field could leak protected traffic.",
+      "cause_ru": "Наличие with_awg и with_tailscale не доказывает поддержку интеграции. Удаление endpoint или поля профиля могло бы отправить защищённый трафик в fallback.",
+      "fix_en": [
+        "Use an engineering core with the with_tailscale_awg capability.",
+        "Keep the current configuration until a compatible core is available."
+      ],
+      "fix_ru": [
+        "Используйте engineering-сборку с capability with_tailscale_awg.",
+        "Сохраните текущую конфигурацию до установки совместимого ядра."
+      ],
+      "desc": "Atomic capability gate: an AWG profile is never pruned or downgraded. Missing or unknown with_tailscale_awg rejects the entire build before any node/field removal; last-good config stays on disk.",
+      "dart": "Next Android phase: implement fail_build before node/field removal.",
+      "go": "core/config/nodeflow/gate_fatal.go:NodeCoreBuildFailure; core/config/outbound_generator.go:GenerateOutboundsFromParserConfig"
     }
   }
 }

@@ -1845,6 +1845,24 @@ Two patterns: a **contextual banner** (a state-dependent hint) and an **overflow
 
 ## CommandClient (libbox)
 
+Task 700 extends the existing Tailscale unary/stream converter with optional
+transport status (`configured_mode`, `applied_mode`, profile label/fingerprint,
+`applied`, safe `last_error`). These fields describe profile application, not
+peer connectivity. The Android reflection adapter and keep rules permit the
+unchanged production AAR to compile; a compiled capability probe positively
+enables AWG at build time. Unknown capability rejects atomic AWG application
+before any detour/node pruning. Stored profiles and the last-good generated
+configuration survive refusal.
+
+The optional `tailscale-protected` preset binds explicit CIDRs/private DNS
+suffixes to one Tailscale endpoint. Preflight validates its target/lists; final
+assembly places protection before general route/DNS rules (after initial
+sniff/DNS interception), and rejects a missing/changed private DNS endpoint or
+an overlapping TUN bypass range. It never relies on the live netmap. Protection
+covers traffic captured by this application's VPN; Android per-app exclusions
+remain outside that capture boundary. Neither a second VpnService nor a desktop
+HTTP control API is added. Engineering/device gates: task 700.
+
 §122 — the UI↔core control channel. The Clash HTTP API was removed entirely.
 
 ### The model: push streams, not pull snapshots

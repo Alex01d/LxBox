@@ -6868,5 +6868,65 @@
       "many": "✓ %d совпадений",
       "other": "✓ %d совпадения"
     }
+  },
+  "Tailscale peer transport": {
+    "value": "Транспорт между узлами Tailscale"
+  },
+  "Ordinary Tailscale (WireGuard)": {
+    "value": "Обычный Tailscale (WireGuard)"
+  },
+  "Unsupported profile": {
+    "value": "Неподдерживаемый профиль"
+  },
+  "Import profile": {
+    "value": "Импортировать профиль"
+  },
+  "Paste profile": {
+    "value": "Вставить профиль"
+  },
+  "Export profile": {
+    "value": "Экспортировать профиль"
+  },
+  "Copy profile": {
+    "value": "Копировать профиль"
+  },
+  "Profile label (optional)": {
+    "value": "Метка профиля (необязательно)"
+  },
+  "AWG parameters (JSON)": {
+    "value": "Параметры AWG (JSON)"
+  },
+  "Both peers must use a compatible profile. Export may contain a shared key; it never includes this device's identity.": {
+    "value": "Оба узла должны использовать совместимый профиль. Экспорт может содержать общий ключ, но не идентификационные данные этого устройства."
+  },
+  "Invalid AWG profile. Check its version, label and typed parameters.": {
+    "value": "Некорректный профиль AWG. Проверьте версию, метку и типы значений параметров."
+  },
+  "Select an AWG mode before exporting a profile.": {
+    "value": "Перед экспортом профиля выберите режим AWG."
+  },
+  "Profile exported": {
+    "value": "Профиль экспортирован"
+  },
+  "Auth key (optional)": {
+    "value": "Ключ авторизации (необязательно)"
+  },
+  "Leave empty to sign in interactively from the Network tab. A one-time key is consumed on first login; clearing app data registers a new device.": {
+    "value": "Оставьте поле пустым для входа через вкладку «Сеть». Одноразовый ключ расходуется при первом входе; после очистки данных приложения регистрируется новое устройство."
+  },
+  "Peer transport": {
+    "value": "Транспорт между узлами"
+  },
+  "Configured: %s": {
+    "value": "Настроено: %s"
+  },
+  "Applied: %s": {
+    "value": "Применено: %s"
+  },
+  "Applied mode unavailable": {
+    "value": "Применённый режим недоступен"
+  },
+  "Copy sign-in link": {
+    "value": "Копировать ссылку для входа"
   }
 }

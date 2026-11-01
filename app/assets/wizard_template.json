@@ -739,6 +739,124 @@
       ]
     },
     {
+      "preset_id": "tailscale-protected",
+      "ui": {
+        "label": "Protected Tailscale networks",
+        "description": "Keep these networks and private names on the selected Tailscale endpoint, including before login and during outages. Choose the endpoint explicitly.",
+        "default": false,
+        "num": 944,
+        "isSortable": true
+      },
+      "vars": [
+        {
+          "name": "out",
+          "type": "outbound",
+          "default_value": "",
+          "required": true,
+          "title": "Tailscale endpoint",
+          "tooltip": "Select the Tailscale endpoint that owns these networks."
+        },
+        {
+          "name": "protected_cidrs",
+          "type": "text_list",
+          "default_value": "",
+          "title": "Protected CIDRs",
+          "tooltip": "One CIDR per line. These networks must never fall back to direct or VLESS."
+        },
+        {
+          "name": "private_dns_suffixes",
+          "type": "text_list",
+          "default_value": "",
+          "title": "Private DNS suffixes",
+          "tooltip": "One suffix per line. Resolve these names through the selected endpoint without public DNS fallback."
+        }
+      ],
+      "rules": [
+        {
+          "#if": [
+            {
+              "@protected_cidrs": "#notEmpty"
+            },
+            {
+              "ip_cidr": [
+                "@protected_cidrs"
+              ],
+              "action": "route",
+              "outbound": "@out"
+            }
+          ]
+        },
+        {
+          "#if": [
+            {
+              "@private_dns_suffixes": "#notEmpty"
+            },
+            {
+              "domain_suffix": [
+                "@private_dns_suffixes"
+              ],
+              "action": "resolve",
+              "server": {
+                "#tpl": "@{out}-protected-dns"
+              }
+            }
+          ]
+        },
+        {
+          "#if": [
+            {
+              "@private_dns_suffixes": "#notEmpty"
+            },
+            {
+              "domain_suffix": [
+                "@private_dns_suffixes"
+              ],
+              "action": "route",
+              "outbound": "@out"
+            }
+          ]
+        }
+      ],
+      "dns_servers": [
+        {
+          "type": "tailscale",
+          "tag": {
+            "#tpl": "@{out}-protected-dns"
+          },
+          "endpoint": "@out"
+        }
+      ],
+      "dns_rules": [
+        {
+          "#if": [
+            {
+              "@private_dns_suffixes": "#notEmpty"
+            },
+            {
+              "domain_suffix": [
+                "@private_dns_suffixes"
+              ],
+              "server": {
+                "#tpl": "@{out}-protected-dns"
+              }
+            }
+          ]
+        }
+      ],
+      "for_each_node": {
+        "#filter": {
+          "#and": [
+            {
+              "@node.body.type": "tailscale"
+            },
+            {
+              "@node": "@out"
+            }
+          ]
+        }
+      }
+    },
+    {
       "preset_id": "tailscale",
       "for_each_node": {"#filter": {"#and": [{"@node.body.type": "tailscale"}, {"#not": "@node.skip_tailscale_presets"}]}},
       "ui": {"label": "Tailscale networks", "description": "Route each tailnet through its Tailscale node and resolve its names with the node's own DNS.", "default": true, "num": 945, "isSortable": true},

@@ -249,14 +249,16 @@ class _TailscaleNetworkTabState extends State<TailscaleNetworkTab>
   @override
   Widget build(BuildContext context) {
     if (!_vpnUp) {
-      return _centerText(getLocalText.s("Start VPN to see the network."));
+      return _transportUnavailable(
+        getLocalText.s("Start VPN to see the network."),
+      );
     }
     if (!_hasData) {
       return const Center(child: CircularProgressIndicator());
     }
     final s = _status;
     if (s == null) {
-      return _centerText(
+      return _transportUnavailable(
         getLocalText.s("The node is not in the running config."),
       );
     }
@@ -267,6 +269,7 @@ class _TailscaleNetworkTabState extends State<TailscaleNetworkTab>
     final children = <Widget>[
       if (s.health.isNotEmpty) _healthBlock(context, s.health),
       _statusBlock(context, s),
+      _transportBlock(context, s.transport),
       if (s.self != null) _thisDeviceBlock(context, s.self!),
       _exitNodeBlock(context, s),
       if (widget.onSaveFields != null) _settingsBlock(context),
@@ -297,19 +300,64 @@ class _TailscaleNetworkTabState extends State<TailscaleNetworkTab>
     );
   }
 
-  Widget _centerText(String text) => Center(
-    child: Padding(
-      padding: const EdgeInsets.all(24),
-      child: Text(text, textAlign: TextAlign.center),
-    ),
+  Widget _transportUnavailable(String text) => ListView(
+    padding: const EdgeInsets.only(bottom: 24),
+    children: [
+      _transportBlock(context, null),
+      ListTile(title: Text(text)),
+    ],
   );
+
+  String _configuredMode() {
+    final awg = widget.body['awg'];
+    if (awg == null) return 'WireGuard';
+    if (awg is Map && (awg['version'] == 2 || awg['version'] == 3)) {
+      return 'AWG${awg['version']}';
+    }
+    return getLocalText.s("Unsupported profile");
+  }
+
+  Widget _transportBlock(
+    BuildContext context,
+    CcTailscaleTransport? transport,
+  ) {
+    final applied =
+        transport != null &&
+        transport.applied &&
+        transport.appliedMode.isNotEmpty;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _header(context, getLocalText.s("Peer transport")),
+        ListTile(
+          dense: true,
+          title: Text(getLocalText.s("Configured: %s", _configuredMode())),
+          subtitle: Text(
+            applied
+                ? getLocalText.s("Applied: %s", transport.appliedMode)
+                : getLocalText.s("Applied mode unavailable"),
+          ),
+        ),
+        if (transport != null && transport.lastError.isNotEmpty)
+          ListTile(
+            dense: true,
+            leading: Icon(
+              Icons.warning_amber,
+              color: Theme.of(context).colorScheme.error,
+            ),
+            title: Text(transport.lastError),
+          ),
+      ],
+    );
+  }
 
   Widget _header(BuildContext context, String text) => Padding(
     padding: const EdgeInsets.fromLTRB(16, 16, 16, 4),
     child: Text(
       text,
-      style: Theme.of(context).textTheme.titleSmall
-          ?.copyWith(fontWeight: FontWeight.w600),
+      style: Theme.of(
+        context,
+      ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600),
     ),
   );
 
@@ -351,8 +399,9 @@ class _TailscaleNetworkTabState extends State<TailscaleNetworkTab>
     padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
     child: Text(
       title,
-      style: Theme.of(context).textTheme.labelMedium
-          ?.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant),
+      style: Theme.of(context).textTheme.labelMedium?.copyWith(
+        color: Theme.of(context).colorScheme.onSurfaceVariant,
+      ),
     ),
   );
 
@@ -383,6 +432,11 @@ class _TailscaleNetworkTabState extends State<TailscaleNetworkTab>
                   FilledButton(
                     onPressed: () => unawaited(UrlLauncher.open(s.authUrl)),
                     child: Text(getLocalText.s("Sign in")),
+                  ),
+                if (needsLogin && s.authUrl.isNotEmpty)
+                  OutlinedButton(
+                    onPressed: () => unawaited(_copy(s.authUrl)),
+                    child: Text(getLocalText.s("Copy sign-in link")),
                   ),
                 if (running)
                   OutlinedButton(

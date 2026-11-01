@@ -92,6 +92,7 @@ The `contract/registry/warnings.json` dictionary is shared with LxBox: both apps
 - [`ss_method_invalid`](#ss_method_invalid) · `error` — Unsupported encryption method {method}
 - [`ss_method_legacy`](#ss_method_legacy) · `info` — Shadowsocks: legacy cipher
 - [`ssh_user_default`](#ssh_user_default) · `info` — SSH: user root substituted
+- [`tailscale_awg_core_unsupported`](#tailscale_awg_core_unsupported) · `error` — AWG/Tailscale is unavailable in this core
 - [`tailscale_core_unsupported`](#tailscale_core_unsupported) · `warning` — Tailscale is unavailable in this core
 - [`tailscale_default_route_advertised`](#tailscale_default_route_advertised) · `warning` — Tailscale: default route {value} removed from advertised routes
 - [`template_fragment_dropped`](#template_fragment_dropped) · `warning` — Entry of {kind} from {owner} left out
@@ -1683,6 +1684,23 @@ The `contract/registry/warnings.json` dictionary is shared with LxBox: both apps
 
 - [`ssh`](protocols/ssh.md)
   - [`user`](protocols/ssh.md#body-user) — the field is absent → filled in with `root`
+
+<a id="tailscale_awg_core_unsupported"></a>
+### tailscale_awg_core_unsupported
+
+**severity:** `error` · **params:** `reason`
+
+**AWG/Tailscale is unavailable in this core**
+
+- **What happened:** The AWG profile requires a confirmed with_tailscale_awg capability ({reason}). The entire configuration was rejected and the previous configuration was retained.
+- **Why it happens:** The new integration cannot be inferred from with_awg and with_tailscale alone. Removing an endpoint or profile field could leak protected traffic.
+- **What you can do:**
+  - Use an engineering core with the with_tailscale_awg capability.
+  - Keep the current configuration until a compatible core is available.
+
+**Where it comes from:**
+
+- Node or subscription level: no field in the registry points at this code, so it is raised while the entry as a whole is being read.
 
 <a id="tailscale_core_unsupported"></a>
 ### tailscale_core_unsupported

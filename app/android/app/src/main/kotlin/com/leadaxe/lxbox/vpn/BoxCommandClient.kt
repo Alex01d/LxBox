@@ -450,6 +450,8 @@ class BoxCommandClient {
         val hi = e.health()
         while (hi != null && hi.hasNext()) hi.next()?.let { health.add(it) }
         m["health"] = health
+        // SPEC 143 / task 700: absent on the unchanged production AAR.
+        TailscaleAwgBridge.transport(e)?.let { m["transport"] = it }
         return m
     }
 

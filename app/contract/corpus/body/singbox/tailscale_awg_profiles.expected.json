@@ -1,0 +1,45 @@
+{
+  "meta": {
+    "body_kind": "singbox-config"
+  },
+  "nodes": [
+    {
+      "entry": {
+        "awg": {
+          "parameters": {
+            "h1": "100000-199999",
+            "h2": "200000-299999",
+            "h3": "300000-399999",
+            "h4": "400000-499999",
+            "s1": 64
+          },
+          "profile_id": "synthetic-v2",
+          "version": 2
+        },
+        "control_url": "https://headscale.example.invalid",
+        "type": "tailscale"
+      },
+      "kind": "endpoint",
+      "label": "ts-awg2",
+      "scheme": "tailscale"
+    },
+    {
+      "entry": {
+        "awg": {
+          "parameters": {
+            "content_padding_addition": "10-40",
+            "header_protection_key": "AQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQE="
+          },
+          "profile_id": "synthetic-v3",
+          "version": 3
+        },
+        "type": "tailscale",
+        "underlay_mode": "derp"
+      },
+      "kind": "endpoint",
+      "label": "ts-awg3",
+      "scheme": "tailscale"
+    }
+  ],
+  "v": 1
+}

@@ -22,3 +22,8 @@ var Registry embed.FS
 func ReadRegistry(name string) ([]byte, error) {
 	return fs.ReadFile(Registry, "registry/"+name)
 }
+
+// TailscaleAWGSchema is the normative atomic profile schema (SPEC 175).
+//
+//go:embed schema/tailscale_awg.schema.json
+var TailscaleAWGSchema []byte

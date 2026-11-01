@@ -66,6 +66,7 @@ flutter:
     - assets/contract/VERSION
     - assets/contract/registry/
     - assets/contract/registry/protocols/
+    - assets/contract/schema/
     # §480 — ЧЕРНОВЫЕ секции-мапперы, пока лаунчер не влил их в сам реестр:
     # исполняет движок маппера, и без бандлинга разбор остался бы без таблицы.
     # Загрузчик берёт секцию из реестра, если она там исполняемая, и только

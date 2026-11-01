@@ -17,6 +17,12 @@ NETWORKS с живым состоянием; его вкладка Network по�
 | Поглотила | `§435` (бывшая фича, отменена §575/§578) · задачи 437, 445, 449, 578, 579, 581 |
 | Состояние | ✅ написана по коду, 2026-09-29 |
 
+Задача 700 добавляет engineering-профили AWG и явную защиту частных сетей.
+Приёмка на физическом устройстве частичная: native AWG2/DERP bulk-stability gate
+и отложенный mobile handoff открыты. Задача701 проверяет исправление coexistence
+protected DNS и один VLESS-carrier comparison с исходным peer. Production pin
+ядра не изменён.
+
 ## Назначение
 
 Пользователь хочет добраться до машин своей tailnet (домашний NAS, сервер в
@@ -183,11 +189,25 @@ tailnet выглядит с телефона.
   состояние и число устройств, без имён и адресов». Мутация: список пиров в
   `GET /state`.
 
+- **P25. AWG — явный атомарный выбор транспорта.** Профили обычного Tailscale,
+  AWG2/AWG3 переживают импорт/правку/экспорт без личности устройства. Отсутствующая
+  или неизвестная поддержка ядра запрещает весь кандидат. Свидетель: проверки
+  профилей и atomic capability задачи 700; device acceptance впереди.
+- **P26. Настроенный/применённый транспорт отделён от связи.** Применение профиля
+  не обещает доступность пира. Свидетель: проверки optional status; отображение
+  на устройстве ещё не принято.
+- **P27. Явная защита частной сети не зависит от входа и состояния сети.**
+  Заданные CIDR/суффиксы остаются на выбранном узле; неверная цель, подмена DNS
+  и пересечение с обходом туннеля запрещают apply. Свидетель: builder-проверки
+  задачи 700, проверки persisted model и router-off startup задачи701 с
+  измеренными fallback counters. Полное logout/outage покрытие впереди;
+  ранняя утечка в модели без защиты остаётся failed test.
+
 ## Контролируемые параметры
 
 | Ручка | Значения | По умолчанию |
 |-------|----------|--------------|
-| Мастер → Tailscale: Tag, Auth key, Control URL, Hostname, Ephemeral, Accept routes, Exit node | строки, два тумблера; Auth key обязателен, маскирован с Show/Hide | `tailscale` · — · пусто · `LxBox-<модель>` · выкл · выкл · пусто |
+| Мастер → Tailscale: Tag, Auth key, Control URL, Hostname, Ephemeral, Accept routes, Exit node | строки, два тумблера; Auth key необязателен, маскирован с Show/Hide | `tailscale` · — · пусто · `LxBox-<модель>` · выкл · выкл · пусто |
 | Экран узла → «Skip Tailscale presets» | вкл/выкл; виден у своего узла Tailscale и члена папки, когда в шаблоне есть пресет с обходом, который его принимает | выкл |
 | Пресет «Tailscale networks» (`tailscale`) | вкл/выкл, сортируемый, `num` 945; переменная «DNS» (`dns_enable`) | вкл · DNS вкл |
 | DNS-сервер типа `tailscale` | `endpoint` (узел Tailscale, обязателен), `accept_default_resolvers` | — |
@@ -338,6 +358,7 @@ tailscale, tag, …тело, state_directory}`; от пресета — запи
 | Узел Tailscale | Создаёт и хранит endpoint Tailscale из мастера или sing-box JSON, гейтит его сборкой ядра и решает, может ли он быть Направлением. | P1–P5, P11 | [tailscale-node.ru.md](FUNCTIONS/tailscale-node.ru.md) |
 | Личность устройства и состояние | Даёт каждому узлу каталог состояния по стабильному ключу, сохраняет его при переименованиях, переносах и в Workspaces, удаляет вместе с узлом и держит вне бэкапа. | P6–P10 | [device-identity-and-state.ru.md](FUNCTIONS/device-identity-and-state.ru.md) |
 | DNS и маршруты tailnet | Обслуживает каждый узел Tailscale сервером MagicDNS и правилами `preferred_by` через пресет `tailscale`, с отказом «Skip Tailscale presets» и типом DNS-сервера `tailscale`. | P12–P18 | [tailnet-dns-and-routes.ru.md](FUNCTIONS/tailnet-dns-and-routes.ru.md) |
+| Профили транспорта | Выбор обычного Tailscale/AWG2/AWG3, атомарный перенос профиля, разделение его применения и доступности пира. | P25–P26 | [peer-transport.ru.md](FUNCTIONS/peer-transport.ru.md) |
 | Вкладка Network | Показывает на экране узла состояние, это устройство, устройства tailnet и exit node, переключает выход на ходу и записывает его в тело. | P19–P24 | [networks-tab.ru.md](FUNCTIONS/networks-tab.ru.md) |
 
 ## Связанные фичи

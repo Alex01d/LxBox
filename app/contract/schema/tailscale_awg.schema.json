@@ -1,0 +1,266 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://leadaxe.github.io/singbox-launcher/contract/tailscale_awg.schema.json",
+  "title": "Embedded Tailscale AWG profile",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "version",
+    "parameters"
+  ],
+  "properties": {
+    "version": {
+      "type": "integer",
+      "enum": [
+        2,
+        3
+      ]
+    },
+    "profile_id": {
+      "type": "string",
+      "pattern": "^(?:[A-Za-z0-9._-]{1,64})?$"
+    },
+    "parameters": {
+      "type": "object",
+      "minProperties": 1,
+      "additionalProperties": false,
+      "properties": {
+        "jc": {
+          "description": "Number of junk packets sent before the handshake.",
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 4294967295
+        },
+        "jmin": {
+          "description": "Minimum size of a junk packet.",
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 4294967295
+        },
+        "jmax": {
+          "description": "Maximum size of a junk packet.",
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 4294967295
+        },
+        "s1": {
+          "description": "Junk prepended to the handshake initiation packet.",
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 4294967295
+        },
+        "s2": {
+          "description": "Junk prepended to the handshake response packet.",
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 4294967295
+        },
+        "s3": {
+          "description": "Junk prepended to the cookie reply packet.",
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 4294967295
+        },
+        "s4": {
+          "description": "Junk prepended to every transport packet.",
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 4294967295
+        },
+        "h1": {
+          "description": "Magic header of the handshake initiation packet.",
+          "oneOf": [
+            {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 4294967295
+            },
+            {
+              "type": "string",
+              "pattern": "^\\s*\\d+\\s*(-\\s*\\d+\\s*)?$"
+            }
+          ]
+        },
+        "h2": {
+          "description": "Magic header of the handshake response packet.",
+          "oneOf": [
+            {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 4294967295
+            },
+            {
+              "type": "string",
+              "pattern": "^\\s*\\d+\\s*(-\\s*\\d+\\s*)?$"
+            }
+          ]
+        },
+        "h3": {
+          "description": "Magic header of the cookie reply packet.",
+          "oneOf": [
+            {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 4294967295
+            },
+            {
+              "type": "string",
+              "pattern": "^\\s*\\d+\\s*(-\\s*\\d+\\s*)?$"
+            }
+          ]
+        },
+        "h4": {
+          "description": "Magic header of the transport packet.",
+          "oneOf": [
+            {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 4294967295
+            },
+            {
+              "type": "string",
+              "pattern": "^\\s*\\d+\\s*(-\\s*\\d+\\s*)?$"
+            }
+          ]
+        },
+        "i1": {
+          "description": "First custom junk packet.",
+          "type": "string",
+          "pattern": "^[^\\r\\n\\x00]*$"
+        },
+        "i2": {
+          "description": "Second custom junk packet.",
+          "type": "string",
+          "pattern": "^[^\\r\\n\\x00]*$"
+        },
+        "i3": {
+          "description": "Third custom junk packet.",
+          "type": "string",
+          "pattern": "^[^\\r\\n\\x00]*$"
+        },
+        "i4": {
+          "description": "Fourth custom junk packet.",
+          "type": "string",
+          "pattern": "^[^\\r\\n\\x00]*$"
+        },
+        "i5": {
+          "description": "Fifth custom junk packet.",
+          "type": "string",
+          "pattern": "^[^\\r\\n\\x00]*$"
+        },
+        "id": {
+          "description": "Masquerade domain name.",
+          "type": "string",
+          "pattern": "^[^\\r\\n\\x00]*$"
+        },
+        "ip": {
+          "description": "Protocol the traffic is masqueraded as.",
+          "type": "string",
+          "pattern": "^[^\\r\\n\\x00]*$"
+        },
+        "ib": {
+          "description": "Client profile imitated inside the masquerade.",
+          "type": "string",
+          "pattern": "^[^\\r\\n\\x00]*$"
+        },
+        "header_protection_key": {
+          "description": "Key protecting packet headers.",
+          "type": "string",
+          "pattern": "^[^\\r\\n\\x00]*$"
+        },
+        "content_padding_addition": {
+          "description": "Extra content padding, number or range.",
+          "oneOf": [
+            {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 4294967295
+            },
+            {
+              "type": "string",
+              "pattern": "^\\s*\\d+\\s*(-\\s*\\d+\\s*)?$"
+            }
+          ]
+        },
+        "rekey_after_time": {
+          "description": "Rekey after this many seconds.",
+          "oneOf": [
+            {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 4294967295
+            },
+            {
+              "type": "string",
+              "pattern": "^\\s*\\d+\\s*(-\\s*\\d+\\s*)?$"
+            }
+          ]
+        },
+        "rekey_timeout": {
+          "description": "Rekey attempt timeout in seconds.",
+          "oneOf": [
+            {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 4294967295
+            },
+            {
+              "type": "string",
+              "pattern": "^\\s*\\d+\\s*(-\\s*\\d+\\s*)?$"
+            }
+          ]
+        },
+        "reject_after_time": {
+          "description": "Reject the session after this many seconds.",
+          "oneOf": [
+            {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 4294967295
+            },
+            {
+              "type": "string",
+              "pattern": "^\\s*\\d+\\s*(-\\s*\\d+\\s*)?$"
+            }
+          ]
+        },
+        "keepalive_timeout": {
+          "description": "Keepalive timeout in seconds.",
+          "oneOf": [
+            {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 4294967295
+            },
+            {
+              "type": "string",
+              "pattern": "^\\s*\\d+\\s*(-\\s*\\d+\\s*)?$"
+            }
+          ]
+        },
+        "max_handshake_attempts": {
+          "description": "Maximum handshake attempts, count not seconds.",
+          "oneOf": [
+            {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 4294967295
+            },
+            {
+              "type": "string",
+              "pattern": "^\\s*\\d+\\s*(-\\s*\\d+\\s*)?$"
+            }
+          ]
+        },
+        "random_trailers": {
+          "description": "Append random trailing bytes to packets.",
+          "type": "boolean"
+        },
+        "disable_cookies": {
+          "description": "Disable the cookie mechanism.",
+          "type": "boolean"
+        }
+      }
+    }
+  }
+}

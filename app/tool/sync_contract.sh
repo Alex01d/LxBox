@@ -27,6 +27,8 @@
 #     не меняются.
 #   LX_CONTRACT_SRC=<путь> или --to <sha> — БАМП: полная синхронизация из
 #     рабочего дерева или указанного коммита лаунчера, пересчёт lock и зеркал.
+#   Для замороженного дерева вне репозитория можно задать LX_CONTRACT_REPO и
+#     LX_CONTRACT_SOURCE_SHA, чтобы lock сохранял проверенную provenance.
 #
 # Идемпотентен: повторный бамп с тем же источником даёт тот же контент и
 # пересчитанный (но при отсутствии изменений идентичный) sha256/synced_at.
@@ -54,7 +56,7 @@ LX_CONTRACT_SRC_EXPLICIT=0
 # существует, и под `set -u` ловушка печатала `tmp: unbound variable`, а
 # каталог не удалялся вовсе.
 SYNC_TMP=""
-_sync_cleanup() { [[ -n "$SYNC_TMP" ]] && rm -rf "$SYNC_TMP"; }
+_sync_cleanup() { if [[ -n "$SYNC_TMP" ]]; then rm -rf "$SYNC_TMP"; fi; }
 trap _sync_cleanup EXIT
 
 if [[ -n "${LX_CONTRACT_SRC:-}" ]]; then
@@ -75,6 +77,7 @@ while [[ $# -gt 0 ]]; do
   bash app/tool/sync_contract.sh              восстановить app/contract из lock
   bash app/tool/sync_contract.sh --to <sha>   бамп с коммита лаунчера
   LX_CONTRACT_SRC=<path> bash app/tool/sync_contract.sh   бамп из каталога
+  LX_CONTRACT_SRC=<path> LX_CONTRACT_REPO=<repo> LX_CONTRACT_SOURCE_SHA=<commit> bash app/tool/sync_contract.sh
 
 Восстановление не трогает assets/contract, docs/contract и contract.lock.
 Бамп пересобирает копию, lock и оба зеркала.
@@ -130,7 +133,15 @@ _restore_contract() {
   source_sha="$(_lock_field source_sha)"
   # §487 worktree_bootstrap использует LX_CONTRACT_REPO; LX_LAUNCHER_REPO —
   # то же для явного бампа. Поле lock — если скрипт сам его записал.
-  launcher_repo="${LX_CONTRACT_REPO:-${LX_LAUNCHER_REPO:-$(_lock_field launcher_repo)}}"
+  launcher_repo="${LX_CONTRACT_REPO:-${LX_LAUNCHER_REPO:-}}"
+  if [[ -z "$launcher_repo" ]]; then
+    launcher_repo="$(_lock_field launcher_repo)"
+    # Portable lock hints are relative to this repository, not the caller cwd.
+    # Explicit environment overrides retain their existing path semantics.
+    if [[ -n "$launcher_repo" && "$launcher_repo" != /* ]]; then
+      launcher_repo="$REPO_DIR/$launcher_repo"
+    fi
+  fi
   if [[ -z "$launcher_repo" ]]; then
     launcher_repo="$DEFAULT_LAUNCHER_REPO"
   fi
@@ -203,10 +214,17 @@ _bump_contract() {
     fi
     launcher_repo="$(_launcher_repo_from_src "$contract_src" || true)"
     if [[ -z "$launcher_repo" ]]; then
-      launcher_repo="$DEFAULT_LAUNCHER_REPO"
+      launcher_repo="${LX_CONTRACT_REPO:-${LX_LAUNCHER_REPO:-$DEFAULT_LAUNCHER_REPO}}"
     fi
     if [[ -d "$launcher_repo/.git" ]]; then
-      source_sha="$(git -C "$launcher_repo" rev-parse HEAD)"
+      if [[ -n "${LX_CONTRACT_SOURCE_SHA:-}" ]]; then
+        source_sha="$(git -C "$launcher_repo" rev-parse --verify "${LX_CONTRACT_SOURCE_SHA}^{commit}")" || {
+          echo "sync_contract: LX_CONTRACT_SOURCE_SHA is not a commit in $launcher_repo" >&2
+          exit 1
+        }
+      else
+        source_sha="$(git -C "$launcher_repo" rev-parse HEAD)"
+      fi
     else
       source_sha=""
     fi
@@ -228,6 +246,12 @@ _bump_contract() {
   cp "$DEST_DIR/VERSION" "$ASSETS_DIR/VERSION"
   cp "$DEST_DIR"/registry/*.json "$ASSETS_DIR/registry/"
   cp "$DEST_DIR"/registry/protocols/*.json "$ASSETS_DIR/registry/protocols/"
+  # Atomic profiles are edited against the same schema that defines the core
+  # contract. Keep this copy byte-for-byte, just like the registry mirror.
+  if [[ -f "$DEST_DIR/schema/tailscale_awg.schema.json" ]]; then
+    mkdir -p "$ASSETS_DIR/schema"
+    cp "$DEST_DIR/schema/tailscale_awg.schema.json" "$ASSETS_DIR/schema/"
+  fi
 
   cat > "$LOCK_FILE" <<EOF
 source=$contract_src

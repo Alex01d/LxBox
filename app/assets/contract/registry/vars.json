@@ -2,6 +2,18 @@
   "v": 1,
   "note": "Реестр имён template-переменных обоих проектов. Источники: singbox-launcher bin/wizard_template.json (vars[]) и LxBox app/assets/wizard_template.json (sections[].vars[]). portable=true — имя есть в обоих шаблонах с одинаковой семантикой: только такие имена допустимы в секции vars бэкапа (PLAN §7). App-флаги LxBox (_appFeatureFlagVars, settings_storage.dart:164) и preset-локальные vars в реестр не входят. Типы — канон TEMPLATE_LANG.md §2.2; где типы сторон расходятся, это указано в note.",
   "vars": {
+    "desktop_command_api": {
+      "type": "bool",
+      "portable": false,
+      "in": "desktop",
+      "note": "SPEC 175: opt-in authenticated loopback StartedService for Linux classic Tailscale; default false."
+    },
+    "desktop_command_api_port": {
+      "type": "number",
+      "portable": false,
+      "in": "desktop",
+      "note": "SPEC 175: local-only API port; private secret uses nonportable clash_secret."
+    },
     "log_level": {
       "type": "enum",
       "portable": true,

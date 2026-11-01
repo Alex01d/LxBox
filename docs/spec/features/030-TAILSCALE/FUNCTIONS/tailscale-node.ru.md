@@ -25,8 +25,8 @@ sing-box JSON, хранит его как тело с `tag` (ссылки шар
 
 | Что | Значение |
 |-----|----------|
-| Поля мастера | Tag (необязателен, пусто → `tailscale`, добавляется эмодзи 🕸️), Auth key (обязателен, маскирован), Control URL, Hostname (заполнен `LxBox-<модель>`), Ephemeral, Accept routes, Exit node |
-| Тело от мастера | `auth_key` плюс только заполненные поля; булевы только как `true` |
+| Поля мастера | Tag (необязателен, пусто → `tailscale`, добавляется эмодзи 🕸️), Auth key (необязателен, маскирован), Control URL, Hostname (заполнен `LxBox-<модель>`), Ephemeral, Accept routes, Exit node |
+| Тело от мастера | `auth_key` только при заполнении, плюс остальные заполненные поля; булевы только как `true` |
 | Тело из JSON | как есть, минус `type`, `tag`, `detour`; незнакомые ключи сохраняются с кодом `json_field_unknown` |
 | Проверки реестра | `exit_node` конфликтует с `advertise_exit_node`; `exit_node_allow_lan_access` требует `exit_node`; маршрут по умолчанию в `advertise_routes` снимается с кодом `tailscale_default_route_advertised` |
 | Гейт ядра | тег сборки `with_tailscale`; его нет → узел снят с кодом `tailscale_core_unsupported` |
@@ -107,3 +107,9 @@ outbound'ов; тело подписки; теги сборки ядра.
 | 6 | [585](../../../tasks/585-unknown-node-type-accepted.md) | Implemented | Незнакомые типы узлов принимаются; перечень endpoint'ов в коде |
 | 7 | [586](../../../tasks/586-endpoint-types-from-registry.md) | Implemented | Раздел endpoint задаёт `kind` реестра, а не код |
 | 8 | [608](../../../tasks/608-tailscale-exit-node-in-node-row.md) | Implemented | Строка узла: имя exit node, `exit offline`, срок ключа |
+
+## Ревизия задачи 700
+
+Headscale допускает интерактивный вход без auth key. Редактор профиля транспорта
+доступен до VPN/входа; правка существующей записи сохраняет её личность. См.
+[профили транспорта](peer-transport.ru.md). Приёмка на устройстве впереди.
