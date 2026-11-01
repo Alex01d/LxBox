@@ -742,5 +742,29 @@
   },
   "fe80::/10 · IPv6 link-local": {
     "value": "fe80::/10 · IPv6 link-local"
+  },
+  "Protected Tailscale networks": {
+    "value": "Защищённые сети Tailscale"
+  },
+  "Keep these networks and private names on the selected Tailscale endpoint, including before login and during outages. Choose the endpoint explicitly.": {
+    "value": "Направлять эти сети и частные имена через выбранный узел Tailscale, в том числе до входа и при сбоях. Явно выберите узел."
+  },
+  "Tailscale endpoint": {
+    "value": "Узел Tailscale"
+  },
+  "Select the Tailscale endpoint that owns these networks.": {
+    "value": "Выберите узел Tailscale, через который доступны эти сети."
+  },
+  "Protected CIDRs": {
+    "value": "Защищённые CIDR"
+  },
+  "One CIDR per line. These networks must never fall back to direct or VLESS.": {
+    "value": "Один CIDR на строку. Трафик этих сетей не должен переключаться на прямое соединение или VLESS."
+  },
+  "Private DNS suffixes": {
+    "value": "Частные DNS-суффиксы"
+  },
+  "One suffix per line. Resolve these names through the selected endpoint without public DNS fallback.": {
+    "value": "Один суффикс на строку. Разрешать эти имена через выбранный узел без переключения на публичный DNS."
   }
 }

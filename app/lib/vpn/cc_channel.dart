@@ -131,8 +131,8 @@ class CcChannel {
   // потребитель один — лист проверки.
   late final Stream<CcTailscalePingResult> _tailscalePingStream =
       _tailscalePingChannel.receiveBroadcastStream().map(
-            (e) => CcTailscalePingResult.fromMap(_asMap(e)),
-          );
+        (e) => CcTailscalePingResult.fromMap(_asMap(e)),
+      );
 
   /// §581 — поток ответов [startTailscalePing]. Слушать до старта.
   Stream<CcTailscalePingResult> get tailscalePing => _tailscalePingStream;
@@ -141,11 +141,11 @@ class CcChannel {
   // карт), здесь они разворачиваются в одиночные события без кэша.
   late final Stream<ConnectionTestEvent> _connectionTestStream =
       _connectionTestChannel.receiveBroadcastStream().expand(
-            (e) => [
-              for (final m in e is List ? e : [e])
-                if (m is Map) ConnectionTestEvent.fromMap(_asMap(m)),
-            ],
-          );
+        (e) => [
+          for (final m in e is List ? e : [e])
+            if (m is Map) ConnectionTestEvent.fromMap(_asMap(m)),
+        ],
+      );
 
   /// §687 — поток событий [startConnectionTest]. Слушать до старта.
   Stream<ConnectionTestEvent> get connectionTest => _connectionTestStream;
@@ -291,7 +291,9 @@ class CcChannel {
   /// один раз.
   Future<String?> takeOpenConnectOpenRequest() async {
     try {
-      return await _methods.invokeMethod<String>('ccTakeOpenConnectOpenRequest');
+      return await _methods.invokeMethod<String>(
+        'ccTakeOpenConnectOpenRequest',
+      );
     } on PlatformException {
       return null;
     } on MissingPluginException {
@@ -305,14 +307,13 @@ class CcChannel {
     String tag,
     String challengeId,
     List<MapEntry<String, String>> values,
-  ) =>
-      _invokeError('ccSubmitOpenConnectForm', {
-        'tag': tag,
-        'challenge_id': challengeId,
-        'values': [
-          for (final v in values) {'key': v.key, 'value': v.value},
-        ],
-      });
+  ) => _invokeError('ccSubmitOpenConnectForm', {
+    'tag': tag,
+    'challenge_id': challengeId,
+    'values': [
+      for (final v in values) {'key': v.key, 'value': v.value},
+    ],
+  });
 
   /// §654 C — отмена челленджа: ядро логинится заново (новый код).
   Future<String?> cancelOpenConnectChallenge(String tag, String challengeId) =>
@@ -328,15 +329,15 @@ class CcChannel {
     String challengeId,
     int port,
     List<String> prefixes,
-  ) =>
-      _invokeError('ccStartOpenConnectCallback', {
-        'tag': tag,
-        'challenge_id': challengeId,
-        'port': port,
-        'prefixes': prefixes,
-      });
+  ) => _invokeError('ccStartOpenConnectCallback', {
+    'tag': tag,
+    'challenge_id': challengeId,
+    'port': port,
+    'prefixes': prefixes,
+  });
 
-  Future<void> stopOpenConnectCallback() => _invoke('ccStopOpenConnectCallback');
+  Future<void> stopOpenConnectCallback() =>
+      _invoke('ccStopOpenConnectCallback');
 
   /// §579 — поднять / снять подписку ядра на состояние узлов Tailscale.
   Future<void> startTailscaleStatus() => _invoke('ccStartTailscaleStatus');
@@ -539,17 +540,15 @@ class CcChannel {
     int maxBytes = 0,
     String userAgent = '',
   }) async {
-    final r = await _methods.invokeMethod<Map<dynamic, dynamic>>(
-      'probeGetUrl',
-      {
-        'runId': runId,
-        'tag': tag,
-        'link': link,
-        'timeoutMs': timeoutMs,
-        'maxBytes': maxBytes,
-        'userAgent': userAgent,
-      },
-    );
+    final r = await _methods
+        .invokeMethod<Map<dynamic, dynamic>>('probeGetUrl', {
+          'runId': runId,
+          'tag': tag,
+          'link': link,
+          'timeoutMs': timeoutMs,
+          'maxBytes': maxBytes,
+          'userAgent': userAgent,
+        });
     return CcGetUrlResult.fromMap(_asMap(r ?? const {}));
   }
 
@@ -575,16 +574,14 @@ class CcChannel {
     int maxBytes = 0,
     String userAgent = '',
   }) async {
-    final r = await _methods.invokeMethod<Map<dynamic, dynamic>>(
-      'ccGetUrlViaOutbound',
-      {
-        'tag': tag,
-        'link': link,
-        'timeoutMs': timeoutMs,
-        'maxBytes': maxBytes,
-        'userAgent': userAgent,
-      },
-    );
+    final r = await _methods
+        .invokeMethod<Map<dynamic, dynamic>>('ccGetUrlViaOutbound', {
+          'tag': tag,
+          'link': link,
+          'timeoutMs': timeoutMs,
+          'maxBytes': maxBytes,
+          'userAgent': userAgent,
+        });
     return CcGetUrlResult.fromMap(_asMap(r ?? const {}));
   }
 
@@ -698,7 +695,9 @@ class CcChannel {
   /// Отказ ядра — [PlatformException] с кодом из [CcStatusError].
   Future<CcWireGuardStatus> getWireGuardStatus(String tag) async {
     final r = await _methods.invokeMethod<Map<dynamic, dynamic>>(
-        'ccGetWireGuardStatus', {'tag': tag});
+      'ccGetWireGuardStatus',
+      {'tag': tag},
+    );
     return CcWireGuardStatus.fromMap(_asMap(r));
   }
 
@@ -750,6 +749,7 @@ class CcTailscaleStatus {
     this.exitNode,
     this.userGroups = const [],
     this.health = const [],
+    this.transport,
   });
 
   final String tag;
@@ -773,14 +773,17 @@ class CcTailscaleStatus {
   /// офлайн и т.п.), текст ядра; пусто — предупреждать не о чем.
   final List<String> health;
 
+  /// Optional on older native/core versions. Applied mode is a device setting,
+  /// not proof of a working peer tunnel or application data plane.
+  final CcTailscaleTransport? transport;
+
   /// Все устройства сети без своего узла.
-  List<CcTailscalePeer> get peers => [
-        for (final g in userGroups) ...g.peers,
-      ];
+  List<CcTailscalePeer> get peers => [for (final g in userGroups) ...g.peers];
 
   factory CcTailscaleStatus.fromMap(Map<String, dynamic> m) {
     final self = m['self'];
     final exit = m['exit_node'];
+    final transport = m['transport'];
     return CcTailscaleStatus(
       tag: '${m['tag'] ?? ''}',
       backendState: '${m['backend_state'] ?? ''}',
@@ -789,9 +792,12 @@ class CcTailscaleStatus {
       networkName: '${m['network_name'] ?? ''}',
       magicDnsSuffix: '${m['magic_dns_suffix'] ?? ''}',
       keyAuth: m['key_auth'] == true,
-      self: self is Map ? CcTailscalePeer.fromMap(CcChannel._asMap(self)) : null,
-      exitNode:
-          exit is Map ? CcTailscalePeer.fromMap(CcChannel._asMap(exit)) : null,
+      self: self is Map
+          ? CcTailscalePeer.fromMap(CcChannel._asMap(self))
+          : null,
+      exitNode: exit is Map
+          ? CcTailscalePeer.fromMap(CcChannel._asMap(exit))
+          : null,
       userGroups: [
         for (final g in CcChannel._asList(m['user_groups']))
           if (g is Map) CcTailscaleUserGroup.fromMap(CcChannel._asMap(g)),
@@ -800,16 +806,52 @@ class CcTailscaleStatus {
         for (final h in CcChannel._asList(m['health']))
           if (h != null && '$h'.isNotEmpty) '$h',
       ],
+      transport: transport is Map
+          ? CcTailscaleTransport.fromMap(CcChannel._asMap(transport))
+          : null,
     );
   }
 
   /// Сообщение канала — список map'ов; всё прочее и записи без тега
   /// отбрасываются.
   static List<CcTailscaleStatus> listFrom(Object? e) => [
-        for (final m in CcChannel._asList(e))
-          if (m is Map)
-            CcTailscaleStatus.fromMap(CcChannel._asMap(m)),
-      ].where((s) => s.tag.isNotEmpty).toList();
+    for (final m in CcChannel._asList(e))
+      if (m is Map) CcTailscaleStatus.fromMap(CcChannel._asMap(m)),
+  ].where((s) => s.tag.isNotEmpty).toList();
+}
+
+class CcTailscaleTransport {
+  const CcTailscaleTransport({
+    this.configuredMode = '',
+    this.appliedMode = '',
+    this.profileId = '',
+    this.profileFingerprint = '',
+    this.applied = false,
+    this.lastError = '',
+  });
+
+  final String configuredMode;
+  final String appliedMode;
+  final String profileId;
+  final String profileFingerprint;
+  final bool applied;
+  final String lastError;
+
+  factory CcTailscaleTransport.fromMap(Map<String, dynamic> m) =>
+      CcTailscaleTransport(
+        configuredMode: m['configured_mode'] is String
+            ? m['configured_mode'] as String
+            : '',
+        appliedMode: m['applied_mode'] is String
+            ? m['applied_mode'] as String
+            : '',
+        profileId: m['profile_id'] is String ? m['profile_id'] as String : '',
+        profileFingerprint: m['profile_fingerprint'] is String
+            ? m['profile_fingerprint'] as String
+            : '',
+        applied: m['applied'] == true,
+        lastError: m['last_error'] is String ? m['last_error'] as String : '',
+      );
 }
 
 /// §645 — ответ [CcChannel.getTailscaleStatus]: запись endpoint'а; без неё —
@@ -883,8 +925,9 @@ class CcTailscalePeer {
   final int lastHandshake;
 
   /// MagicDNS-имя без точки в конце.
-  String get dnsNameClean =>
-      dnsName.endsWith('.') ? dnsName.substring(0, dnsName.length - 1) : dnsName;
+  String get dnsNameClean => dnsName.endsWith('.')
+      ? dnsName.substring(0, dnsName.length - 1)
+      : dnsName;
 
   /// Первый адрес (IPv4 идёт первым у ядра); пусто — адресов нет.
   String get firstIp => ips.isEmpty ? '' : ips.first;
@@ -892,27 +935,27 @@ class CcTailscalePeer {
   static int _int(Object? v) => v is num ? v.toInt() : 0;
 
   factory CcTailscalePeer.fromMap(Map<String, dynamic> m) => CcTailscalePeer(
-        stableId: '${m['stable_id'] ?? ''}',
-        hostName: '${m['host_name'] ?? ''}',
-        dnsName: '${m['dns_name'] ?? ''}',
-        os: '${m['os'] ?? ''}',
-        online: m['online'] == true,
-        exitNode: m['exit_node'] == true,
-        exitNodeOption: m['exit_node_option'] == true,
-        shareeNode: m['sharee_node'] == true,
-        expired: m['expired'] == true,
-        keyExpiry: _int(m['key_expiry']),
-        lastSeen: _int(m['last_seen']),
-        ips: [
-          for (final ip in CcChannel._asList(m['ips']))
-            if (ip != null && '$ip'.isNotEmpty) '$ip',
-        ],
-        path: '${m['path'] ?? ''}'.toLowerCase(),
-        endpoint: '${m['endpoint'] ?? ''}',
-        peerRelay: '${m['peer_relay'] ?? ''}',
-        derpRegionCode: '${m['derp_region_code'] ?? ''}',
-        lastHandshake: _int(m['last_handshake']),
-      );
+    stableId: '${m['stable_id'] ?? ''}',
+    hostName: '${m['host_name'] ?? ''}',
+    dnsName: '${m['dns_name'] ?? ''}',
+    os: '${m['os'] ?? ''}',
+    online: m['online'] == true,
+    exitNode: m['exit_node'] == true,
+    exitNodeOption: m['exit_node_option'] == true,
+    shareeNode: m['sharee_node'] == true,
+    expired: m['expired'] == true,
+    keyExpiry: _int(m['key_expiry']),
+    lastSeen: _int(m['last_seen']),
+    ips: [
+      for (final ip in CcChannel._asList(m['ips']))
+        if (ip != null && '$ip'.isNotEmpty) '$ip',
+    ],
+    path: '${m['path'] ?? ''}'.toLowerCase(),
+    endpoint: '${m['endpoint'] ?? ''}',
+    peerRelay: '${m['peer_relay'] ?? ''}',
+    derpRegionCode: '${m['derp_region_code'] ?? ''}',
+    lastHandshake: _int(m['last_handshake']),
+  );
 }
 
 /// §613 (ядро SPEC 115) — значения `TailscalePeer.path`. Строки ядра
@@ -1338,10 +1381,9 @@ class CcConnection {
       !compact && network.isNotEmpty ? '[$network] $ruleText' : ruleText,
     );
     if (chains.length > 1) {
-      inner.addAll(chains
-          .sublist(1)
-          .reversed
-          .map((t) => directionTagDisplay(t, labels)));
+      inner.addAll(
+        chains.sublist(1).reversed.map((t) => directionTagDisplay(t, labels)),
+      );
     }
     sb.write(inner.join(' ⇒ '));
     // §252 — физический путь (→ по ходу пакета): транспорт изнутри наружу

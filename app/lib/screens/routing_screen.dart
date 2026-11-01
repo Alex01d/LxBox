@@ -194,9 +194,11 @@ class _RoutingScreenState extends State<RoutingScreen>
     // «ждёт скачивания» становится рабочей без переоткрытия.
     _ruleSetCacheSub = RuleSetDownloader.changes.listen((_) {
       if (!mounted || _loading) return;
-      unawaited(_refreshSrsCache().then((_) {
-        if (mounted) setState(() {});
-      }));
+      unawaited(
+        _refreshSrsCache().then((_) {
+          if (mounted) setState(() {});
+        }),
+      );
     });
   }
 
@@ -241,8 +243,7 @@ class _RoutingScreenState extends State<RoutingScreen>
         _sharedResyncAgain = false;
         await _reloadSharedBuffers();
       } while (_sharedResyncAgain && mounted);
-    }()
-        .whenComplete(() => _sharedResync = null);
+    }().whenComplete(() => _sharedResync = null);
     unawaited(_sharedResync);
   }
 
@@ -271,8 +272,10 @@ class _RoutingScreenState extends State<RoutingScreen>
     // §674 — источники поменялись: пул пересчитать (с отсрочкой — контроллер
     // уведомляет пачками).
     _nodePoolDebounce?.cancel();
-    _nodePoolDebounce =
-        Timer(const Duration(milliseconds: 300), _refreshNodePool);
+    _nodePoolDebounce = Timer(
+      const Duration(milliseconds: 300),
+      _refreshNodePool,
+    );
     if (!mounted || _loading) return;
     // §578/§643 — строка пресета с `for_each_node` показывает обслуживаемые
     // узлы: правка источника (включение, `skip_tailscale_presets`,
@@ -286,11 +289,10 @@ class _RoutingScreenState extends State<RoutingScreen>
   /// §578/§643 — узлы источников для пресетов с обходом узлов (строка
   /// пресета и превью редактора), см. [presetNodesForView].
   List<PresetNode> _presetViewNodes() => presetNodesForView(
-        [for (final e in widget.subController.entries) e.list],
-        nodeTypes:
-            presetLoopNodeTypes(_template?.selectableRules ?? const []),
-        lastEmittedTagMap: widget.subController.lastEmittedTagMap,
-      );
+    [for (final e in widget.subController.entries) e.list],
+    nodeTypes: presetLoopNodeTypes(_template?.selectableRules ?? const []),
+    lastEmittedTagMap: widget.subController.lastEmittedTagMap,
+  );
 
   /// §258 — после загрузки Направлений: скролл к focusDirectionTag + вспышка 2.2 с
   /// (зеркало _focusMember в folder_detail_screen, §255).
@@ -338,8 +340,12 @@ class _RoutingScreenState extends State<RoutingScreen>
   /// См. [RoutingHelpers.presetNeedsDownload].
   @override
   bool _presetNeedsDownload(CustomRulePreset rule, SelectableRule preset) =>
-      RoutingHelpers.presetNeedsDownload(rule, preset, _srsCached,
-          globalVars: _userVars);
+      RoutingHelpers.presetNeedsDownload(
+        rule,
+        preset,
+        _srsCached,
+        globalVars: _userVars,
+      );
 
   /// §219 — сбросить кэш опций после мутации `_directions`.
   @override
@@ -382,11 +388,11 @@ class _RoutingScreenState extends State<RoutingScreen>
                   RoutingTab.rules.index;
               if (!onRulesTab) return const SizedBox.shrink();
               return RulesMenuButton(
-              // §398 — пресеты не экспортируются; при этом уйти на шаг
-              // DNS можно и без правил, поэтому гейт снят до «есть хоть
-              // какие-то настройки» (пустой storage — экран пуст в любом
-              // случае).
-              canExport: true,
+                // §398 — пресеты не экспортируются; при этом уйти на шаг
+                // DNS можно и без правил, поэтому гейт снят до «есть хоть
+                // какие-то настройки» (пустой storage — экран пуст в любом
+                // случае).
+                canExport: true,
                 onExport: _exportRules,
                 onImport: _importRules,
               );
@@ -479,12 +485,11 @@ class _RoutingScreenState extends State<RoutingScreen>
               border: Border(left: BorderSide(color: cs.error, width: 3)),
             )
           : highlighted
-              ? BoxDecoration(
-                  color: cs.primaryContainer.withValues(alpha: 0.5),
-                  border:
-                      Border(left: BorderSide(color: cs.primary, width: 3)),
-                )
-              : null,
+          ? BoxDecoration(
+              color: cs.primaryContainer.withValues(alpha: 0.5),
+              border: Border(left: BorderSide(color: cs.primary, width: 3)),
+            )
+          : null,
       child: RoutingDirectionTile(
         direction: direction,
         dragIndex: index,
@@ -527,12 +532,18 @@ class _RoutingScreenState extends State<RoutingScreen>
     final b = directionMoveBounds(_directions, oldIndex);
     final moving = _directions[oldIndex];
     final String? blocked = newIndex > b.max
-        ? getLocalText.s('Cannot move: "%s" includes "%s"',
-            b.includedBy!.displayLabel, moving.displayLabel)
+        ? getLocalText.s(
+            'Cannot move: "%s" includes "%s"',
+            b.includedBy!.displayLabel,
+            moving.displayLabel,
+          )
         : newIndex < b.min
-            ? getLocalText.s('Cannot move: "%s" includes "%s"',
-                moving.displayLabel, b.includesAbove!.displayLabel)
-            : null;
+        ? getLocalText.s(
+            'Cannot move: "%s" includes "%s"',
+            moving.displayLabel,
+            b.includesAbove!.displayLabel,
+          )
+        : null;
     if (blocked != null) {
       ScaffoldMessenger.of(context)
         ..hideCurrentSnackBar()
@@ -610,7 +621,8 @@ class _RoutingScreenState extends State<RoutingScreen>
     // §393 A3 — include-heal бывает ТОЛЬКО на удалении, и там `ruleLead` уже
     // «deleted»: одиночный include-heal (правила и detour'ы на Направление не
     // ссылались) берёт ту же вводную, а не detour'ную.
-    final lead = healed.rules > 0 ||
+    final lead =
+        healed.rules > 0 ||
             healed.includes > 0 ||
             healed.chainPositions > 0 ||
             healed.dnsServers > 0
@@ -636,8 +648,9 @@ class _RoutingScreenState extends State<RoutingScreen>
   /// без побочных эффектов). Возвращает тот же future, что получит редактор.
   Future<List<String>> _refreshNodePool() {
     final gen = ++_nodePoolGen;
-    final f = directionPoolPreview(
-        [for (final e in widget.subController.entries) e.list]);
+    final f = directionPoolPreview([
+      for (final e in widget.subController.entries) e.list,
+    ]);
     _nodePoolFuture = f;
     f.then(
       (v) {
@@ -734,7 +747,10 @@ class _RoutingScreenState extends State<RoutingScreen>
       // §202/§248/§274 — persist Направления: disable лечит оба рода ссылок,
       // flag-unset — detour-ссылки; счётчики — в SnackBar ниже.
       // §275 — DirectionMutations зеркалит detour-heal в _entries контроллера.
-      final healed = await DirectionMutations.update(saved, widget.subController);
+      final healed = await DirectionMutations.update(
+        saved,
+        widget.subController,
+      );
       if (!mounted) return;
       await _resyncHealedRefs(healed);
       if (!mounted) return;
@@ -838,11 +854,11 @@ class _RoutingScreenState extends State<RoutingScreen>
     // порождает сам), правила — только пользовательские inline/srs.
     final dnsServers = [
       for (final s in await SettingsStorage.getDnsServers())
-        if (s is! DnsServerPreset) s
+        if (s is! DnsServerPreset) s,
     ];
     final dnsRules = [
       for (final r in await SettingsStorage.getDnsRulesList())
-        if (r is DnsRuleInline || r is DnsRuleSrs) r
+        if (r is DnsRuleInline || r is DnsRuleSrs) r,
     ];
     if (!mounted) return;
     final selected = await showRuleExportPicker(
@@ -852,7 +868,7 @@ class _RoutingScreenState extends State<RoutingScreen>
       dnsServers: dnsServers,
       dnsRules: dnsRules,
       templateServerTags: {
-        for (final s in template.dnsOptionsModel.servers) s.tag
+        for (final s in template.dnsOptionsModel.servers) s.tag,
       },
     );
     // §398 — DNS-only экспорт допустим: правил может не быть вовсе. Пусто
@@ -912,10 +928,14 @@ class _RoutingScreenState extends State<RoutingScreen>
           final tmpDir = await getTemporaryDirectory();
           final path = '${tmpDir.path}/$filename';
           await File(path).writeAsString(json);
-          await SharePlus.instance.share(ShareParams(
-            files: [XFile(path, mimeType: 'application/json', name: filename)],
-            subject: 'LxBox rules',
-          ));
+          await SharePlus.instance.share(
+            ShareParams(
+              files: [
+                XFile(path, mimeType: 'application/json', name: filename),
+              ],
+              subject: 'LxBox rules',
+            ),
+          );
           showSnack(getLocalText.s("Rules exported"));
           return;
       }
@@ -1060,12 +1080,16 @@ class _RoutingScreenState extends State<RoutingScreen>
       // DNS-сущности — прямо в хранение (append; санация уже разобрала их
       // в модели).
       if (picked.dnsServers.isNotEmpty) {
-        await SettingsStorage.saveDnsServers(
-            [...existingServers, ...picked.dnsServers]);
+        await SettingsStorage.saveDnsServers([
+          ...existingServers,
+          ...picked.dnsServers,
+        ]);
       }
       if (picked.dnsRules.isNotEmpty) {
-        await SettingsStorage.saveDnsRulesList(
-            [...existingDnsRules, ...picked.dnsRules]);
+        await SettingsStorage.saveDnsRulesList([
+          ...existingDnsRules,
+          ...picked.dnsRules,
+        ]);
       }
       if (!mounted) return;
 
@@ -1087,11 +1111,16 @@ class _RoutingScreenState extends State<RoutingScreen>
       }
       showSnack(switch ((inserted.length, dnsCount)) {
         (final n, 0) when needsSrs => getLocalText.plural(
-            "Imported %d rules — tap ☁ to download rule-sets, then enable", n),
+          "Imported %d rules — tap ☁ to download rule-sets, then enable",
+          n,
+        ),
         (final n, 0) => getLocalText.plural("Imported %d rules", n),
         (0, final m) => getLocalText.s("Imported %d DNS entries", m),
         (final n, final m) => getLocalText.s(
-            "Imported %1\$d rules and %2\$d DNS entries", n, m),
+          "Imported %1\$d rules and %2\$d DNS entries",
+          n,
+          m,
+        ),
       });
     } catch (e) {
       showSnack(
@@ -1177,8 +1206,8 @@ class _RoutingScreenState extends State<RoutingScreen>
     final touchesDns = rule.kind == CustomRuleKind.preset
         ? (preset?.touchesDns ?? false)
         : (rule.dnsMirrorActive ||
-            rule.forceIpv4Active ||
-            rule.dnsFixedActive); // §683 — Answer = Fixed IP
+              rule.forceIpv4Active ||
+              rule.dnsFixedActive); // §683 — Answer = Fixed IP
 
     Widget? statusButton;
     if (rule is CustomRuleSrs) {
@@ -1205,8 +1234,11 @@ class _RoutingScreenState extends State<RoutingScreen>
       sortable: _isSortable(rule),
       // §601 — состояние 2: включено, файла набора нет.
       waitingForDownload: RoutingHelpers.waitingForDownload(
-          rule, preset, _srsCached,
-          globalVars: _userVars),
+        rule,
+        preset,
+        _srsCached,
+        globalVars: _userVars,
+      ),
       statusButton: statusButton,
       onTap: () => _openCustomRuleEditor(index),
       onLongPressStart: (pos) => _showRuleContextMenu(index, pos),
@@ -1398,9 +1430,15 @@ class _RoutingScreenState extends State<RoutingScreen>
     final result = await openCustomRuleEditor(
       context,
       initial: current,
-      outboundOptions: _outboundOptions()
-          .map((o) => OutboundOption(value: o.tag, label: o.label))
-          .toList(),
+      outboundOptions: current.presetId == 'tailscale-protected'
+          ? [
+              for (final n in _presetViewNodes())
+                if (n.body['type'] == 'tailscale')
+                  OutboundOption(value: n.tag, label: n.tag),
+            ]
+          : _outboundOptions()
+                .map((o) => OutboundOption(value: o.tag, label: o.label))
+                .toList(),
       existingNames: existing,
       preset: current.kind == CustomRuleKind.preset
           ? _presetFor(current.presetId)
@@ -1439,9 +1477,10 @@ class _RoutingScreenState extends State<RoutingScreen>
       });
       if (urlChanged || kindChanged) {
         // ## 12 — старые файлы всех наборов прежнего правила.
-        for (final cacheId in current is CustomRuleSrs
-            ? current.cacheIds
-            : <String>[current.id]) {
+        for (final cacheId
+            in current is CustomRuleSrs
+                ? current.cacheIds
+                : <String>[current.id]) {
           unawaited(RuleSetDownloader.delete(cacheId));
         }
       }

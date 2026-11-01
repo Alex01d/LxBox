@@ -22,6 +22,38 @@ import '../contract/node_core_gate.dart';
 import '../contract/registry.dart';
 import 'core_chain_capability.dart' show kCoreBuildTags;
 
+/// A fatal capability mismatch rejects the candidate as a whole. Callers keep
+/// the last-good configuration; this error contains no profile values/secrets.
+final class CoreBuildFailure implements Exception {
+  const CoreBuildFailure(this.tag, this.refusal);
+
+  final String tag;
+  final CoreRefusal refusal;
+
+  String get code => refusal.code;
+  String? get path => refusal.path;
+
+  @override
+  String toString() =>
+      '[$code] $tag${path == null ? '' : ' [$path]'}: '
+      '${refusal.reason}';
+}
+
+/// Preflight every entry before any caller is allowed to drop or edit nodes.
+void assertCoreBuildSupported(
+  Iterable<SingboxEntry> entries, {
+  required String coreVersion,
+  Set<String>? coreBuildTags = kCoreBuildTags,
+}) {
+  final core = CoreInfo(version: coreVersion, tags: coreBuildTags);
+  for (final entry in entries) {
+    final type = entry.map['type'];
+    if (type is! String || type.isEmpty) continue;
+    final refusal = nodeCoreBuildFailure(type, entry.map, core);
+    if (refusal != null) throw CoreBuildFailure(entry.tag, refusal);
+  }
+}
+
 /// Результат прогона гарда по одной сборке.
 final class RegistryGateReport {
   const RegistryGateReport(
@@ -66,6 +98,11 @@ RegistryGateReport applyRegistryGate(
   required String coreVersion,
   Set<String>? coreBuildTags = kCoreBuildTags,
 }) {
+  assertCoreBuildSupported(
+    entries,
+    coreVersion: coreVersion,
+    coreBuildTags: coreBuildTags,
+  );
   final warnings = <String>[];
   final dropped = <SingboxEntry>[];
   final warningsByEmittedTag = <String, List<NodeWarning>>{};
@@ -135,9 +172,11 @@ RegistryGateReport applyRegistryGate(
     final original = entry.authored
         ? (jsonDecode(jsonEncode(entry.map)) as Map).cast<String, dynamic>()
         : entry.map;
-    final raw = Map<String, dynamic>.from(entry.authored
-        ? (jsonDecode(jsonEncode(entry.map)) as Map).cast<String, dynamic>()
-        : entry.map);
+    final raw = Map<String, dynamic>.from(
+      entry.authored
+          ? (jsonDecode(jsonEncode(entry.map)) as Map).cast<String, dynamic>()
+          : entry.map,
+    );
     final res = settleSanitized(
       type,
       original,

@@ -45,6 +45,18 @@ final class CoreInfo {
     }
     return null;
   }
+
+  /// Atomic capabilities cannot be inferred when the core has not reported
+  /// them. Legacy drop_node callers keep their previous unknown-is-allowed rule.
+  String? unconfirmed(String? buildTag, String? minCore, String what) {
+    if (buildTag != null && buildTag.isNotEmpty && tags == null) {
+      return 'core build capabilities are unknown';
+    }
+    if (minCore != null && minCore.isNotEmpty && version.trim().isEmpty) {
+      return 'core version is unknown';
+    }
+    return unmet(buildTag, minCore, what);
+  }
 }
 
 /// Почему узел этому ядру не по силам.
@@ -85,14 +97,52 @@ CoreRefusal? nodeCoreRefusal(
   return _walk('', schema.order, schema.fields, body, scheme, core);
 }
 
+/// Check the registry's fail_build policy without changing the node. This
+/// preflight must run before drop_node, field sanitization or detour pruning.
+CoreRefusal? nodeCoreBuildFailure(
+  String scheme,
+  Map<String, dynamic> body,
+  CoreInfo core,
+) {
+  if (!ContractRegistry.I.isLoaded) {
+    // A missing registry must not erase a known atomic transport. Ordinary
+    // nodes keep the historical registry-unavailable behavior.
+    if (scheme == 'tailscale' &&
+        (body['awg'] != null || body['underlay_mode'] != null)) {
+      return const CoreRefusal(
+        code: 'tailscale_awg_core_unsupported',
+        reason: 'cannot verify required core capabilities',
+      );
+    }
+    return null;
+  }
+  final schema = ContractRegistry.I.schemaFor(scheme);
+  if (schema == null) return null;
+  final top = schema.onCoreUnsupported;
+  if (top != null && top.failsBuild) {
+    final reason = core.unconfirmed(schema.buildTag, schema.minCore, scheme);
+    if (reason != null) return CoreRefusal(code: top.code, reason: reason);
+  }
+  return _walk(
+    '',
+    schema.order,
+    schema.fields,
+    body,
+    scheme,
+    core,
+    fatal: true,
+  );
+}
+
 CoreRefusal? _walk(
   String prefix,
   List<String> order,
   Map<String, FieldSchema> fields,
   Map<String, dynamic> m,
   String scheme,
-  CoreInfo core,
-) {
+  CoreInfo core, {
+  bool fatal = false,
+}) {
   for (final name in order) {
     final f = fields[name];
     if (f == null) continue;
@@ -102,16 +152,23 @@ CoreRefusal? _walk(
     final what = '$scheme.$path';
 
     final own = f.onCoreUnsupported;
-    if (own != null && own.dropsNode) {
-      final reason = core.unmet(f.buildTag, f.minCore, what);
+    if (own != null && (fatal ? own.failsBuild : own.dropsNode)) {
+      final reason = fatal
+          ? core.unconfirmed(f.buildTag, f.minCore, what)
+          : core.unmet(f.buildTag, f.minCore, what);
       if (reason != null) {
         return CoreRefusal(code: own.code, path: path, reason: reason);
       }
     }
     final rf = f.rangeForm;
     final rfGate = rf?.onCoreUnsupported;
-    if (rf != null && rfGate != null && rfGate.dropsNode && isAwgRangeValue(v)) {
-      final reason = core.unmet(rf.buildTag, rf.minCore, '$what as a range');
+    if (rf != null &&
+        rfGate != null &&
+        (fatal ? rfGate.failsBuild : rfGate.dropsNode) &&
+        isAwgRangeValue(v)) {
+      final reason = fatal
+          ? core.unconfirmed(rf.buildTag, rf.minCore, '$what as a range')
+          : core.unmet(rf.buildTag, rf.minCore, '$what as a range');
       if (reason != null) {
         return CoreRefusal(code: rfGate.code, path: path, reason: reason);
       }
@@ -124,16 +181,30 @@ CoreRefusal? _walk(
         final disc = inner[f.discriminator ?? 'type'];
         final vf = disc is String ? variants[disc.trim()] : null;
         if (vf != null) {
-          final r = _walk(path, vf.order ?? const [], vf.fields ?? const {},
-              inner, scheme, core);
+          final r = _walk(
+            path,
+            vf.order ?? const [],
+            vf.fields ?? const {},
+            inner,
+            scheme,
+            core,
+            fatal: fatal,
+          );
           if (r != null) return r;
         }
         continue;
       }
       final sub = f.fields;
       if (sub != null && sub.isNotEmpty) {
-        final r =
-            _walk(path, f.order ?? const [], sub, inner, scheme, core);
+        final r = _walk(
+          path,
+          f.order ?? const [],
+          sub,
+          inner,
+          scheme,
+          core,
+          fatal: fatal,
+        );
         if (r != null) return r;
       }
     } else if (v is List) {
@@ -142,8 +213,15 @@ CoreRefusal? _walk(
       if (items == null || sub == null || sub.isEmpty) continue;
       for (final it in v) {
         if (it is! Map) continue;
-        final r = _walk('$path[]', items.order ?? const [], sub,
-            it.cast<String, dynamic>(), scheme, core);
+        final r = _walk(
+          '$path[]',
+          items.order ?? const [],
+          sub,
+          it.cast<String, dynamic>(),
+          scheme,
+          core,
+          fatal: fatal,
+        );
         if (r != null) return r;
       }
     }

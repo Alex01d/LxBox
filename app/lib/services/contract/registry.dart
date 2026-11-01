@@ -63,9 +63,7 @@ const kWildcardField = '*';
 /// точечно, и лишний слой конвертации разошёлся бы со схемой на первом же
 /// новом атрибуте. Геттеры — только для тех, что нужны санитайзеру.
 final class FieldSchema {
-  FieldSchema(this.raw)
-      : _nested = null,
-        _variants = null;
+  FieldSchema(this.raw) : _nested = null, _variants = null;
 
   /// §553 — поле, собранное разворотом ссылки ([ContractRegistry._expand]):
   /// вложенная схема уже разобрана, второй раз её из [raw] не строим.
@@ -324,8 +322,7 @@ final class FieldSchema {
 
   /// §469 — код запрета для [scheme]: точечный из [forbiddenCodes], иначе
   /// общий [code]. `null` — кода реестр не назвал.
-  String? forbiddenCodeFor(String scheme) =>
-      forbiddenCodes?[scheme] ?? code;
+  String? forbiddenCodeFor(String scheme) => forbiddenCodes?[scheme] ?? code;
 
   // §549 R3 — связи разбираются один раз на экземпляр, а не на каждый вызов
   // геттера: санитайзер спрашивает их у каждого поля каждого узла, а схема
@@ -374,8 +371,9 @@ final class FieldSchema {
 
   /// Вложенный объект: порядок + поля. Объект без `fields` (например
   /// `transport.headers`) — свободная карта, внутрь санитайзер не смотрит.
-  late final List<String>? order =
-      (raw['order'] as List?)?.cast<String>().toList(growable: false);
+  late final List<String>? order = (raw['order'] as List?)
+      ?.cast<String>()
+      .toList(growable: false);
 
   /// Разбирается один раз: реестр иммутабелен после загрузки, а санитайзер
   /// спускается во вложенные объекты (`tls`, `tls.reality`) на каждом узле.
@@ -387,7 +385,9 @@ final class FieldSchema {
     return {
       for (final e in f.entries)
         if (e.key != kWildcardField && e.value is Map)
-          e.key as String: FieldSchema((e.value as Map).cast<String, dynamic>()),
+          e.key as String: FieldSchema(
+            (e.value as Map).cast<String, dynamic>(),
+          ),
     };
   }
 
@@ -477,7 +477,6 @@ final class BodySchema {
   /// `condition`, без `source_kind`): при каком готовом теле узел годится
   /// ВЫХОДОМ — кандидатом в пул Направления. `null` — годится всегда.
   final Map<String, dynamic>? exitCapableWhen;
-
 }
 
 /// Контракт 1.1.60 — `on_core_unsupported`: что делать с узлом, когда
@@ -485,11 +484,14 @@ final class BodySchema {
 final class CoreUnsupported {
   const CoreUnsupported({required this.action, required this.code});
 
-  /// Единственное значение схемы — `drop_node`.
+  /// `drop_node` preserves the legacy downgrade policy; `fail_build` requires
+  /// positive capability confirmation before any configuration mutation.
   final String action;
   final String code;
 
   bool get dropsNode => action == 'drop_node';
+
+  bool get failsBuild => action == 'fail_build';
 
   static CoreUnsupported? tryParse(Object? raw) {
     if (raw is! Map) return null;
@@ -638,11 +640,10 @@ final class ContractRegistry {
   /// §652 — загрузка из [snapshot] другого isolate. Файл, которого в снимке
   /// нет, читается так же, как отсутствующий ассет (бросает).
   Future<void> loadFromSnapshot(RegistrySnapshot snap) => _load(
-        (rel) async =>
-            snap.texts[rel] ??
-            (throw StateError('registry snapshot: no $rel')),
-        () async => snap.protocols,
-      );
+    (rel) async =>
+        snap.texts[rel] ?? (throw StateError('registry snapshot: no $rel')),
+    () async => snap.protocols,
+  );
 
   /// Версия контракта из `contract/VERSION` (например `1.1.0`).
   String get version => _version;
@@ -655,16 +656,18 @@ final class ContractRegistry {
   /// правки Dart (`pubspec.yaml` кладёт каталог целиком).
   Future<void> load({AssetLoader? loader, AssetLister? lister}) async {
     final read = loader ?? (String p) => rootBundle.loadString(p);
-    final list = lister ??
+    final list =
+        lister ??
         () async =>
             (await AssetManifest.loadFromAssetBundle(rootBundle)).listAssets();
     const prefix = '$_assetRoot/$_kProtocolsDir';
     await _load(
       (rel) => read('$_assetRoot/$rel'),
       () async => _protocolFileNames(
-          (await list()).where((p) => p.startsWith(prefix)).map(
-                (p) => p.substring(prefix.length),
-              )),
+        (await list())
+            .where((p) => p.startsWith(prefix))
+            .map((p) => p.substring(prefix.length)),
+      ),
     );
   }
 
@@ -675,20 +678,22 @@ final class ContractRegistry {
   Future<void> loadFromDirectory(String dir) async {
     await _load(
       (rel) => File('$dir/$rel').readAsString(),
-      () async => _protocolFileNames(Directory('$dir/$_kProtocolsDir')
-          .listSync()
-          .whereType<File>()
-          .map((f) => f.uri.pathSegments.last)),
+      () async => _protocolFileNames(
+        Directory(
+          '$dir/$_kProtocolsDir',
+        ).listSync().whereType<File>().map((f) => f.uri.pathSegments.last),
+      ),
     );
   }
 
   /// Имена файлов протоколов без `.json`, по алфавиту: порядок загрузки не
   /// должен зависеть от того, в каком порядке их отдал манифест или ФС.
-  static List<String> _protocolFileNames(Iterable<String> names) => names
-      .where((n) => n.endsWith('.json') && !n.contains('/'))
-      .map((n) => n.substring(0, n.length - '.json'.length))
-      .toList()
-    ..sort();
+  static List<String> _protocolFileNames(Iterable<String> names) =>
+      names
+          .where((n) => n.endsWith('.json') && !n.contains('/'))
+          .map((n) => n.substring(0, n.length - '.json'.length))
+          .toList()
+        ..sort();
 
   Future<void> _load(
     Future<String> Function(String rel) readRaw,
@@ -713,7 +718,8 @@ final class ContractRegistry {
       // dialer и dialer.common живут в одном файле — читаем один раз.
       if (_shared.containsKey(entry.value)) continue;
       _shared[entry.value] =
-          jsonDecode(await read('registry/${entry.value}')) as Map<String, dynamic>;
+          jsonDecode(await read('registry/${entry.value}'))
+              as Map<String, dynamic>;
     }
 
     // Контракт 1.1.41 — `source_kinds.json` цели `ref` не имеет: тело узла в
@@ -737,8 +743,9 @@ final class ContractRegistry {
     // §566 — состав протоколов даёт каталог реестра (манифест бандла или
     // листинг на диске), а не список в коде.
     for (final scheme in await listProtocols()) {
-      final data = jsonDecode(await read('$_kProtocolsDir$scheme.json'))
-          as Map<String, dynamic>;
+      final data =
+          jsonDecode(await read('$_kProtocolsDir$scheme.json'))
+              as Map<String, dynamic>;
       // Ключ — singbox_type записи, а не имя файла: санитайзер получает
       // `type` из тела узла, и для схем-алиасов (hy2 → hysteria2) имя файла
       // сошлось бы не всегда.
@@ -747,13 +754,14 @@ final class ContractRegistry {
       _generation++;
     }
 
-    final warnings = jsonDecode(await read('registry/warnings.json'))
-        as Map<String, dynamic>;
+    final warnings =
+        jsonDecode(await read('registry/warnings.json'))
+            as Map<String, dynamic>;
     final byCode = (warnings['warnings'] as Map).cast<String, dynamic>();
     // `path`/`value` подставляются всегда (text_params_implicit) — в params
     // кодов они не перечислены.
-    final implicit =
-        ((warnings['text_params_implicit'] as List?) ?? const []).cast<String>();
+    final implicit = ((warnings['text_params_implicit'] as List?) ?? const [])
+        .cast<String>();
     for (final e in byCode.entries) {
       final w = (e.value as Map).cast<String, dynamic>();
       _warnings[e.key] = WarningText(
@@ -821,8 +829,8 @@ final class ContractRegistry {
   final Map<String, _SchemaSlot> _transportCache = {};
 
   BodySchema? _transportVariant(String type) {
-    final body =
-        (_shared['transports.json']?['body'] as Map?)?.cast<String, dynamic>();
+    final body = (_shared['transports.json']?['body'] as Map?)
+        ?.cast<String, dynamic>();
     if (body == null) return null;
     final variant = (body['variants'] as Map?)?[type];
     if (variant is! Map) return null;
@@ -992,14 +1000,12 @@ final class ContractRegistry {
           if (e is Map) e.cast<String, dynamic>(),
       ],
       absentWhen: (body['absent_when'] as Map?)?.cast<String, dynamic>(),
-      exitCapableWhen:
-          (body['exit_capable_when'] as Map?)?.cast<String, dynamic>(),
+      exitCapableWhen: (body['exit_capable_when'] as Map?)
+          ?.cast<String, dynamic>(),
       buildTag: body['build_tag'] as String?,
       minCore: body['min_core'] as String?,
       onCoreUnsupported: CoreUnsupported.tryParse(body['on_core_unsupported']),
-      levels: [
-        for (final e in (body['levels'] as List?) ?? const []) '$e',
-      ],
+      levels: [for (final e in (body['levels'] as List?) ?? const []) '$e'],
       form: (body['form'] as Map?)?.cast<String, dynamic>(),
     );
   }
@@ -1026,7 +1032,11 @@ final class ContractRegistry {
   /// → единственное поле с тем же `desc_en`. Неоднозначность — ошибка
   /// реестра, поле не выбирается.
   static FieldSchema? _resolveNamedRef(
-      String name, FieldSchema src, List<String> parts, BodySchema sub) {
+    String name,
+    FieldSchema src,
+    List<String> parts,
+    BodySchema sub,
+  ) {
     if (parts.length >= 3) return sub.fields[parts.skip(2).join('.')];
     final own = sub.fields[name];
     if (own != null) return own;
@@ -1049,7 +1059,10 @@ final class ContractRegistry {
   /// суб-схемы. Описание (`desc_*`, `impl`) — обёртки: это текст про поле
   /// ЭТОЙ схемы (`masque.network_list`), а не про общее правило.
   static FieldSchema _mergeRefAttrs(
-      FieldSchema src, FieldSchema target, String section) {
+    FieldSchema src,
+    FieldSchema target,
+    String section,
+  ) {
     final raw = <String, dynamic>{...target.raw, 'origin_ref': section};
     final w = src.raw;
     if (w['required'] == true) raw['required'] = true;
@@ -1079,7 +1092,10 @@ final class ContractRegistry {
   /// `absent_when` объявлен один раз у суб-схемы и переезжает сюда, если
   /// обёртка не задала свой.
   static FieldSchema _refAsObject(
-      FieldSchema src, BodySchema sub, String section) {
+    FieldSchema src,
+    BodySchema sub,
+    String section,
+  ) {
     final raw = _wrapperAttrs(src, section);
     raw['order'] = List<String>.unmodifiable(sub.order);
     raw['fields'] = {
@@ -1089,15 +1105,18 @@ final class ContractRegistry {
     final aw = src.raw['absent_when'] ?? sub.absentWhen;
     if (aw != null) raw['absent_when'] = aw;
     return FieldSchema._expanded(
-        Map.unmodifiable(raw), Map.unmodifiable(sub.fields), null);
+      Map.unmodifiable(raw),
+      Map.unmodifiable(sub.fields),
+      null,
+    );
   }
 
   /// `transports` — вариантная суб-схема: поле-объект с вариантами по
   /// дискриминатору (`type`). Варианты — те же, что отдаёт
   /// [transportVariant].
   FieldSchema? _transportsAsObject(FieldSchema src) {
-    final body =
-        (_shared['transports.json']?['body'] as Map?)?.cast<String, dynamic>();
+    final body = (_shared['transports.json']?['body'] as Map?)
+        ?.cast<String, dynamic>();
     final disc = body?['discriminator'];
     final vs = body?['variants'];
     if (disc is! String || disc.isEmpty || vs is! Map) return null;
@@ -1124,7 +1143,10 @@ final class ContractRegistry {
     ]);
     raw['variants'] = {for (final e in variants.entries) e.key: e.value.raw};
     return FieldSchema._expanded(
-        Map.unmodifiable(raw), null, Map.unmodifiable(variants));
+      Map.unmodifiable(raw),
+      null,
+      Map.unmodifiable(variants),
+    );
   }
 
   static Map<String, dynamic> _wrapperAttrs(FieldSchema src, String section) =>
@@ -1142,7 +1164,9 @@ final class ContractRegistry {
     return {
       for (final e in f.entries)
         if (e.key != kWildcardField && e.value is Map)
-          e.key as String: FieldSchema((e.value as Map).cast<String, dynamic>()),
+          e.key as String: FieldSchema(
+            (e.value as Map).cast<String, dynamic>(),
+          ),
     };
   }
 }
@@ -1159,7 +1183,10 @@ final class _SchemaSlot {
 /// незнакомая форма поля загрузку не роняет.
 List<String> _stringList(Object? v) {
   if (v is! List) return const [];
-  return [for (final e in v) if (e is String) e];
+  return [
+    for (final e in v)
+      if (e is String) e,
+  ];
 }
 
 /// §473/§472 шаг 7 — потолок `mtu` AmneziaWG-узла ПО РЕЕСТРУ
@@ -1186,17 +1213,18 @@ List<String> _stringList(Object? v) {
 /// §566 — [type] — тип тела узла (`entry.type`), по нему схема ищется в
 /// реестре; имени протокола здесь нет.
 int? awgMtuCeilingByRegistry(String type) {
-  final ceiling =
-      ContractRegistry.I.schemaFor(type)?.fields['mtu']?.maxWhen?['max'];
+  final ceiling = ContractRegistry.I
+      .schemaFor(type)
+      ?.fields['mtu']
+      ?.maxWhen?['max'];
   return ceiling is num ? ceiling.toInt() : kAwgMtuFallback;
 }
 
 /// §473 — код о ЗАМЕНЕ `mtu` потолком, как его назвал реестр
 /// (`max_when.code`). Второй копии имени в Dart не заводится.
-String? awgMtuClampCodeByRegistry(String type) => ContractRegistry.I
-    .schemaFor(type)
-    ?.fields['mtu']
-    ?.maxWhen?['code'] as String?;
+String? awgMtuClampCodeByRegistry(String type) =>
+    ContractRegistry.I.schemaFor(type)?.fields['mtu']?.maxWhen?['code']
+        as String?;
 
 /// Потолок AmneziaWG-MTU, когда реестр не загружен.
 ///

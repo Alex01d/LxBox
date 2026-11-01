@@ -318,22 +318,18 @@ class LxCodeEditorState extends State<LxCodeEditor>
   /// редактору сразу, иначе по направлению на пороге сдвига
   /// ([lxEditorOwnsDrag]). Отдельного горизонтального drag нет: вбок,
   /// когда некуда, жест уходит вкладкам.
-  late final Set<Factory<OneSequenceGestureRecognizer>> _recognizers = {
-    Factory<OneSequenceGestureRecognizer>(
-      () => LxEditorDragRecognizer(
-        takesAtDown: () => _fill || _selected,
-        takesDrag: (delta) => lxEditorOwnsDrag(
-          delta,
-          canScrollX: _canScrollX,
-          scrollable: _scrollable,
-          scrollTop: _scrollTop,
-          scrollBottom: _scrollBottom,
-        ),
-        slop: () => _dragSlop,
-      ),
+  late final Set<Factory<OneSequenceGestureRecognizer>> _recognizers =
+      lxEditorGestureRecognizers(
+    takesAtDown: () => _fill || _selected,
+    takesDrag: (delta) => lxEditorOwnsDrag(
+      delta,
+      canScrollX: _canScrollX,
+      scrollable: _scrollable,
+      scrollTop: _scrollTop,
+      scrollBottom: _scrollBottom,
     ),
-    const Factory<OneSequenceGestureRecognizer>(LongPressGestureRecognizer.new),
-  };
+    slop: () => _dragSlop,
+  );
   Rect? _cursorRect;
 
   /// Каретка в первой / последней экранной строке (из `cursor`): стрелка
@@ -1232,6 +1228,22 @@ bool lxEditorOwnsDrag(
   if (!scrollable) return false;
   return delta.dy > 0 ? !scrollTop : !scrollBottom;
 }
+
+/// PlatformView keys recognizers by Factory.type, not by the runtime object
+/// returned from its constructor. Keep each concrete generic type distinct.
+@visibleForTesting
+Set<Factory<OneSequenceGestureRecognizer>> lxEditorGestureRecognizers({
+  required bool Function() takesAtDown,
+  required bool Function(Offset delta) takesDrag,
+  required double Function() slop,
+}) => {
+  Factory<LxEditorDragRecognizer>(() => LxEditorDragRecognizer(
+    takesAtDown: takesAtDown,
+    takesDrag: takesDrag,
+    slop: slop,
+  )),
+  const Factory<LongPressGestureRecognizer>(LongPressGestureRecognizer.new),
+};
 
 /// Распознаватель platform view редактора (§649). Если [takesAtDown]
 /// истинен — берёт касание сразу, как [EagerGestureRecognizer] (ручки

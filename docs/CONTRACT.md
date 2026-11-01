@@ -26,7 +26,7 @@ the content.
 | launcher repo, `contract/` | The source. All edits go there. |
 | `app/contract/` | Vendored **copy**, written by `app/tool/sync_contract.sh`. Gitignored, read-only — never edited. |
 | `app/contract.lock` | sha256 of the copy, written by the same script. |
-| `app/assets/contract/` | Committed mirror of the registry — what tests and the app read on CI. |
+| `app/assets/contract/` | Committed mirror of the registry and the native Tailscale AWG profile schema — what tests and the app read on CI. |
 | `docs/contract/` | Byte-for-byte mirror of the contract's generated docs. Not edited by hand. |
 
 ## What is normative

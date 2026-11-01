@@ -33,13 +33,17 @@ void main(List<String> args) {
   final dir = Directory('contract');
 
   if (!dir.existsSync()) {
-    stdout.writeln('contract/: копии нет — контрактные тесты пропускаются '
-        '(синхронизируйте локально: bash tool/sync_contract.sh)');
+    stdout.writeln(
+      'contract/: копии нет — контрактные тесты пропускаются '
+      '(синхронизируйте локально: bash tool/sync_contract.sh)',
+    );
     return;
   }
   if (!lockFile.existsSync()) {
-    stderr.writeln('contract/ есть, а contract.lock нет: непонятно, какая '
-        'версия контракта в дереве. Запустите tool/sync_contract.sh');
+    stderr.writeln(
+      'contract/ есть, а contract.lock нет: непонятно, какая '
+      'версия контракта в дереве. Запустите tool/sync_contract.sh',
+    );
     exitCode = 1;
     return;
   }
@@ -53,11 +57,13 @@ void main(List<String> args) {
 
   final actual = _treeHash(dir);
   if (actual != expected) {
-    stderr.writeln('Копия контракта не совпадает с contract.lock:\n'
-        '  в дереве: $actual\n'
-        '  в lock:   $expected\n'
-        'Копию не правят руками — источник живёт в репозитории лаунчера. '
-        'Запустите tool/sync_contract.sh, чтобы обновить копию и lock.');
+    stderr.writeln(
+      'Копия контракта не совпадает с contract.lock:\n'
+      '  в дереве: $actual\n'
+      '  в lock:   $expected\n'
+      'Копию не правят руками — источник живёт в репозитории лаунчера. '
+      'Запустите tool/sync_contract.sh, чтобы обновить копию и lock.',
+    );
     exitCode = 1;
     return;
   }
@@ -66,10 +72,12 @@ void main(List<String> args) {
 
   final mirrorDiff = _mirrorDiff(dir);
   if (mirrorDiff.isNotEmpty) {
-    stderr.writeln('§460 — зеркало реестра assets/contract/ разошлось с '
-        'копией контракта:\n${mirrorDiff.map((l) => '  $l').join('\n')}\n'
-        'Зеркало не правят руками — оно кладётся tool/sync_contract.sh. '
-        'Запустите скрипт, чтобы пересобрать зеркало.');
+    stderr.writeln(
+      '§460 — зеркало реестра assets/contract/ разошлось с '
+      'копией контракта:\n${mirrorDiff.map((l) => '  $l').join('\n')}\n'
+      'Зеркало не правят руками — оно кладётся tool/sync_contract.sh. '
+      'Запустите скрипт, чтобы пересобрать зеркало.',
+    );
     exitCode = 1;
     return;
   }
@@ -77,11 +85,13 @@ void main(List<String> args) {
 
   final docsDiff = _docsMirrorDiff(dir);
   if (docsDiff.isNotEmpty) {
-    stderr.writeln('§460 W2b — зеркало документации ../docs/contract/ '
-        'разошлось с copy contract/docs/generated/:\n'
-        '${docsDiff.map((l) => '  $l').join('\n')}\n'
-        'Зеркало не правят руками — оно кладётся tool/sync_contract.sh. '
-        'Запустите скрипт, чтобы пересобрать зеркало.');
+    stderr.writeln(
+      '§460 W2b — зеркало документации ../docs/contract/ '
+      'разошлось с copy contract/docs/generated/:\n'
+      '${docsDiff.map((l) => '  $l').join('\n')}\n'
+      'Зеркало не правят руками — оно кладётся tool/sync_contract.sh. '
+      'Запустите скрипт, чтобы пересобрать зеркало.',
+    );
     exitCode = 1;
     return;
   }
@@ -153,6 +163,11 @@ List<String> _mirrorDiff(Directory contractDir) {
   }
 
   compare('VERSION');
+  if (File(
+    '${contractDir.path}/schema/tailscale_awg.schema.json',
+  ).existsSync()) {
+    compare('schema/tailscale_awg.schema.json');
+  }
   for (final sub in const ['registry', 'registry/protocols']) {
     final srcDir = Directory('${contractDir.path}/$sub');
     if (!srcDir.existsSync()) continue;
@@ -188,7 +203,9 @@ bool _bytesEqual(List<int> a, List<int> b) {
 
 String? _lockHash(String content) {
   for (final line in const LineSplitter().convert(content)) {
-    if (line.startsWith('sha256=')) return line.substring('sha256='.length).trim();
+    if (line.startsWith('sha256=')) {
+      return line.substring('sha256='.length).trim();
+    }
   }
   return null;
 }
@@ -198,12 +215,13 @@ String? _lockHash(String content) {
 /// склеенного содержимого файлов в байтовом порядке путей. Имена в хеш не
 /// входят. Считать иначе нельзя: проверка падала бы на каждом прогоне.
 String _treeHash(Directory dir) {
-  final paths = dir
-      .listSync(recursive: true)
-      .whereType<File>()
-      .map((f) => f.path)
-      .toList()
-    ..sort(); // байтовый порядок, как LC_ALL=C sort
+  final paths =
+      dir
+          .listSync(recursive: true)
+          .whereType<File>()
+          .map((f) => f.path)
+          .toList()
+        ..sort(); // байтовый порядок, как LC_ALL=C sort
 
   // Склеиваем содержимое ровно так, как это делает `xargs cat`. Файлы
   // контракта — текстовые и мелкие (единицы мегабайт на всё дерево), поэтому

@@ -29,6 +29,7 @@ import '../widgets/node_diagnostics_tab.dart';
 import '../widgets/openconnect_form.dart';
 import '../services/contract/form_source_sync.dart';
 import '../widgets/tailscale_network_tab.dart';
+import '../widgets/tailscale_awg_form.dart';
 import '../services/tailscale_network.dart';
 import '../services/l10n/locale_controller.dart';
 import '../services/warp/warp_endpoint_picker.dart';
@@ -119,6 +120,9 @@ class _NodeSettingsScreenState extends State<NodeSettingsScreen>
   /// §654 B2 — последнее тело формы OpenConnect, разобранное из Source: пока
   /// текст не объект, форма показывает его неактивной.
   Map<String, dynamic>? _ocLastBody;
+  final _tsAwgFormKey = GlobalKey<TailscaleAwgFormState>();
+  Map<String, dynamic>? _tsAwgLastBody;
+  bool _tsAwgDraftChanged = false;
 
   /// Разбор + хранимый вердикт (`core_rejected` и др.) для секции
   /// Notifications во вкладке Diagnostics.
@@ -154,8 +158,11 @@ class _NodeSettingsScreenState extends State<NodeSettingsScreen>
     _jsonCtrl = TextEditingController();
     _sourceCtrl = TextEditingController();
     // §581 — у узла Tailscale вкладка Network перед Diagnostics.
-    final first = _member?.node ??
-        (widget.entry.list.nodes.isEmpty ? null : widget.entry.list.nodes.first);
+    final first =
+        _member?.node ??
+        (widget.entry.list.nodes.isEmpty
+            ? null
+            : widget.entry.list.nodes.first);
     _isTailscale = first is TailscaleSpec;
     // §686 п. 9 — у WireGuard/AmneziaWG вкладка INI после JSON.
     _isWireguard = first is WireguardSpec;
@@ -219,6 +226,7 @@ class _NodeSettingsScreenState extends State<NodeSettingsScreen>
   AutoSelectSpec? _autoLastGroup;
 
   Future<void> _load() async {
+    _tsAwgDraftChanged = false;
     // v2: одиночный — узел уже распарсен в entry.list.nodes.first;
     // §237 член папки — из members[memberIndex].
     final NodeSpec node;
@@ -234,8 +242,10 @@ class _NodeSettingsScreenState extends State<NodeSettingsScreen>
     }
 
     _node = node; // §392 — источник probe-ветки диагностики
-    final emittedTag =
-        TagResolver.displayTag(widget.entry.list.tagPrefix, node.tag);
+    final emittedTag = TagResolver.displayTag(
+      widget.entry.list.tagPrefix,
+      node.tag,
+    );
     _notifications = warningsForConfigTag(
       emittedTag,
       widget.subController.entries,
@@ -257,8 +267,8 @@ class _NodeSettingsScreenState extends State<NodeSettingsScreen>
     _serverInfo = node is TailscaleSpec
         ? getLocalText.s("No address (Tailscale)")
         : node.isAddressless
-            ? getLocalText.s("No address")
-            : '${node.server}:${node.port}';
+        ? getLocalText.s("No address")
+        : '${node.server}:${node.port}';
     // §455 — источник как есть; предпросмотр JSON — то, что уйдёт в ядро:
     // у sing-box-источника это его объект (дословно), иначе emit() модели.
     // Д-1 — гейт тот же, что у сборки (`verbatimBodyOf`): у Xray-объекта
@@ -270,8 +280,8 @@ class _NodeSettingsScreenState extends State<NodeSettingsScreen>
     final Object? preview = node is AutoSelectSpec && member != null
         ? autoGroupJsonPreview(node) // §686
         : sourceIsSingbox(raw) && node.rawSource.trimLeft().startsWith('{')
-            ? jsonDecode(node.rawSource)
-            : node.emit(TemplateVars.empty).map;
+        ? jsonDecode(node.rawSource)
+        : node.emit(TemplateVars.empty).map;
     _jsonCtrl.text = const JsonEncoder.withIndent('  ').convert(preview);
     // §686 п. 9 — `.conf` из того же тела, что показывает вкладка JSON: у
     // тела sing-box JSON ключи вне таблицы переноса уходят в «Not in INI».
@@ -340,8 +350,7 @@ class _NodeSettingsScreenState extends State<NodeSettingsScreen>
       context,
       controller: widget.subController,
       directions: _directions,
-      currentFolder:
-          (member != null && list is FolderServers) ? list : null,
+      currentFolder: (member != null && list is FolderServers) ? list : null,
       selfBareTag: member?.node?.tag ?? '',
       selfDisplayTag: member == null
           ? TagResolver.displayTag(list.tagPrefix, _originalTag)
@@ -386,13 +395,17 @@ class _NodeSettingsScreenState extends State<NodeSettingsScreen>
   Future<void> _persistDetour(NodeLink value) async {
     final mi = widget.memberIndex;
     if (mi != null) {
-      final err =
-          await widget.subController.setMemberDetour(widget.index, mi, value);
+      final err = await widget.subController.setMemberDetour(
+        widget.index,
+        mi,
+        value,
+      );
       if (err != null && mounted) {
         // §239 — отклонено (цикл/self): откатываем локальный выбор.
         setState(() => _detour = _member?.detour ?? NodeLink.none);
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text(err.render())));
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(err.render())));
       }
       return;
     }
@@ -404,8 +417,9 @@ class _NodeSettingsScreenState extends State<NodeSettingsScreen>
   void _insertEmoji(String emoji) {
     final text = _tagCtrl.text;
     final sel = _tagCtrl.selection;
-    final start =
-        (sel.start >= 0 && sel.start <= text.length) ? sel.start : text.length;
+    final start = (sel.start >= 0 && sel.start <= text.length)
+        ? sel.start
+        : text.length;
     final end = (sel.end >= 0 && sel.end <= text.length) ? sel.end : start;
     const space = ' ';
     final insert = '$emoji$space';
@@ -424,6 +438,11 @@ class _NodeSettingsScreenState extends State<NodeSettingsScreen>
   /// true — записано (§626: Save диалога Unsaved changes закрывает экран
   /// только при успехе).
   Future<bool> _saveSource() async {
+    final profileForm = _tsAwgFormKey.currentState;
+    if (_isTailscale && profileForm != null && !await profileForm.validate()) {
+      return false;
+    }
+    if (!mounted) return false;
     final text = _sourceCtrl.text.trim();
     if (text.isEmpty) {
       _snack(getLocalText.s("Source is empty"));
@@ -459,17 +478,22 @@ class _NodeSettingsScreenState extends State<NodeSettingsScreen>
       toStore = SubscriptionController.rawWithName(text, _tagCtrl.text.trim());
     } else {
       // §456 — INI: текст как есть, имя — полем записи (`nameHint`).
-      return _store(text,
-          nameHint: _tagCtrl.text.trim(),
-          savedMessage: () => getLocalText.s("Saved"));
+      return _store(
+        text,
+        nameHint: _tagCtrl.text.trim(),
+        savedMessage: () => getLocalText.s("Saved"),
+      );
     }
-    return _store(toStore,
-        savedMessage: () => droppedExtras
-            ? getLocalText.s(
-                "Only the node is saved. The rest of the input is not kept.")
-            : commentsRemoved
-                ? getLocalText.s("Comments were removed.")
-                : getLocalText.s("Saved"));
+    return _store(
+      toStore,
+      savedMessage: () => droppedExtras
+          ? getLocalText.s(
+              "Only the node is saved. The rest of the input is not kept.",
+            )
+          : commentsRemoved
+          ? getLocalText.s("Comments were removed.")
+          : getLocalText.s("Saved"),
+    );
   }
 
   /// §686 — Save вкладки Source auto-узла: запись разбирается строго и
@@ -486,8 +510,11 @@ class _NodeSettingsScreenState extends State<NodeSettingsScreen>
     }
     final ready = parsed as AutoGroupSourceReady;
     final err = await widget.subController.updateAutoMemberAt(
-        widget.index, mi, ready.group,
-        enabled: ready.enabled);
+      widget.index,
+      mi,
+      ready.group,
+      enabled: ready.enabled,
+    );
     if (!mounted) return err == null;
     if (err != null) {
       _snack(err.render());
@@ -503,8 +530,8 @@ class _NodeSettingsScreenState extends State<NodeSettingsScreen>
   /// поле убирается) в теле узла, дальше тем же путём, что Save вкладки
   /// Source (тег из поля Tag, проверка ядром, запись, пересборка).
   Future<void> _saveExitNode(String? value) => _saveTailscaleFields({
-        'exit_node': value == null || value.isEmpty ? null : value,
-      });
+    'exit_node': value == null || value.isEmpty ? null : value,
+  });
 
   /// §613 — поля тела узла с вкладки Network (Save choice, переключатели
   /// Settings): `null` убирает поле; запись — как Save вкладки Source.
@@ -545,16 +572,20 @@ class _NodeSettingsScreenState extends State<NodeSettingsScreen>
       final ignored = masqueradeKeysPresent(raw);
       reason = [
         getLocalText.s(
-            "Masquerade is off: the node sets I1 explicitly, and I1 takes priority. Without I1 in Source this section becomes available."),
-        if (ignored) getLocalText.s("The masquerade keys in Source are ignored."),
+          "Masquerade is off: the node sets I1 explicitly, and I1 takes priority. Without I1 in Source this section becomes available.",
+        ),
+        if (ignored)
+          getLocalText.s("The masquerade keys in Source are ignored."),
       ].join(' ');
     } else {
       reason = switch (masqueradeWritability(raw)) {
         MasqueradeWritability.writable => null,
         MasqueradeWritability.packedLink => getLocalText.s(
-            "This source is a packed link. Masquerade can be changed after Edit JSON turns the node into JSON."),
-        MasqueradeWritability.unsupportedFormat =>
-          getLocalText.s("Masquerade is not supported for this source format."),
+          "This source is a packed link. Masquerade can be changed after Edit JSON turns the node into JSON.",
+        ),
+        MasqueradeWritability.unsupportedFormat => getLocalText.s(
+          "Masquerade is not supported for this source format.",
+        ),
       };
     }
     final picker = _picker;
@@ -577,17 +608,25 @@ class _NodeSettingsScreenState extends State<NodeSettingsScreen>
   /// Записать [raw] источником узла (одиночный — `updateConnectionAt`, член
   /// папки — `updateMemberAt`) и перечитать экран.
   /// true — записано.
-  Future<bool> _store(String raw,
-      {String? nameHint, required String Function() savedMessage}) async {
+  Future<bool> _store(
+    String raw, {
+    String? nameHint,
+    required String Function() savedMessage,
+  }) async {
     try {
       final mi = widget.memberIndex;
       // §237 — член папки: транзакционная правка raw (битый → откат).
       // §603 — одиночный сервер так же: битый источник не пишется.
       final err = mi != null
-          ? await widget.subController
-              .updateMemberAt(widget.index, mi, raw, nameHint: nameHint)
-          : await widget.subController
-              .updateConnectionAt(widget.index, [raw], nameHint: nameHint);
+          ? await widget.subController.updateMemberAt(
+              widget.index,
+              mi,
+              raw,
+              nameHint: nameHint,
+            )
+          : await widget.subController.updateConnectionAt(widget.index, [
+              raw,
+            ], nameHint: nameHint);
       if (!mounted) return err == null;
       if (err != null) {
         _snack(err.render());
@@ -620,8 +659,11 @@ class _NodeSettingsScreenState extends State<NodeSettingsScreen>
       context: context,
       builder: (ctx) => AlertDialog(
         title: Text(getLocalText.s("Edit JSON?")),
-        content: Text(getLocalText.s(
-            "The source will be replaced by this JSON and the node will go to the core as is. The app stops checking such a node: only the core validates it on save, and a mistake can leave it unable to connect. There is no way back to a link. Edit the source instead when you can.")),
+        content: Text(
+          getLocalText.s(
+            "The source will be replaced by this JSON and the node will go to the core as is. The app stops checking such a node: only the core validates it on save, and a mistake can leave it unable to connect. There is no way back to a link. Edit the source instead when you can.",
+          ),
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
@@ -635,8 +677,10 @@ class _NodeSettingsScreenState extends State<NodeSettingsScreen>
       ),
     );
     if (ok != true || !mounted) return;
-    await _store(_jsonCtrl.text,
-        savedMessage: () => getLocalText.s("Source replaced with JSON"));
+    await _store(
+      _jsonCtrl.text,
+      savedMessage: () => getLocalText.s("Source replaced with JSON"),
+    );
     if (!mounted) return;
     _tabs.animateTo(_kSourceTab);
   }
@@ -656,12 +700,15 @@ class _NodeSettingsScreenState extends State<NodeSettingsScreen>
       context: context,
       builder: (ctx) => AlertDialog(
         title: Text(getLocalText.s("Edit INI?")),
-        content: Text([
-          getLocalText.s(
-              "The source will be replaced by this INI. The tag and Detour stay as they are."),
-          if (ini.lost.isNotEmpty)
-            getLocalText.s("Not in INI: %s", ini.lost.join(', ')),
-        ].join('\n\n')),
+        content: Text(
+          [
+            getLocalText.s(
+              "The source will be replaced by this INI. The tag and Detour stay as they are.",
+            ),
+            if (ini.lost.isNotEmpty)
+              getLocalText.s("Not in INI: %s", ini.lost.join(', ')),
+          ].join('\n\n'),
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
@@ -675,9 +722,11 @@ class _NodeSettingsScreenState extends State<NodeSettingsScreen>
       ),
     );
     if (ok != true || !mounted) return;
-    final stored = await _store(ini.text,
-        nameHint: _originalTag,
-        savedMessage: () => getLocalText.s("Source replaced with INI"));
+    final stored = await _store(
+      ini.text,
+      nameHint: _originalTag,
+      savedMessage: () => getLocalText.s("Source replaced with INI"),
+    );
     if (!stored || !mounted) return;
     _tabs.animateTo(_kSourceTab);
   }
@@ -691,9 +740,11 @@ class _NodeSettingsScreenState extends State<NodeSettingsScreen>
       final dir = await getTemporaryDirectory();
       final path = '${dir.path}/$name';
       await File(path).writeAsString(ini.text);
-      await SharePlus.instance.share(ShareParams(
-        files: [XFile(path, mimeType: 'text/plain', name: name)],
-      ));
+      await SharePlus.instance.share(
+        ShareParams(
+          files: [XFile(path, mimeType: 'text/plain', name: name)],
+        ),
+      );
     } catch (e) {
       _snack(formatUserError(e).render());
     }
@@ -712,7 +763,9 @@ class _NodeSettingsScreenState extends State<NodeSettingsScreen>
   /// не считаются.
   bool get _dirty =>
       _originalTag.isNotEmpty &&
-      (_tagCtrl.text != _originalTag || _sourceCtrl.text != _containerRaw);
+      (_tagCtrl.text != _originalTag ||
+          _sourceCtrl.text != _containerRaw ||
+          _tsAwgDraftChanged);
 
   /// Save в AppBar и в диалоге Unsaved changes.
   Future<bool> _save() async {
@@ -754,9 +807,11 @@ class _NodeSettingsScreenState extends State<NodeSettingsScreen>
       },
       child: Scaffold(
         appBar: AppBar(
-          title: Text(_tagCtrl.text.isNotEmpty
-              ? _tagCtrl.text
-              : getLocalText.s("Node Settings")),
+          title: Text(
+            _tagCtrl.text.isNotEmpty
+                ? _tagCtrl.text
+                : getLocalText.s("Node Settings"),
+          ),
           actions: [
             IconButton(
               tooltip: getLocalText.s("Save"),
@@ -792,7 +847,9 @@ class _NodeSettingsScreenState extends State<NodeSettingsScreen>
                   if (_isTailscale)
                     TailscaleNetworkTab(
                       liveTag: TagResolver.displayTag(
-                          widget.entry.list.tagPrefix, _originalTag),
+                        widget.entry.list.tagPrefix,
+                        _originalTag,
+                      ),
                       body: _node is TailscaleSpec
                           ? (_node as TailscaleSpec).body
                           : const {},
@@ -803,9 +860,12 @@ class _NodeSettingsScreenState extends State<NodeSettingsScreen>
                   NodeDiagnosticsTab(
                     node: _node,
                     liveTag: TagResolver.displayTag(
-                        widget.entry.list.tagPrefix, _originalTag),
+                      widget.entry.list.tagPrefix,
+                      _originalTag,
+                    ),
                     warnings: _notifications,
-                    scrollToNotifications: widget.initialTab ==
+                    scrollToNotifications:
+                        widget.initialTab ==
                         NodeSettingsScreen.diagnosticsTabIndex,
                   ),
                 ],
@@ -817,11 +877,18 @@ class _NodeSettingsScreenState extends State<NodeSettingsScreen>
   Widget _buildSettingsTab(ThemeData theme) {
     if (_autoGroup != null) return _buildAutoGroupSettingsTab(theme);
     return ListView(
-      padding:
-          EdgeInsets.fromLTRB(16, 16, 16, MediaQuery.of(context).padding.bottom + 24),
+      padding: EdgeInsets.fromLTRB(
+        16,
+        16,
+        16,
+        MediaQuery.of(context).padding.bottom + 24,
+      ),
       children: [
         _sectionHeader(
-            getLocalText.s("Info"), getLocalText.s("Protocol and server details"), theme),
+          getLocalText.s("Info"),
+          getLocalText.s("Protocol and server details"),
+          theme,
+        ),
         // Лейбл в title, значение в subtitle (во всю ширину, перенос по словам).
         // Раньше длинное значение в `trailing` сжимало title до нуля и «Server»
         // переносился вертикально по буквам (напр. WARP-хост
@@ -855,43 +922,56 @@ class _NodeSettingsScreenState extends State<NodeSettingsScreen>
         ),
         if (_node case final WireguardSpec wg) ...[
           const SizedBox(height: 16),
-          _sectionHeader(getLocalText.s("Masquerade"),
-              getLocalText.s(
-                "AmneziaWG 1.5 parameters: decoy packets before the WireGuard handshake."),
-              theme),
+          _sectionHeader(
+            getLocalText.s("Masquerade"),
+            getLocalText.s(
+              "AmneziaWG 1.5 parameters: decoy packets before the WireGuard handshake.",
+            ),
+            theme,
+          ),
           _buildMasqueradeSection(wg),
         ],
         // §322 — у узла автовыбора detour'а нет: он не соединение, а правило
         // выбора среди членов. Блок не рисуем вовсе (не «серым»).
         if (_member?.node?.isGroup != true) ...[
-        const SizedBox(height: 16),
-        _sectionHeader(
-            getLocalText.s("Detour"), getLocalText.s("Route through another server first"), theme),
-        ListTile(
-          leading: const Icon(Icons.alt_route, size: 20),
-          title: Text(getLocalText.s("Detour server")),
-          // §248 — Направление-цель рендерится как «⚙ <label>».
-          subtitle: Text(_detour.isEmpty
-              ? getLocalText.s("None (direct)")
-              : _detourDisplay(_detour)),
-          trailing: const Icon(Icons.chevron_right),
-          onTap: () => unawaited(_pickDetour()),
-        ),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-          child: Text(
-            // §252 — полная цепочка «как пакет пойдёт»: цель → её собственный
-            // detour → … (detourPathHops), а не только первый хоп.
-            _detour.isEmpty
-                ? getLocalText.s("Traffic goes directly to this server.")
-                : getLocalText.s("Phone → %1\$s → %2\$s → Internet", _detourPath(), _originalTag),
-            style: theme.textTheme.bodySmall
-                ?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+          const SizedBox(height: 16),
+          _sectionHeader(
+            getLocalText.s("Detour"),
+            getLocalText.s("Route through another server first"),
+            theme,
           ),
-        ),
-        // §636 — TLS: узловое переопределение ручек «TLS Fragmentation».
-        const SizedBox(height: 16),
-        ..._buildTlsSection(theme),
+          ListTile(
+            leading: const Icon(Icons.alt_route, size: 20),
+            title: Text(getLocalText.s("Detour server")),
+            // §248 — Направление-цель рендерится как «⚙ <label>».
+            subtitle: Text(
+              _detour.isEmpty
+                  ? getLocalText.s("None (direct)")
+                  : _detourDisplay(_detour),
+            ),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => unawaited(_pickDetour()),
+          ),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+            child: Text(
+              // §252 — полная цепочка «как пакет пойдёт»: цель → её собственный
+              // detour → … (detourPathHops), а не только первый хоп.
+              _detour.isEmpty
+                  ? getLocalText.s("Traffic goes directly to this server.")
+                  : getLocalText.s(
+                      "Phone → %1\$s → %2\$s → Internet",
+                      _detourPath(),
+                      _originalTag,
+                    ),
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
+            ),
+          ),
+          // §636 — TLS: узловое переопределение ручек «TLS Fragmentation».
+          const SizedBox(height: 16),
+          ..._buildTlsSection(theme),
         ], // §322 — конец гейта detour-блока
         const SizedBox(height: 16),
         ..._buildSkipPresetsBlock(theme),
@@ -922,16 +1002,19 @@ class _NodeSettingsScreenState extends State<NodeSettingsScreen>
     final list = widget.entry.list;
     final folder = _member != null && list is FolderServers ? list : null;
     return [
-      _sectionHeader(getLocalText.s("TLS"),
-          getLocalText.s("Override the global TLS settings for this server."),
-          theme),
+      _sectionHeader(
+        getLocalText.s("TLS"),
+        getLocalText.s("Override the global TLS settings for this server."),
+        theme,
+      ),
       if (_underDetour)
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
           child: Text(
             getLocalText.s("Not applied: traffic goes through a detour first."),
-            style: theme.textTheme.bodySmall
-                ?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: theme.colorScheme.onSurfaceVariant,
+            ),
           ),
         ),
       TlsPolicyTiles(
@@ -952,12 +1035,17 @@ class _NodeSettingsScreenState extends State<NodeSettingsScreen>
     if (mi != null) {
       // Синхронная часть заменяет член до записи на диск — экран
       // перерисовывается сразу, не дожидаясь IO.
-      final pending = widget.subController.setMemberTls(widget.index, mi, value);
+      final pending = widget.subController.setMemberTls(
+        widget.index,
+        mi,
+        value,
+      );
       setState(() {});
       final err = await pending;
       if (err != null && mounted) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text(err.render())));
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(err.render())));
         setState(() {});
       }
       return;
@@ -985,11 +1073,14 @@ class _NodeSettingsScreenState extends State<NodeSettingsScreen>
         key: const ValueKey('node-skip-presets'),
         secondary: const Icon(Icons.rule_folder_outlined, size: 20),
         title: Text(getLocalText.s("Skip Tailscale presets")),
-        subtitle: Text(getLocalText
-            .s("Presets will not add routing or DNS rules for this node.")),
+        subtitle: Text(
+          getLocalText.s(
+            "Presets will not add routing or DNS rules for this node.",
+          ),
+        ),
         value: _recordFlag(NodeRecordFlag.skipTailscalePresets),
-        onChanged: (v) => unawaited(
-            _setRecordFlag(NodeRecordFlag.skipTailscalePresets, v)),
+        onChanged: (v) =>
+            unawaited(_setRecordFlag(NodeRecordFlag.skipTailscalePresets, v)),
       ),
       const SizedBox(height: 16),
     ];
@@ -1000,53 +1091,69 @@ class _NodeSettingsScreenState extends State<NodeSettingsScreen>
   /// туннеля получают reject.
   List<Widget> _buildTunnelIngressBlock(ThemeData theme) {
     if (!_tunnelIngressVisible) return const [];
-    Widget flag(String key, IconData icon, NodeRecordFlag f, String title,
-            String subtitle) =>
-        SwitchListTile(
-          key: ValueKey(key),
-          secondary: Icon(icon, size: 20),
-          title: Text(title),
-          subtitle: Text(subtitle),
-          value: _recordFlag(f),
-          onChanged: (v) => unawaited(_setRecordFlag(f, v)),
-        );
+    Widget flag(
+      String key,
+      IconData icon,
+      NodeRecordFlag f,
+      String title,
+      String subtitle,
+    ) => SwitchListTile(
+      key: ValueKey(key),
+      secondary: Icon(icon, size: 20),
+      title: Text(title),
+      subtitle: Text(subtitle),
+      value: _recordFlag(f),
+      onChanged: (v) => unawaited(_setRecordFlag(f, v)),
+    );
     return [
       _sectionHeader(
-          getLocalText.s("Incoming connections from this tunnel"),
-          getLocalText.s(
-              "Peers on the other side of this tunnel can open connections to this device. Without the switches below they are rejected."),
-          theme),
+        getLocalText.s("Incoming connections from this tunnel"),
+        getLocalText.s(
+          "Peers on the other side of this tunnel can open connections to this device. Without the switches below they are rejected.",
+        ),
+        theme,
+      ),
       flag(
-          'node-allow-local',
-          Icons.phone_android_outlined,
-          NodeRecordFlag.allowLocal,
-          getLocalText.s("Allow access to this device"),
-          getLocalText.s(
-              "Peers reach services on this device's tunnel address. The service sees them as 127.0.0.1, so everything that trusts localhost becomes reachable.")),
+        'node-allow-local',
+        Icons.phone_android_outlined,
+        NodeRecordFlag.allowLocal,
+        getLocalText.s("Allow access to this device"),
+        getLocalText.s(
+          "Peers reach services on this device's tunnel address. The service sees them as 127.0.0.1, so everything that trusts localhost becomes reachable.",
+        ),
+      ),
       flag(
-          'node-allow-lan',
-          Icons.lan_outlined,
-          NodeRecordFlag.allowLan,
-          getLocalText.s("Expose local network"),
-          getLocalText.s("Peers reach private networks behind this device.")),
+        'node-allow-lan',
+        Icons.lan_outlined,
+        NodeRecordFlag.allowLan,
+        getLocalText.s("Expose local network"),
+        getLocalText.s("Peers reach private networks behind this device."),
+      ),
       flag(
-          'node-allow-gateway',
-          Icons.alt_route_outlined,
-          NodeRecordFlag.allowGateway,
-          getLocalText.s("Allow as gateway"),
-          getLocalText.s(
-              "Peers route any traffic through this device; it leaves through the outbound chosen in the Tunnel ingress preset.")),
+        'node-allow-gateway',
+        Icons.alt_route_outlined,
+        NodeRecordFlag.allowGateway,
+        getLocalText.s("Allow as gateway"),
+        getLocalText.s(
+          "Peers route any traffic through this device; it leaves through the outbound chosen in the Tunnel ingress preset.",
+        ),
+      ),
       const SizedBox(height: 16),
     ];
   }
 
   Future<void> _setRecordFlag(NodeRecordFlag flag, bool value) async {
-    final err = await widget.subController
-        .setNodeRecordFlag(widget.index, widget.memberIndex, flag, value);
+    final err = await widget.subController.setNodeRecordFlag(
+      widget.index,
+      widget.memberIndex,
+      flag,
+      value,
+    );
     if (!mounted) return;
     if (err != null) {
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text(err.render())));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(err.render())));
     }
     setState(() {});
   }
@@ -1063,7 +1170,11 @@ class _NodeSettingsScreenState extends State<NodeSettingsScreen>
         : const <AutoPoolCandidate>[];
     return ListView(
       padding: EdgeInsets.fromLTRB(
-          16, 16, 16, MediaQuery.of(context).padding.bottom + 24),
+        16,
+        16,
+        16,
+        MediaQuery.of(context).padding.bottom + 24,
+      ),
       children: [
         ListenableBuilder(
           listenable: _sourceCtrl,
@@ -1073,8 +1184,11 @@ class _NodeSettingsScreenState extends State<NodeSettingsScreen>
             if (member == null || current == null) {
               return const SizedBox.shrink();
             }
-            final parsed =
-                autoGroupFromSourceText(_sourceCtrl.text, _folderId, current);
+            final parsed = autoGroupFromSourceText(
+              _sourceCtrl.text,
+              _folderId,
+              current,
+            );
             if (parsed != null) _autoLastGroup = parsed;
             final shown = parsed ?? _autoLastGroup ?? current;
             return Padding(
@@ -1087,9 +1201,11 @@ class _NodeSettingsScreenState extends State<NodeSettingsScreen>
                       padding: const EdgeInsets.only(bottom: 8),
                       child: Text(
                         getLocalText.s(
-                            "The form is off: Source is not a valid JSON object."),
+                          "The form is off: Source is not a valid JSON object.",
+                        ),
                         style: theme.textTheme.bodySmall?.copyWith(
-                            color: theme.colorScheme.onSurfaceVariant),
+                          color: theme.colorScheme.onSurfaceVariant,
+                        ),
                       ),
                     ),
                   AutoGroupForm(
@@ -1099,7 +1215,11 @@ class _NodeSettingsScreenState extends State<NodeSettingsScreen>
                     enabled: parsed != null,
                     onChanged: (g) {
                       final next = autoGroupSourceWith(
-                          _sourceCtrl.text, member, g, _folderId);
+                        _sourceCtrl.text,
+                        member,
+                        g,
+                        _folderId,
+                      );
                       if (next != _sourceCtrl.text) _sourceCtrl.text = next;
                     },
                   ),
@@ -1118,36 +1238,72 @@ class _NodeSettingsScreenState extends State<NodeSettingsScreen>
   /// текста руками обновляет форму. Текст не объект — форма неактивна.
   /// Сохранение — Save экрана.
   Widget _buildOpenConnectSourceForm(ThemeData theme) => ListenableBuilder(
-        listenable: _sourceCtrl,
-        builder: (context, _) {
-          final body = formBodyFromSource(_sourceCtrl.text);
-          if (body != null) _ocLastBody = body;
-          final shown = body ?? _ocLastBody;
-          return Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              if (body == null)
-                Text(
-                  getLocalText.s(
-                      "The form is off: Source is not a valid JSON object."),
-                  style: theme.textTheme.bodySmall
-                      ?.copyWith(color: theme.colorScheme.onSurfaceVariant),
-                ),
-              if (shown != null)
-                OpenConnectForm(
-                  key: const ValueKey('node-openconnect-form'),
-                  body: shown,
-                  enabled: body != null,
-                  showErrors: true,
-                  onChanged: (b) {
-                    final next = sourceWithFormBody(_sourceCtrl.text, b);
-                    if (next != _sourceCtrl.text) _sourceCtrl.text = next;
-                  },
-                ),
-            ],
-          );
-        },
+    listenable: _sourceCtrl,
+    builder: (context, _) {
+      final body = formBodyFromSource(_sourceCtrl.text);
+      if (body != null) _ocLastBody = body;
+      final shown = body ?? _ocLastBody;
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          if (body == null)
+            Text(
+              getLocalText.s(
+                "The form is off: Source is not a valid JSON object.",
+              ),
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
+            ),
+          if (shown != null)
+            OpenConnectForm(
+              key: const ValueKey('node-openconnect-form'),
+              body: shown,
+              enabled: body != null,
+              showErrors: true,
+              onChanged: (b) {
+                final next = sourceWithFormBody(_sourceCtrl.text, b);
+                if (next != _sourceCtrl.text) _sourceCtrl.text = next;
+              },
+            ),
+        ],
       );
+    },
+  );
+
+  Widget _buildTailscaleSourceForm(ThemeData theme) => ListenableBuilder(
+    listenable: _sourceCtrl,
+    builder: (context, _) {
+      final body = formBodyFromSource(_sourceCtrl.text);
+      if (body != null) _tsAwgLastBody = body;
+      final shown = body ?? _tsAwgLastBody;
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          if (body == null)
+            Text(
+              getLocalText.s(
+                "The form is off: Source is not a valid JSON object.",
+              ),
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
+            ),
+          if (shown != null)
+            TailscaleAwgForm(
+              key: _tsAwgFormKey,
+              body: shown,
+              enabled: body != null,
+              onDraftChanged: () => _tsAwgDraftChanged = true,
+              onChanged: (body) {
+                final next = sourceWithFormBody(_sourceCtrl.text, body);
+                if (next != _sourceCtrl.text) _sourceCtrl.text = next;
+              },
+            ),
+        ],
+      );
+    },
+  );
 
   /// §455 — вкладка Source: `origin.raw` как есть, единственное место правки.
   Widget _buildSourceTab(ThemeData theme) {
@@ -1155,21 +1311,35 @@ class _NodeSettingsScreenState extends State<NodeSettingsScreen>
     final isAuto = _autoGroup != null;
     final kindNote = switch (_originKind) {
       'json' => getLocalText.s(
-          "sing-box JSON: sent to the core as is. The core checks it on save."),
+        "sing-box JSON: sent to the core as is. The core checks it on save.",
+      ),
       'wg_ini' => getLocalText.s(
-          "WireGuard config: saved as is. The tag is stored separately."),
+        "WireGuard config: saved as is. The tag is stored separately.",
+      ),
       _ => getLocalText.s("Link: the tag goes into its fragment on save."),
     };
     return ListView(
-      padding:
-          EdgeInsets.fromLTRB(16, 16, 16, MediaQuery.of(context).padding.bottom + 24),
+      padding: EdgeInsets.fromLTRB(
+        16,
+        16,
+        16,
+        MediaQuery.of(context).padding.bottom + 24,
+      ),
       children: [
-        _sectionHeader(getLocalText.s("Source"),
-            getLocalText.s("The node's original text. Save writes it as is."), theme),
+        _sectionHeader(
+          getLocalText.s("Source"),
+          getLocalText.s("The node's original text. Save writes it as is."),
+          theme,
+        ),
         if (_node?.protocol == kOpenConnectScheme)
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
             child: _buildOpenConnectSourceForm(theme),
+          ),
+        if (_isTailscale)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+            child: _buildTailscaleSourceForm(theme),
           ),
         Padding(
           padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
@@ -1187,8 +1357,9 @@ class _NodeSettingsScreenState extends State<NodeSettingsScreen>
                   ? null
                   : Text(
                       kindNote,
-                      style: theme.textTheme.bodySmall
-                          ?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: theme.colorScheme.onSurfaceVariant,
+                      ),
                     ),
             ),
           ),
@@ -1201,11 +1372,20 @@ class _NodeSettingsScreenState extends State<NodeSettingsScreen>
   /// detour и пост-шагов сборки). Кнопка Edit — см. [_editJson].
   Widget _buildJsonTab(ThemeData theme) {
     return ListView(
-      padding:
-          EdgeInsets.fromLTRB(16, 16, 16, MediaQuery.of(context).padding.bottom + 24),
+      padding: EdgeInsets.fromLTRB(
+        16,
+        16,
+        16,
+        MediaQuery.of(context).padding.bottom + 24,
+      ),
       children: [
-        _sectionHeader(getLocalText.s("Outbound JSON"),
-            getLocalText.s("What the core receives. Read-only: edit the source instead."), theme),
+        _sectionHeader(
+          getLocalText.s("Outbound JSON"),
+          getLocalText.s(
+            "What the core receives. Read-only: edit the source instead.",
+          ),
+          theme,
+        ),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
           // §624 — Copy в строке кнопок над рамкой, не поверх текста.
@@ -1231,17 +1411,17 @@ class _NodeSettingsScreenState extends State<NodeSettingsScreen>
         // §686 — у группы нет тела узла, которое можно отдать ядру
         // дословно: правят форму или Source.
         if (_autoGroup == null)
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-          child: Align(
-            alignment: Alignment.centerLeft,
-            child: TextButton.icon(
-              icon: const Icon(Icons.edit_outlined, size: 18),
-              label: Text(getLocalText.s("Edit JSON")),
-              onPressed: () => unawaited(_editJson()),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+            child: Align(
+              alignment: Alignment.centerLeft,
+              child: TextButton.icon(
+                icon: const Icon(Icons.edit_outlined, size: 18),
+                label: Text(getLocalText.s("Edit JSON")),
+                onPressed: () => unawaited(_editJson()),
+              ),
             ),
           ),
-        ),
       ],
     );
   }
@@ -1253,8 +1433,12 @@ class _NodeSettingsScreenState extends State<NodeSettingsScreen>
     final ini = _ini;
     final lost = ini?.lost ?? const <String>[];
     return ListView(
-      padding:
-          EdgeInsets.fromLTRB(16, 16, 16, MediaQuery.of(context).padding.bottom + 24),
+      padding: EdgeInsets.fromLTRB(
+        16,
+        16,
+        16,
+        MediaQuery.of(context).padding.bottom + 24,
+      ),
       children: [
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -1288,8 +1472,9 @@ class _NodeSettingsScreenState extends State<NodeSettingsScreen>
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
             child: Text(
               getLocalText.s("Not in INI: %s", lost.join(', ')),
-              style: theme.textTheme.bodySmall
-                  ?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
             ),
           ),
         Padding(

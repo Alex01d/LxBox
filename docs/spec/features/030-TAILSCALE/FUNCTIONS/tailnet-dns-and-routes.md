@@ -101,3 +101,13 @@ the `endpoint` picker.
 | 3 | [443](../../../tasks/443-contract-1-0-2-spec129.md) | Released v2.24.0 | The dangling-`endpoint` sanitizer of `tailscale` DNS servers kept as is |
 | 4 | [575](../../../tasks/575-remove-node-sections.md) | Implemented (phases 1–3) | Node sections abolished; the `endpoint` picker moved to the preset node list |
 | 5 | [578](../../../tasks/578-tailscale-preset-template-for-each.md) | Spec, implementation started | The `tailscale` preset with `for_each`, `skip_presets`, late seeding, DNS rule names the server |
+
+## Explicit private protection — task 700
+
+The optional "Protected Tailscale networks" preset binds explicit CIDRs/private
+DNS suffixes to a selected Tailscale endpoint. It stays effective without a live
+network map and takes priority over ordinary direct/proxy/public-DNS rules.
+Missing targets, invalid lists, DNS endpoint collisions and overlapping tunnel
+bypass ranges reject apply. This covers traffic captured by the VPN, not apps
+excluded by Android per-app settings. Ordinary live-route discovery remains
+separate. Engineering implementation; physical-device acceptance pending.

@@ -17,6 +17,12 @@ the node becomes an ordinary Direction and carries the internet traffic.
 | Absorbed | `§435` (a former feature, cancelled by §575/§578) · tasks 437, 445, 449, 578, 579, 581 |
 | State | ✅ written from code, 2026-09-29 |
 
+Task 700 adds engineering AWG profiles and explicit private-network protection.
+Physical-device acceptance is partial: the native AWG2/DERP bulk-stability gate
+and deferred mobile handoff remain open. Task701 verifies the protected-DNS
+coexistence fix and one stock-peer VLESS-carrier comparison. The production core
+pin is unchanged.
+
 ## Purpose
 
 The user wants to reach the machines of their tailnet (home NAS, office
@@ -193,11 +199,25 @@ lives in the core until "Save choice" writes it into the node.
   "Debug API: state and device count, no names or addresses". **Mutation:**
   the peer list in `GET /state`.
 
+- **P25. AWG is an explicit atomic transport choice.** Ordinary Tailscale, AWG2
+  and AWG3 profiles survive import/edit/export without carrying device identity.
+  Missing or unknown core support rejects the complete candidate. Witness:
+  task-700 profile and atomic capability tests; device acceptance pending.
+- **P26. Configured/applied transport is separate from connectivity.** An applied
+  profile does not claim a reachable peer. Witness: optional status decoding
+  tests; live-device display acceptance pending.
+- **P27. Explicit private protection survives login and network state changes.**
+  Selected CIDRs and suffixes remain on their endpoint; invalid targets, private
+  DNS collisions and overlapping tunnel bypasses reject apply. Witness: task-700
+  protection builder tests, task701 persisted-model and router-off startup
+  checks with measured fallback counters. Broader logout/outage coverage remains
+  pending; the earlier unprotected-model leak remains a failed test.
+
 ## Controlled parameters
 
 | Knob | Values | Default |
 |------|--------|---------|
-| Wizard → Tailscale: Tag, Auth key, Control URL, Hostname, Ephemeral, Accept routes, Exit node | strings, two switches; Auth key required, masked with Show/Hide | `tailscale` · — · empty · `LxBox-<model>` · off · off · empty |
+| Wizard → Tailscale: Tag, Auth key, Control URL, Hostname, Ephemeral, Accept routes, Exit node | strings, two switches; Auth key optional, masked with Show/Hide | `tailscale` · — · empty · `LxBox-<model>` · off · off · empty |
 | Node screen → "Skip Tailscale presets" | on/off; visible on an own Tailscale server or folder member when the template has a node-loop preset that accepts it | off |
 | Preset "Tailscale networks" (`tailscale`) | on/off, sortable, `num` 945; variable "DNS" (`dns_enable`) | on · DNS on |
 | DNS server of type `tailscale` | `endpoint` (a Tailscale node, required), `accept_default_resolvers` | — |
@@ -221,6 +241,11 @@ Core RPC: `SubscribeTailscaleStatus`, `SetTailscaleExitNode`, `TailscaleLogout`,
 node), `tailscale_state.json` (the index slot → node key → directory name).
 Warning code: `tailscale_core_unsupported`. Debug API: `GET /state` field
 `tailscale`, record field `skip_tailscale_presets` (read-only).
+
+Additional controls: peer transport (ordinary/AWG2/AWG3), profile label and typed
+JSON parameters with file import/export; optional `underlay_mode` auto/derp;
+"Protected Tailscale networks" preset, selected endpoint, one protected CIDR or
+private DNS suffix per line. Both AWG peers require compatible profiles.
 
 ## Inputs / Outputs
 
@@ -254,7 +279,7 @@ Delete node / Workspace delete → index record removed → directory removed wh
 
 ## Rules and guarantees
 
-- The tailnet route is a live condition, not a subnet list: `preferred_by`
+- Without explicit private protection, the ordinary tailnet route is a live condition, not a subnet list: `preferred_by`
   asks the endpoint whether an address or a name is its own (machine names,
   machine addresses, accepted subnets). Until the tailnet is up the rule does
   not match and traffic follows the other rules. Two nodes in one tailnet
@@ -340,6 +365,7 @@ Delete node / Workspace delete → index record removed → directory removed wh
 | Tailscale node | Creates and stores a Tailscale endpoint from the wizard or sing-box JSON, gates it by the core build and decides whether it can be a Direction. | P1–P5, P11 | [tailscale-node.md](FUNCTIONS/tailscale-node.md) |
 | Device identity and state | Gives every node a state directory bound to a stable key, keeps it through renames, moves and Workspaces, deletes it with the node and keeps it out of the backup. | P6–P10 | [device-identity-and-state.md](FUNCTIONS/device-identity-and-state.md) |
 | Tailnet DNS and routes | Serves every Tailscale node with a MagicDNS server and `preferred_by` rules through the `tailscale` preset, with a Skip Tailscale presets opt-out and the `tailscale` DNS server type. | P12–P18 | [tailnet-dns-and-routes.md](FUNCTIONS/tailnet-dns-and-routes.md) |
+| Peer transport profiles | Selects ordinary Tailscale/AWG2/AWG3, carries atomic profiles and separates profile application from connectivity. | P25–P26 | [peer-transport.md](FUNCTIONS/peer-transport.md) |
 | Network tab | Shows the node state, this device, the tailnet devices and the exit node on the node screen, switches the exit on the fly and saves it into the body. | P19–P24 | [networks-tab.md](FUNCTIONS/networks-tab.md) |
 
 ## Related features

@@ -15,6 +15,7 @@ class _Methods {
   // Config
   static const saveConfig = 'saveConfig';
   static const getConfig = 'getConfig';
+
   /// §316 — native `Context.filesDir` (краш-репорты и stderr ядра лежат там,
   /// а НЕ в Dart-овском `getApplicationDocumentsDirectory()` = `app_flutter`).
   static const getFilesDir = 'getFilesDir';
@@ -68,8 +69,10 @@ class _Methods {
   static const getAppInfo = 'getAppInfo';
 
   // System settings
-  static const isIgnoringBatteryOptimizations = 'isIgnoringBatteryOptimizations';
-  static const openBatteryOptimizationSettings = 'openBatteryOptimizationSettings';
+  static const isIgnoringBatteryOptimizations =
+      'isIgnoringBatteryOptimizations';
+  static const openBatteryOptimizationSettings =
+      'openBatteryOptimizationSettings';
   static const openAppDetailsSettings = 'openAppDetailsSettings';
   static const areNotificationsEnabled = 'areNotificationsEnabled';
   static const openNotificationSettings = 'openNotificationSettings';
@@ -93,6 +96,7 @@ class _Methods {
 
   // Diagnostics / introspection
   static const getCoreVersion = 'getCoreVersion';
+  static const getCoreCapabilities = 'getCoreCapabilities';
   static const getMemoryInfo = 'getMemoryInfo';
 
   /// §324 — каноническая форма конфига через `Libbox.formatConfig()`: тот же

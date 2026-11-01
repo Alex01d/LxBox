@@ -137,6 +137,7 @@ void main() {
               'Not saved. Traffic is not routed through this node until you save the choice.'),
           findsOneWidget);
       await tester.ensureVisible(save);
+      await tester.pump();
       await tester.tap(save);
       await tester.pump();
       expect(saved, '100.64.0.2');
@@ -149,6 +150,7 @@ void main() {
           body: const {'exit_node': 'gw'},
           onSave: (v) async => saved = v);
       await tester.ensureVisible(save);
+      await tester.pump();
       await tester.tap(save);
       await tester.pump();
       expect(saved, isNull);

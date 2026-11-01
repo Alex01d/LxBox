@@ -28,6 +28,7 @@ import '../models/source_chain.dart';
 import '../models/source_replace.dart';
 import '../models/tls_policy.dart';
 import 'core_reject/core_reject_backup.dart';
+import 'atomic_transport_backup.dart';
 import 'lx_backup_slice.dart';
 import 'node_link_address.dart';
 import 'node_hash.dart' show deepSortKeys;
@@ -77,9 +78,12 @@ const int kLxBackupFormat0x = 1;
 /// Маркер контракта 1.0 в ключе `lx_backup` (BACKUP.md §8).
 const int kLxBackupFormat10 = 2;
 
-/// §438 — формат, который эта сторона пишет, и старший, который читает. Файл
-/// с `lx_backup` выше отвергается целиком, а не разбирается частично
-/// (BACKUP.md §8); младший `1` читается legacy-входом.
+/// Contract 1.2.0: marker 3 is required for atomic AWG/carrier/guard payloads.
+const int kLxBackupFormatAtomic = 3;
+const int kLxBackupMaxVersion = kLxBackupFormatAtomic;
+
+/// Default export marker. Atomic profiles/guards opt into marker 3 below;
+/// maximum supported input is [kLxBackupMaxVersion].
 const int kLxBackupVersion = kLxBackupFormat10;
 
 /// Значения `exported_by.app`. §401 — только они: ключами карманов
@@ -303,7 +307,12 @@ const Set<String> kLxImportDefaultSystemTags = {
 
 /// Предупреждение импорта: код + что затронуто.
 class LxBackupWarning {
-  const LxBackupWarning(this.code, this.detail, {this.kind = '', this.reason = ''});
+  const LxBackupWarning(
+    this.code,
+    this.detail, {
+    this.kind = '',
+    this.reason = '',
+  });
 
   final String code;
   final String detail;
@@ -708,9 +717,11 @@ class LxBackupFile {
     this.warp = const [],
     this.rulesDeclared = true,
     this.mixins = const [],
+    this.requires,
   });
 
   final int version;
+  final LxBackupRequirements? requires;
   final String exportedByApp;
   final String exportedByVersion;
   final String exportedAt;
@@ -803,29 +814,29 @@ class LxBackupFile {
   LxBackupFile copyWith({
     List<CustomRule>? rules,
     List<LxBackupWarning>? warnings,
-  }) =>
-      LxBackupFile(
-        version: version,
-        exportedByApp: exportedByApp,
-        exportedByVersion: exportedByVersion,
-        exportedAt: exportedAt,
-        directions: directions,
-        directionPing: directionPing,
-        rules: rules ?? this.rules,
-        rulesDeclared: rulesDeclared,
-        chains: chains,
-        chainHops: chainHops,
-        chainPositions: chainPositions,
-        subscriptions: subscriptions,
-        servers: servers,
-        folders: folders,
-        dns: dns,
-        warp: warp,
-        mixins: mixins,
-        vars: vars,
-        routeFinal: routeFinal,
-        warnings: warnings ?? this.warnings,
-      );
+  }) => LxBackupFile(
+    version: version,
+    requires: requires,
+    exportedByApp: exportedByApp,
+    exportedByVersion: exportedByVersion,
+    exportedAt: exportedAt,
+    directions: directions,
+    directionPing: directionPing,
+    rules: rules ?? this.rules,
+    rulesDeclared: rulesDeclared,
+    chains: chains,
+    chainHops: chainHops,
+    chainPositions: chainPositions,
+    subscriptions: subscriptions,
+    servers: servers,
+    folders: folders,
+    dns: dns,
+    warp: warp,
+    mixins: mixins,
+    vars: vars,
+    routeFinal: routeFinal,
+    warnings: warnings ?? this.warnings,
+  );
 }
 
 /// Результат экспорта: сам файл + что в него НЕ поехало.
@@ -875,6 +886,7 @@ Future<LxBackupExport> buildLxBackup({
   List<Direction> directions = const [],
   Map<String, LxDirectionPing> directionPing = const {},
   List<SourceChain> chains = const [],
+
   /// Порядок `sources[]` файла: ключи `id:<uuid>` и `chain:<tag>`.
   /// Нет — [lists], затем [chains].
   List<String>? sourceKeys,
@@ -918,8 +930,12 @@ Future<LxBackupExport> buildLxBackup({
       _noteLocalOnly(warnings, r.name, const ['json']);
       continue;
     }
-    final record =
-        exportBackupRecord(BackupRecord.rule, stored, r.name, warnings);
+    final record = exportBackupRecord(
+      BackupRecord.rule,
+      stored,
+      r.name,
+      warnings,
+    );
     if (record != null) ruleRecords.add(record);
   }
 
@@ -953,9 +969,14 @@ Future<LxBackupExport> buildLxBackup({
     if (warp.isNotEmpty) 'warp': warp,
     // §704 — миксины итогового конфига, без `id`. Наша секция: лаунчеру —
     // запрос объявить ключ терпимым в `backup.schema.json`.
-    if (mixins.isNotEmpty)
-      'mixins': [for (final m in mixins) m.toBackupJson()],
+    if (mixins.isNotEmpty) 'mixins': [for (final m in mixins) m.toBackupJson()],
   };
+
+  final requirements = atomicTransportRequirements(out);
+  if (requirements != null) {
+    out['lx_backup'] = kLxBackupFormatAtomic;
+    out['requires'] = requirements.toJson();
+  }
 
   return LxBackupExport(
     const JsonEncoder.withIndent('  ').convert(out),
@@ -987,12 +1008,8 @@ List<Map<String, dynamic>> _exportSources({
 }) {
   Map<String, dynamic>? ofList(ServerList list) =>
       _exportSource(list, warnings);
-  Map<String, dynamic>? ofChain(SourceChain c) => exportBackupRecord(
-        BackupRecord.chain,
-        chainToRecord(c),
-        c.tag,
-        warnings,
-      );
+  Map<String, dynamic>? ofChain(SourceChain c) =>
+      exportBackupRecord(BackupRecord.chain, chainToRecord(c), c.tag, warnings);
   if (sourceKeys == null) {
     return [
       for (final list in lists) ?ofList(list),
@@ -1042,12 +1059,14 @@ Map<String, dynamic>? _exportSource(
     UserServer() => BackupRecord.server,
     FolderServers() => BackupRecord.folder,
   };
-  final stored = sanitizeCoreRejectInBackupRecord(sourceToRecord(list), kind,
-      forExport: true);
+  final stored = sanitizeCoreRejectInBackupRecord(
+    sourceToRecord(list),
+    kind,
+    forExport: true,
+  );
   final entity = switch (list) {
     SubscriptionServers s => s.name.isEmpty ? s.url : s.name,
-    UserServer u =>
-      _str(stored['tag']).isEmpty ? u.id : _str(stored['tag']),
+    UserServer u => _str(stored['tag']).isEmpty ? u.id : _str(stored['tag']),
     FolderServers f => f.name,
   };
   final record = exportBackupRecord(kind, stored, entity, warnings);
@@ -1055,19 +1074,19 @@ Map<String, dynamic>? _exportSource(
   return switch (kind) {
     BackupRecord.server => _withJsonBody(record),
     BackupRecord.folder => {
-        for (final e in record.entries)
-          e.key: e.key == 'nodes' && e.value is List
-              ? [
-                  for (final n in e.value as List)
-                    // Член без текста — пустая строка папки: переносить
-                    // нечего (хранение держит его `unsupported` без исходника).
-                    // Член-группа текста не имеет и едет записью (§439 N2).
-                    if (n is Map &&
-                        (n['kind'] == kNodeKindAuto || _hasSourceText(n)))
-                      _withJsonBody(n.cast<String, dynamic>()),
-                ]
-              : e.value,
-      },
+      for (final e in record.entries)
+        e.key: e.key == 'nodes' && e.value is List
+            ? [
+                for (final n in e.value as List)
+                  // Член без текста — пустая строка папки: переносить
+                  // нечего (хранение держит его `unsupported` без исходника).
+                  // Член-группа текста не имеет и едет записью (§439 N2).
+                  if (n is Map &&
+                      (n['kind'] == kNodeKindAuto || _hasSourceText(n)))
+                    _withJsonBody(n.cast<String, dynamic>()),
+              ]
+            : e.value,
+    },
     _ => record,
   };
 }
@@ -1148,7 +1167,8 @@ Map<String, dynamic>? _tryDecodeObject(String body) {
 ///
 /// §438 — формат опознаётся ключом `lx_backup` одним сравнением ещё до
 /// разбора тела (BACKUP.md §8): `1` — декодер 0.x, `2` — декодер 1.0.
-/// Больше [kLxBackupVersion] — отказ целиком; вне `{1, 2}` — не наш файл.
+/// Marker 3 uses the same decoder after validating its transport requirements.
+/// Above [kLxBackupMaxVersion] the whole file is rejected.
 LxBackupFile parseLxBackup(
   String raw, {
   Set<String> knownOutbounds = const {},
@@ -1201,17 +1221,22 @@ LxBackupFile decodeLxBackup(
   if (version is! int) {
     throw const FormatException('Это не файл LX Backup: нет поля lx_backup');
   }
-  if (version > kLxBackupVersion) {
+  if (version > kLxBackupMaxVersion) {
     throw FormatException(
-      'Формат бэкапа v$version новее поддерживаемого v$kLxBackupVersion — обновите приложение',
+      'Формат бэкапа v$version новее поддерживаемого v$kLxBackupMaxVersion — обновите приложение',
     );
   }
   if (version < kLxBackupFormat0x) {
     throw const FormatException('Это не файл LX Backup: нет поля lx_backup');
   }
-  if (version == kLxBackupFormat10) {
+  if (version == kLxBackupFormat10 || version == kLxBackupFormatAtomic) {
+    final requirements = version == kLxBackupFormatAtomic
+        ? LxBackupRequirements.parse(decoded['requires'])
+        : null;
     return _parse10(
       decoded,
+      formatVersion: version,
+      requirements: requirements,
       takenTags: takenTags,
       knownPresets: knownPresets,
       knownChains: knownChains,
@@ -1255,9 +1280,7 @@ LxBackupFile _parse0x(
   // запись с тем же тегом получает `backup_chain_exists` наравне с тёзкой
   // локальной цепочки.
   final chains = <SourceChain>[];
-  final takenChainTags = <String>{
-    for (final t in knownChains) t.trim(),
-  };
+  final takenChainTags = <String>{for (final t in knownChains) t.trim()};
   for (final item in (decoded['chains'] as List? ?? const [])) {
     if (item is! Map) continue;
     final j = item.cast<String, dynamic>();
@@ -1276,11 +1299,7 @@ LxBackupFile _parse0x(
   final rules = <CustomRule>[
     for (final item in (decoded['rules'] as List? ?? const []))
       if (item is Map)
-        ..._ruleFromJson(
-          item.cast<String, dynamic>(),
-          knownPresets,
-          warnings,
-        ),
+        ..._ruleFromJson(item.cast<String, dynamic>(), knownPresets, warnings),
   ];
 
   // Порядок разбора секций = порядок предупреждений в превью: переменные,
@@ -1296,8 +1315,12 @@ LxBackupFile _parse0x(
     dnsWarnings,
     recordVars,
   );
-  final parsedVars =
-      _parseVars(decoded, warnings, dns: dnsRaw, recordVars: recordVars);
+  final parsedVars = _parseVars(
+    decoded,
+    warnings,
+    dns: dnsRaw,
+    recordVars: recordVars,
+  );
   final routeFinal = _parseRouteFinal(decoded);
   final warp = _parseWarp(decoded, warnings);
   final mixins = _parseMixins(decoded, warnings);
@@ -1359,9 +1382,7 @@ _ParsedDirections _parseDirections(
   // `vpn-de` — не тёзка, а второе Направление: для ядра это два разных
   // outbound'а, и объявлять одно из них «уже существующим» значило бы молча
   // потерять приехавшую запись.
-  final taken = <String>{
-    for (final t in takenTags) t.trim(),
-  };
+  final taken = <String>{for (final t in takenTags) t.trim()};
   final items = decoded['directions'];
   for (final item in (items is List ? items : const [])) {
     if (item is! Map) continue;
@@ -1381,10 +1402,7 @@ _ParsedDirections _parseDirections(
     final ping = _directionPingFromCanon(j, tag, warnings);
     if (!ping.isEmpty) directionPing[tag] = ping;
   }
-  return (
-    directions: directions,
-    ping: directionPing,
-  );
+  return (directions: directions, ping: directionPing);
 }
 
 /// `vars` — только переносимые имена (обе формы одинаковы).
@@ -1424,8 +1442,9 @@ _ParsedDirections _parseDirections(
     // §643 (D-132) — корневая переменная шаблона приёмника с
     // `wizard_ui: internal`: значение файла не данные пользователя.
     if (recordVars.internalGlobals.contains(key)) {
-      warnings.add(LxBackupWarning(kWarnVarSkipped, key,
-          reason: kVarSkippedInternal));
+      warnings.add(
+        LxBackupWarning(kWarnVarSkipped, key, reason: kVarSkippedInternal),
+      );
       continue;
     }
     if (kLxPortableVars.contains(key)) {
@@ -1434,22 +1453,26 @@ _ParsedDirections _parseDirections(
     }
     final target = rootDnsVarTarget(key, recordVars);
     if (target == null) {
-      warnings.add(LxBackupWarning(kWarnVarSkipped, key,
-          reason: kVarSkippedNotPortable));
+      warnings.add(
+        LxBackupWarning(kWarnVarSkipped, key, reason: kVarSkippedNotPortable),
+      );
       continue;
     }
     final at = servers == null
         ? -1
         : servers.indexWhere(
-            (s) => s is DnsServerTemplate && s.tag == target.tag);
+            (s) => s is DnsServerTemplate && s.tag == target.tag,
+          );
     if (at < 0) {
-      warnings.add(LxBackupWarning(kWarnVarSkipped, key,
-          reason: kVarSkippedNoRecord));
+      warnings.add(
+        LxBackupWarning(kWarnVarSkipped, key, reason: kVarSkippedNoRecord),
+      );
       continue;
     }
     if (ownVars.contains(target.tag)) {
-      warnings.add(LxBackupWarning(kWarnVarSkipped, key,
-          reason: kVarSkippedSuperseded));
+      warnings.add(
+        LxBackupWarning(kWarnVarSkipped, key, reason: kVarSkippedSuperseded),
+      );
       continue;
     }
     final value = rawVars[key];
@@ -1457,7 +1480,8 @@ _ParsedDirections _parseDirections(
     if (text.isEmpty) continue;
     final record = servers![at] as DnsServerTemplate;
     servers[at] = record.copyWith(
-        varValues: {...record.varValues, target.varName: text});
+      varValues: {...record.varValues, target.varName: text},
+    );
     lifted = true;
   }
   return (
@@ -1526,7 +1550,9 @@ List<Mixin> _parseMixins(
     final item = list[i];
     if (item is! Map) continue;
     final j = item.cast<String, dynamic>();
-    final bad = j['target'] is! String ? 'target' : (j['op'] is! String ? 'op' : null);
+    final bad = j['target'] is! String
+        ? 'target'
+        : (j['op'] is! String ? 'op' : null);
     if (bad != null) {
       warnings.add(LxBackupWarning(kWarnFieldTypeMismatch, 'mixins[$i].$bad'));
       continue;
@@ -1540,9 +1566,7 @@ List<Mixin> _parseMixins(
 /// порядке файла (у них нет места на оси, и перебивать размеченных им не за
 /// что). Порядок, который разбор отдаёт превью и слиянию.
 List<CustomRule> sortRulesByAxis(List<CustomRule> rules) {
-  final indexed = [
-    for (var i = 0; i < rules.length; i++) (i, rules[i]),
-  ];
+  final indexed = [for (var i = 0; i < rules.length; i++) (i, rules[i])];
   indexed.sort((a, b) {
     final an = a.$2.orderNum;
     final bn = b.$2.orderNum;
@@ -2034,10 +2058,12 @@ void _noteIdentityDropped(
     ...(set.where((k) => !_identityKeyOrder.contains(k)).toList()..sort()),
   ];
   if (ordered.isEmpty) return;
-  warnings.add(LxBackupWarning(
-    kWarnSourceIdentityDropped,
-    '$where: ${ordered.join(', ')}',
-  ));
+  warnings.add(
+    LxBackupWarning(
+      kWarnSourceIdentityDropped,
+      '$where: ${ordered.join(', ')}',
+    ),
+  );
 }
 
 /// Ключи объекта `identity` в порядке схемы 0.12. Порядок фиксирован, а не
@@ -2136,7 +2162,9 @@ List<LxServer> _legacyAutogroups0x(
   List<LxServer> servers,
   List<LxBackupWarning> warnings,
 ) {
-  if (!servers.any((s) => s.folder.isNotEmpty && isLegacyAutogroupText(s.uri))) {
+  if (!servers.any(
+    (s) => s.folder.isNotEmpty && isLegacyAutogroupText(s.uri),
+  )) {
     return servers;
   }
   final byFolder = <String, List<int>>{};
@@ -2149,7 +2177,9 @@ List<LxServer> _legacyAutogroups0x(
     final members = [for (final i in indexes) servers[i]];
     final nodes = <NodeSpec?>[
       for (final m in members)
-        isLegacyAutogroupText(m.uri) ? null : FolderMember(raw: _body0x(m)).node,
+        isLegacyAutogroupText(m.uri)
+            ? null
+            : FolderMember(raw: _body0x(m)).node,
     ];
     for (var k = 0; k < members.length; k++) {
       final m = members[k];
@@ -2163,11 +2193,13 @@ List<LxServer> _legacyAutogroups0x(
       );
       if (read == null) continue;
       for (final problem in read.dropped) {
-        warnings.add(LxBackupWarning(
-          kWarnGroupDegraded,
-          read.group.tag,
-          reason: 'member $problem, dropped',
-        ));
+        warnings.add(
+          LxBackupWarning(
+            kWarnGroupDegraded,
+            read.group.tag,
+            reason: 'member $problem, dropped',
+          ),
+        );
       }
       out[indexes[k]] = LxServer(
         autoGroup: read.group,
@@ -2218,8 +2250,12 @@ LxDns? _dnsFromJson(
     final server = _dnsServer0x(e, kind);
     if (server == null) continue;
     if (!_templateServerDeclared(server, recordVars)) {
-      warnings.add(LxBackupWarning(
-          kWarnDnsEntrySkipped, 'dns.servers: template:${server.tag}'));
+      warnings.add(
+        LxBackupWarning(
+          kWarnDnsEntrySkipped,
+          'dns.servers: template:${server.tag}',
+        ),
+      );
       continue;
     }
     servers.add(server);
@@ -2446,7 +2482,6 @@ Map<String, dynamic> _directionToJson(Direction d, LxDirectionPing? ping) => {
   if (d.auto != null) 'auto': directionAutoToRecord(d.auto!),
 };
 
-
 /// §393 C9 — каноническая запись `chains[]` → мобильная [SourceChain].
 ///
 /// Достижимость `hops` здесь НЕ проверяется: хоп — чаще всего узел подписки,
@@ -2476,7 +2511,8 @@ SourceChain _chainFromCanon(Map<String, dynamic> j, String tag) {
         if (e.key != 'hops') e.key: e.value,
     },
     'hops': [
-      for (final h in (canon['hops'] is List ? canon['hops'] as List : const []))
+      for (final h
+          in (canon['hops'] is List ? canon['hops'] as List : const []))
         if (h is String) h,
     ],
   }).value!;
@@ -2548,12 +2584,12 @@ Set<String> lxImportRootNames({
 /// Теги корневых узлов [lists] — одиночных серверов, под которыми узел
 /// эмитится (префикс сервера + тег узла, [containerFinalForm]).
 Set<String> lxImportRootNodeTags(List<ServerList> lists) => {
-      for (final l in lists)
-        if (l is UserServer)
-          // Сервер, заведённый этим импортом, узлов ещё не разобрал: они в тексте.
-          for (final n in l.nodes.isNotEmpty ? l.nodes : _nodesOf(l.rawBody))
-            if (n.tag.isNotEmpty) containerFinalForm(l, n.tag),
-    };
+  for (final l in lists)
+    if (l is UserServer)
+      // Сервер, заведённый этим импортом, узлов ещё не разобрал: они в тексте.
+      for (final n in l.nodes.isNotEmpty ? l.nodes : _nodesOf(l.rawBody))
+        if (n.tag.isNotEmpty) containerFinalForm(l, n.tag),
+};
 
 /// D-117 — ЕДИНСТВЕННЫЙ список известных целей импорта (BACKUP.md §3): цели
 /// правил (`backup_unknown_outbound`), `route.final`
@@ -2611,14 +2647,14 @@ Set<String>? lxImportKnownTargets({
 /// (`reject` у отказа), `outbound` тела правила вида json. У пресета цели
 /// нет — она из шаблона. Пустая строка — цели нет, проверять нечего.
 String _ruleTarget(CustomRule r) => switch (r) {
-      CustomRuleInline(:final outbound) => outbound,
-      CustomRuleSrs(:final outbound) => outbound,
-      CustomRulePreset() => '',
-      CustomRuleJson(:final json) => switch (_tryDecodeObject(json.trim())) {
-          {'outbound': final String o} => o,
-          _ => '',
-        },
-    };
+  CustomRuleInline(:final outbound) => outbound,
+  CustomRuleSrs(:final outbound) => outbound,
+  CustomRulePreset() => '',
+  CustomRuleJson(:final json) => switch (_tryDecodeObject(json.trim())) {
+    {'outbound': final String o} => o,
+    _ => '',
+  },
+};
 
 /// D-117 — цели правил и `route.final` файла против списка известных целей
 /// [known] ([lxImportKnownTargets]). Один проход на оба формата файла.
@@ -2641,8 +2677,12 @@ LxBackupFile gateLxBackupTargets(LxBackupFile file, Set<String>? known) {
       rules.add(r);
       continue;
     }
-    warnings.add(LxBackupWarning(kWarnUnknownOutbound,
-        '${r.name.isEmpty ? r.kind.name : r.name} → $target'));
+    warnings.add(
+      LxBackupWarning(
+        kWarnUnknownOutbound,
+        '${r.name.isEmpty ? r.kind.name : r.name} → $target',
+      ),
+    );
     rules.add(r.withEnabled(false));
   }
   var routeFinal = file.routeFinal;
@@ -2654,6 +2694,7 @@ LxBackupFile gateLxBackupTargets(LxBackupFile file, Set<String>? known) {
   }
   return LxBackupFile(
     version: file.version,
+    requires: file.requires,
     exportedByApp: file.exportedByApp,
     exportedByVersion: file.exportedByVersion,
     exportedAt: file.exportedAt,
@@ -2814,7 +2855,11 @@ List<CustomRule> _jsonRule0x(
   };
   return [
     for (final part in _splitRuleBodies(
-        record, match is Map ? [match] : match, 'rules[$name].match', warnings))
+      record,
+      match is Map ? [match] : match,
+      'rules[$name].match',
+      warnings,
+    ))
       ?ruleFromRecord(part).value,
   ];
 }
@@ -2875,12 +2920,11 @@ Map<String, dynamic> _sourceForCodec(
   Map<String, dynamic> j,
   String fileId, {
   Map<String, dynamic> override = const {},
-}) =>
-    {
-      ...stripUndeclaredBackupFields(kind, j),
-      ...override,
-      'id': fileId.isEmpty ? _kNoFileId : fileId,
-    };
+}) => {
+  ...stripUndeclaredBackupFields(kind, j),
+  ...override,
+  'id': fileId.isEmpty ? _kNoFileId : fileId,
+};
 
 /// §439 Л2 — есть ли в записи файла поле LxBox, которое контракт объявил:
 /// только такое поле применяется, его отсутствие оставляет значение
@@ -2889,10 +2933,13 @@ bool _carries(BackupRecord kind, Map<String, dynamic> j, String key) =>
     j.containsKey(key) && declaredBackupKeys(kind).contains(key);
 
 /// Флаги политики detour без ссылки (ссылка едет полем `detour`).
-DetourPolicy _flagsOf(DetourPolicy p) => p.copyWith(overrideDetour: NodeLink.none);
+DetourPolicy _flagsOf(DetourPolicy p) =>
+    p.copyWith(overrideDetour: NodeLink.none);
 
 LxBackupFile _parse10(
   Map<String, dynamic> decoded, {
+  required int formatVersion,
+  LxBackupRequirements? requirements,
   required Set<String> takenTags,
   required Set<String> knownPresets,
   required Set<String> knownChains,
@@ -2908,9 +2955,7 @@ LxBackupFile _parse10(
   final chains = <SourceChain>[];
   final chainHops = <String, List<NodeLink>>{};
   final chainPositions = <String, int>{};
-  final takenChainTags = <String>{
-    for (final t in knownChains) t.trim(),
-  };
+  final takenChainTags = <String>{for (final t in knownChains) t.trim()};
 
   final sources = _list(decoded['sources']);
   for (var i = 0; i < sources.length; i++) {
@@ -2951,11 +2996,13 @@ LxBackupFile _parse10(
       default:
         // Корневые `auto`/`unsupported` union не выражает, незнакомый вид —
         // чужая сторона, ушедшая вперёд по схеме. Молча не теряется (П6).
-        warnings.add(LxBackupWarning(
-          kWarnSourceKindUnsupported,
-          _source10Label(j),
-          kind: kind,
-        ));
+        warnings.add(
+          LxBackupWarning(
+            kWarnSourceKindUnsupported,
+            _source10Label(j),
+            kind: kind,
+          ),
+        );
     }
   }
 
@@ -2966,10 +3013,13 @@ LxBackupFile _parse10(
 
   // §441 — DNS раньше переменных (Н8), предупреждения — на прежнем месте.
   final dnsWarnings = <LxBackupWarning>[];
-  final dnsRaw =
-      _dns10(decoded['dns'], knownPresets, dnsWarnings, recordVars);
-  final parsedVars =
-      _parseVars(decoded, warnings, dns: dnsRaw, recordVars: recordVars);
+  final dnsRaw = _dns10(decoded['dns'], knownPresets, dnsWarnings, recordVars);
+  final parsedVars = _parseVars(
+    decoded,
+    warnings,
+    dns: dnsRaw,
+    recordVars: recordVars,
+  );
   final vars = parsedVars.vars;
   final routeFinal = _parseRouteFinal(decoded);
   final warp = _parseWarp(decoded, warnings);
@@ -2979,7 +3029,8 @@ LxBackupFile _parse10(
 
   final by = _obj(decoded['exported_by']) ?? const <String, dynamic>{};
   return LxBackupFile(
-    version: kLxBackupFormat10,
+    version: formatVersion,
+    requires: requirements,
     exportedByApp: _str(by['app']),
     exportedByVersion: _str(by['version']),
     exportedAt: _str(decoded['exported_at']),
@@ -3016,16 +3067,19 @@ void _dropForeignSections(
   final raw = _obj(j['sections']);
   if (raw == null) return;
   final dns = _obj(raw['dns']);
-  final carriesRecords = _list(raw['rules']).isNotEmpty ||
+  final carriesRecords =
+      _list(raw['rules']).isNotEmpty ||
       _list(dns?['servers']).isNotEmpty ||
       _list(dns?['rules']).isNotEmpty;
   if (!carriesRecords) return;
-  warnings.add(LxBackupWarning(
-    kWarnSectionRecordDropped,
-    '${_source10Label(j)}: sections',
-    kind: kind,
-    reason: kSectionDropReasonNotAllowed,
-  ));
+  warnings.add(
+    LxBackupWarning(
+      kWarnSectionRecordDropped,
+      '${_source10Label(j)}: sections',
+      kind: kind,
+      reason: kSectionDropReasonNotAllowed,
+    ),
+  );
 }
 
 /// Узел `kind: server` (корневой или член папки) → [LxServer] кодеком
@@ -3105,8 +3159,12 @@ LxServer? _server10(
     allowLocal: node.allowLocal,
     allowLan: node.allowLan,
     allowGateway: node.allowGateway,
-    tls: _carries(folder == null ? BackupRecord.server : BackupRecord.folderNode,
-            j, 'tls')
+    tls:
+        _carries(
+          folder == null ? BackupRecord.server : BackupRecord.folderNode,
+          j,
+          'tls',
+        )
         ? node.tls
         : null,
   );
@@ -3157,11 +3215,13 @@ LxServer? _folderMember10(
         );
       }
   }
-  warnings.add(LxBackupWarning(
-    kWarnSourceKindUnsupported,
-    '${folder.name}: ${tag.isEmpty ? kind : tag}',
-    kind: kind,
-  ));
+  warnings.add(
+    LxBackupWarning(
+      kWarnSourceKindUnsupported,
+      '${folder.name}: ${tag.isEmpty ? kind : tag}',
+      kind: kind,
+    ),
+  );
   return null;
 }
 
@@ -3178,7 +3238,8 @@ LxSubscription _subscription10(
   j = sanitizeCoreRejectInBackupRecord(j, BackupRecord.subscription);
   final fileId = _trimmed(j['id']);
   final read = sourceFromRecord(
-      _sourceForCodec(BackupRecord.subscription, j, fileId));
+    _sourceForCodec(BackupRecord.subscription, j, fileId),
+  );
   final sub = read.value! as SubscriptionServers;
   bool carries(String key) => _carries(BackupRecord.subscription, j, key);
   _noteIdentityDropped(
@@ -3205,8 +3266,9 @@ LxSubscription _subscription10(
     detour: _link10(j['detour']),
     detourPolicy: carries('detour_policy') ? _flagsOf(sub.detourPolicy) : null,
     importRules: carries('import_rules') ? sub.importRules : null,
-    importRulesEnabled:
-        carries('import_rules_enabled') ? sub.importRulesEnabled : null,
+    importRulesEnabled: carries('import_rules_enabled')
+        ? sub.importRulesEnabled
+        : null,
     onUpdateAction: carries('on_update_action') ? sub.onUpdateAction : null,
     tls: carries('tls') ? sub.tls : null,
     replace: sub.replace,
@@ -3219,12 +3281,14 @@ LxSubscription _subscription10(
 /// общий `detour`. Состав разбирается узлами ([_folderMember10]).
 LxFolder _folder10(Map<String, dynamic> j, int position) {
   final fileId = _trimmed(j['id']);
-  final read = sourceFromRecord(_sourceForCodec(
-    BackupRecord.folder,
-    j,
-    fileId,
-    override: const {'nodes': <Object?>[]},
-  ));
+  final read = sourceFromRecord(
+    _sourceForCodec(
+      BackupRecord.folder,
+      j,
+      fileId,
+      override: const {'nodes': <Object?>[]},
+    ),
+  );
   final folder = read.value! as FolderServers;
   bool carries(String key) => _carries(BackupRecord.folder, j, key);
   return LxFolder(
@@ -3239,7 +3303,9 @@ LxFolder _folder10(Map<String, dynamic> j, int position) {
     enabled: folder.enabled,
     tagPrefix: folder.tagPrefix,
     detour: _link10(j['detour']),
-    detourPolicy: carries('detour_policy') ? _flagsOf(folder.detourPolicy) : null,
+    detourPolicy: carries('detour_policy')
+        ? _flagsOf(folder.detourPolicy)
+        : null,
     pingUrl: carries('ping_url') ? folder.pingUrl : null,
     pingTimeoutMs: carries('ping_timeout_ms') ? folder.pingTimeoutMs : null,
     replace: folder.replace,
@@ -3256,9 +3322,10 @@ LxFolder _folder10(Map<String, dynamic> j, int position) {
   String tag,
   List<LxBackupWarning> warnings,
 ) {
-  final read = chainFromRecord(
-    {...stripUndeclaredBackupFields(BackupRecord.chain, j), 'tag': tag},
-  );
+  final read = chainFromRecord({
+    ...stripUndeclaredBackupFields(BackupRecord.chain, j),
+    'tag': tag,
+  });
   final chain = read.value;
   if (chain == null) return null;
   for (final key in read.unknownKeys) {
@@ -3268,9 +3335,7 @@ LxFolder _folder10(Map<String, dynamic> j, int position) {
   }
   return (
     chain: chain,
-    hops: [
-      for (final h in _list(j['hops'])) ?nodeLinkFromRecord(h),
-    ],
+    hops: [for (final h in _list(j['hops'])) ?nodeLinkFromRecord(h)],
   );
 }
 
@@ -3298,13 +3363,16 @@ List<Map<String, dynamic>> _splitRuleBodies(
     final item = body[i];
     if (item is! Map) {
       warnings.add(
-          LxBackupWarning(kWarnUnknownField, '$where[$i]: not an object'));
+        LxBackupWarning(kWarnUnknownField, '$where[$i]: not an object'),
+      );
       continue;
     }
     parts.add({
       for (final e in record.entries)
         if (e.key != 'id' || parts.isEmpty) e.key: e.value,
-      'name': parts.isEmpty || name.isEmpty ? name : '$name #${parts.length + 1}',
+      'name': parts.isEmpty || name.isEmpty
+          ? name
+          : '$name #${parts.length + 1}',
       'body': item.cast<String, dynamic>(),
     });
   }
@@ -3339,7 +3407,11 @@ List<CustomRule> _rule10(
   final record = stripUndeclaredBackupFields(BackupRecord.rule, j);
   return [
     for (final part in _splitRuleBodies(
-        record, record['body'], 'rules[$label].body', warnings))
+      record,
+      record['body'],
+      'rules[$label].body',
+      warnings,
+    ))
       ?_ruleRecord10(part, kind, knownPresets, warnings),
   ];
 }
@@ -3357,7 +3429,8 @@ CustomRule? _ruleRecord10(
   final rule = read.value;
   if (rule == null) {
     warnings.add(
-        LxBackupWarning(kWarnUnknownField, 'rules[$label]: ${read.dropped}'));
+      LxBackupWarning(kWarnUnknownField, 'rules[$label]: ${read.dropped}'),
+    );
     return null;
   }
 
@@ -3375,10 +3448,12 @@ CustomRule? _ruleRecord10(
 
   if (read.unknownKeys.isNotEmpty) {
     if (kind != 'inline' || read.unknownKeys.contains('rule_set')) {
-      warnings.add(LxBackupWarning(
-        kWarnUnknownField,
-        'rules[$label].body: ${read.unknownKeys.join(', ')}',
-      ));
+      warnings.add(
+        LxBackupWarning(
+          kWarnUnknownField,
+          'rules[$label].body: ${read.unknownKeys.join(', ')}',
+        ),
+      );
       return null;
     }
     // `dns`/`resolve` — поля LxBox у типизированного правила; у правила вида
@@ -3416,14 +3491,17 @@ LxDns? _dns10(
     final kind = _str(e['kind']);
     final read = (kind == 'user' || kind == 'template' || kind == 'preset')
         ? dnsServerFromRecord(
-            stripUndeclaredBackupFields(BackupRecord.dnsServer, e))
+            stripUndeclaredBackupFields(BackupRecord.dnsServer, e),
+          )
         : null;
     final server = read?.value;
     if (server == null) {
-      warnings.add(LxBackupWarning(
-        kWarnDnsEntrySkipped,
-        'dns.servers: ${read?.dropped ?? 'kind=$kind'}',
-      ));
+      warnings.add(
+        LxBackupWarning(
+          kWarnDnsEntrySkipped,
+          'dns.servers: ${read?.dropped ?? 'kind=$kind'}',
+        ),
+      );
       continue;
     }
     // Пресет, которого в шаблоне этой стороны нет, применить нечем.
@@ -3431,13 +3509,21 @@ LxDns? _dns10(
         server.presetId.isNotEmpty &&
         knownPresets.isNotEmpty &&
         !knownPresets.contains(server.presetId)) {
-      warnings.add(LxBackupWarning(
-          kWarnDnsEntrySkipped, 'dns.servers: ${_trimmed(e['ref'])}'));
+      warnings.add(
+        LxBackupWarning(
+          kWarnDnsEntrySkipped,
+          'dns.servers: ${_trimmed(e['ref'])}',
+        ),
+      );
       continue;
     }
     if (!_templateServerDeclared(server, recordVars)) {
-      warnings.add(LxBackupWarning(
-          kWarnDnsEntrySkipped, 'dns.servers: template:${server.tag}'));
+      warnings.add(
+        LxBackupWarning(
+          kWarnDnsEntrySkipped,
+          'dns.servers: template:${server.tag}',
+        ),
+      );
       continue;
     }
     servers.add(server);
@@ -3450,27 +3536,31 @@ LxDns? _dns10(
     final kind = _str(e['kind']);
     // Виды LxBox (`srs`, `template`) читаются, только когда контракт их
     // объявит (таблица среза).
-    final readable = kind == 'user' ||
+    final readable =
+        kind == 'user' ||
         kind == 'preset' ||
         ((kind == 'srs' || kind == 'template') &&
             backupKindTravels(BackupRecord.dnsRule, kind));
     final read = readable
-        ? dnsRuleFromRecord(stripUndeclaredBackupFields(BackupRecord.dnsRule, e))
+        ? dnsRuleFromRecord(
+            stripUndeclaredBackupFields(BackupRecord.dnsRule, e),
+          )
         : null;
     switch (read?.value) {
       case final DnsRulePreset rule
           when knownPresets.isNotEmpty && !knownPresets.contains(rule.presetId):
-        warnings.add(LxBackupWarning(
-          kWarnDnsEntrySkipped,
-          'dns.rules: ${_str(e['ref'])}',
-        ));
+        warnings.add(
+          LxBackupWarning(kWarnDnsEntrySkipped, 'dns.rules: ${_str(e['ref'])}'),
+        );
       case final DnsRuleRef rule:
         rules.add(rule);
       case null:
-        warnings.add(LxBackupWarning(
-          kWarnDnsEntrySkipped,
-          'dns.rules: ${read?.dropped ?? 'kind=$kind'}',
-        ));
+        warnings.add(
+          LxBackupWarning(
+            kWarnDnsEntrySkipped,
+            'dns.rules: ${read?.dropped ?? 'kind=$kind'}',
+          ),
+        );
     }
   }
 
@@ -3502,6 +3592,7 @@ LxDns? _dns10(
 
 const Set<String> _root10Keys = {
   'lx_backup',
+  'requires',
   'exported_by',
   'exported_at',
   'sources',
@@ -3643,8 +3734,14 @@ List<LxBackupWarning> _scanUnknown10(Map<String, dynamic> root) {
   final dns = _obj(root['dns']);
   if (dns != null) {
     sc.object('dns', dns, _dns10Keys);
-    sc.array(dns, 'dns.servers', 'servers', dnsServerKeys, 'tag',
-        sc.dnsServer10Body);
+    sc.array(
+      dns,
+      'dns.servers',
+      'servers',
+      dnsServerKeys,
+      'tag',
+      sc.dnsServer10Body,
+    );
     sc.array(dns, 'dns.rules', 'rules', dnsRuleKeys, 'name', null);
   }
 
@@ -3658,7 +3755,13 @@ List<LxBackupWarning> _scanUnknown10(Map<String, dynamic> root) {
     if (group != null) {
       sc.object('$where.group', group, _group10Keys);
       sc.array(
-          group, '$where.group.members', 'members', _link10Keys, 'tag', null);
+        group,
+        '$where.group.members',
+        'members',
+        _link10Keys,
+        'tag',
+        null,
+      );
       sc.nestedAt(group, '$where.group', 'strategy', _directionAutoKeys);
       sc.nestedAt(group, '$where.group', 'members_rule', _membersRule10Keys);
     }
@@ -3721,7 +3824,8 @@ typedef BackupSubscriptionMerge = ({
 /// с одним `id` дали бы двух владельцев одной адресации). Форма ограничена:
 /// `id` приходит из чужого файла, а в состоянии он служит ключом.
 String _adoptSourceId(String fileId, Set<String> taken) {
-  final id = fileId.isNotEmpty &&
+  final id =
+      fileId.isNotEmpty &&
           _sourceIdShape.hasMatch(fileId) &&
           !taken.contains(fileId)
       ? fileId
@@ -3799,7 +3903,8 @@ BackupSubscriptionMerge mergeBackupSubscriptions(
         // Пустое имя в файле именем не является — своё не затираем.
         name: sub.label.isNotEmpty ? sub.label : null,
         tagPrefix: sub.tagPrefix,
-        updateIntervalHours: sub.updateIntervalHours ??
+        updateIntervalHours:
+            sub.updateIntervalHours ??
             (sub.fullSettings ? _defaultUpdateIntervalHours : null),
         enabled: sub.enabled,
         // `identity` — слепок целиком: объекта в файле НЕТ значит «настройка
@@ -3811,7 +3916,8 @@ BackupSubscriptionMerge mergeBackupSubscriptions(
         // в файле — свои (сторона их не носит). Ссылку detour ставит слияние
         // узлов по [detours].
         detourPolicy: sub.detourPolicy?.copyWith(
-            overrideDetour: existing.detourPolicy.overrideDetour),
+          overrideDetour: existing.detourPolicy.overrideDetour,
+        ),
         importRules: sub.importRules,
         importRulesEnabled: sub.importRulesEnabled,
         onUpdateAction: sub.onUpdateAction,
@@ -3826,29 +3932,32 @@ BackupSubscriptionMerge mergeBackupSubscriptions(
       continue;
     }
 
-    merged.add(SubscriptionServers(
-      id: _adoptSourceId(sub.id, takenIds),
-      name: sub.label,
-      enabled: sub.enabled,
-      tagPrefix: sub.tagPrefix,
-      detourPolicy: sub.detourPolicy ?? DetourPolicy.defaults,
-      tls: sub.tls ?? TlsPolicy.none,
-      url: sub.url,
-      updateIntervalHours:
-          sub.updateIntervalHours ?? _defaultUpdateIntervalHours,
-      // §401 (D-083) — per-source identity: чем подписка представляется
-      // провайдеру. Провайдеры ВЕТВЯТ выдачу по UA, и без переноса та же
-      // ссылка отдала бы на новой машине другой набор узлов.
-      identity: sub.identity,
-      disabledHashes: {
-        for (final e in sub.disabled.entries) e.key: at(e.value),
-      },
-      nodeWarnings: sub.nodeWarnings,
-      importRules: sub.importRules ?? const [],
-      importRulesEnabled: sub.importRulesEnabled ?? true,
-      onUpdateAction: sub.onUpdateAction ?? SubscriptionOnUpdateAction.rebuild,
-      replace: sub.replace,
-    ));
+    merged.add(
+      SubscriptionServers(
+        id: _adoptSourceId(sub.id, takenIds),
+        name: sub.label,
+        enabled: sub.enabled,
+        tagPrefix: sub.tagPrefix,
+        detourPolicy: sub.detourPolicy ?? DetourPolicy.defaults,
+        tls: sub.tls ?? TlsPolicy.none,
+        url: sub.url,
+        updateIntervalHours:
+            sub.updateIntervalHours ?? _defaultUpdateIntervalHours,
+        // §401 (D-083) — per-source identity: чем подписка представляется
+        // провайдеру. Провайдеры ВЕТВЯТ выдачу по UA, и без переноса та же
+        // ссылка отдала бы на новой машине другой набор узлов.
+        identity: sub.identity,
+        disabledHashes: {
+          for (final e in sub.disabled.entries) e.key: at(e.value),
+        },
+        nodeWarnings: sub.nodeWarnings,
+        importRules: sub.importRules ?? const [],
+        importRulesEnabled: sub.importRulesEnabled ?? true,
+        onUpdateAction:
+            sub.onUpdateAction ?? SubscriptionOnUpdateAction.rebuild,
+        replace: sub.replace,
+      ),
+    );
     byUrl[sub.url] = merged.length - 1;
     if (sub.id.isNotEmpty) ids[sub.id] = merged.last.id;
     if (sub.detour != null) detours[merged.last.id] = sub.detour;
@@ -4038,13 +4147,16 @@ BackupServerMerge mergeBackupServers(
   // папок, места, куда легли члены, и корень результата известны только
   // тогда. [count] — изменение ссылки считается применённым (у совпавшей
   // папки, чьи прочие настройки не изменились).
-  final pendingLinks =
-      <({int at, int member, NodeLink? link, bool count})>[];
+  final pendingLinks = <({int at, int member, NodeLink? link, bool count})>[];
   for (var i = 0; i < merged.length; i++) {
     final l = merged[i];
     if (l is! SubscriptionServers || !sourceDetours.containsKey(l.id)) continue;
-    pendingLinks
-        .add((at: i, member: -1, link: sourceDetours[l.id], count: false));
+    pendingLinks.add((
+      at: i,
+      member: -1,
+      link: sourceDetours[l.id],
+      count: false,
+    ));
   }
 
   final singleBodies = <String, int>{};
@@ -4057,23 +4169,25 @@ BackupServerMerge mergeBackupServers(
 
   // Второй проход — ОДИН, в порядке файла: папка, её члены, корневые узлы.
   final folderPosition = {for (final f in folders) f.key: f.position};
-  final events = <(int, int, int, Object)>[
-    for (var i = 0; i < folders.length; i++)
-      (folders[i].position, 0, i, folders[i]),
-    for (var i = 0; i < incoming.length; i++)
-      (
-        incoming[i].folderRef.isNotEmpty
-            ? (folderPosition[incoming[i].folderRef] ?? incoming[i].position)
-            : incoming[i].position,
-        1,
-        i,
-        incoming[i],
-      ),
-  ]..sort((a, b) {
-      if (a.$1 != b.$1) return a.$1.compareTo(b.$1);
-      if (a.$2 != b.$2) return a.$2.compareTo(b.$2);
-      return a.$3.compareTo(b.$3);
-    });
+  final events =
+      <(int, int, int, Object)>[
+        for (var i = 0; i < folders.length; i++)
+          (folders[i].position, 0, i, folders[i]),
+        for (var i = 0; i < incoming.length; i++)
+          (
+            incoming[i].folderRef.isNotEmpty
+                ? (folderPosition[incoming[i].folderRef] ??
+                      incoming[i].position)
+                : incoming[i].position,
+            1,
+            i,
+            incoming[i],
+          ),
+      ]..sort((a, b) {
+        if (a.$1 != b.$1) return a.$1.compareTo(b.$1);
+        if (a.$2 != b.$2) return a.$2.compareTo(b.$2);
+        return a.$3.compareTo(b.$3);
+      });
 
   final folderAtKey = <String, int>{};
   // §439 N2 — куда легли члены папок файла (тег в файле → тег здесь) и
@@ -4085,11 +4199,13 @@ BackupServerMerge mergeBackupServers(
       final at = matchedAt[item.key];
       if (at != null) {
         final local = merged[at] as FolderServers;
-        final policy = (item.detourPolicy ?? local.detourPolicy)
-            .copyWith(overrideDetour: local.detourPolicy.overrideDetour);
+        final policy = (item.detourPolicy ?? local.detourPolicy).copyWith(
+          overrideDetour: local.detourPolicy.overrideDetour,
+        );
         final pingUrl = item.pingUrl ?? local.pingUrl;
         final pingTimeoutMs = item.pingTimeoutMs ?? local.pingTimeoutMs;
-        final changed = local.enabled != item.enabled ||
+        final changed =
+            local.enabled != item.enabled ||
             local.tagPrefix != item.tagPrefix ||
             local.detourPolicy != policy ||
             local.pingUrl != pingUrl ||
@@ -4108,21 +4224,27 @@ BackupServerMerge mergeBackupServers(
           );
           applied++;
         }
-        pendingLinks
-            .add((at: at, member: -1, link: item.detour, count: !changed));
+        pendingLinks.add((
+          at: at,
+          member: -1,
+          link: item.detour,
+          count: !changed,
+        ));
         folderAtKey[item.key] = at;
       } else {
-        merged.add(FolderServers(
-          id: plannedId[item.key]!,
-          name: item.name,
-          enabled: item.enabled,
-          tagPrefix: item.tagPrefix,
-          detourPolicy: item.detourPolicy ?? DetourPolicy.defaults,
-          tls: item.tls ?? TlsPolicy.none,
-          pingUrl: item.pingUrl,
-          pingTimeoutMs: item.pingTimeoutMs,
-          replace: item.replace,
-        ));
+        merged.add(
+          FolderServers(
+            id: plannedId[item.key]!,
+            name: item.name,
+            enabled: item.enabled,
+            tagPrefix: item.tagPrefix,
+            detourPolicy: item.detourPolicy ?? DetourPolicy.defaults,
+            tls: item.tls ?? TlsPolicy.none,
+            pingUrl: item.pingUrl,
+            pingTimeoutMs: item.pingTimeoutMs,
+            replace: item.replace,
+          ),
+        );
         pendingLinks.add((
           at: merged.length - 1,
           member: -1,
@@ -4159,11 +4281,21 @@ BackupServerMerge mergeBackupServers(
       if (at == null) continue;
       final count = (merged[at] as FolderServers).members.length;
       applied += _mergeFolderMember(
-          merged, at, srv, body, NodeLink.none, touched,
-          landings: landings);
+        merged,
+        at,
+        srv,
+        body,
+        NodeLink.none,
+        touched,
+        landings: landings,
+      );
       if ((merged[at] as FolderServers).members.length > count) {
-        pendingLinks
-            .add((at: at, member: count, link: srv.detour, count: false));
+        pendingLinks.add((
+          at: at,
+          member: count,
+          link: srv.detour,
+          count: false,
+        ));
       }
       continue;
     }
@@ -4175,9 +4307,11 @@ BackupServerMerge mergeBackupServers(
         final local = merged[hit] as UserServer;
         // §439 Л2 — объявленные настройки LxBox узла: поле есть — замещает,
         // нет — своё остаётся. Ссылку detour совпавший узел держит.
-        final flags = srv.detourPolicy
-            ?.copyWith(overrideDetour: local.detourPolicy.overrideDetour);
-        final side = (flags != null && flags != local.detourPolicy) ||
+        final flags = srv.detourPolicy?.copyWith(
+          overrideDetour: local.detourPolicy.overrideDetour,
+        );
+        final side =
+            (flags != null && flags != local.detourPolicy) ||
             (srv.tagPrefix != null && srv.tagPrefix != local.tagPrefix);
         // §578/§656 — поля записи: `true` из файла, своё не сбрасывается.
         final rec = srv.flagsOver(
@@ -4200,23 +4334,25 @@ BackupServerMerge mergeBackupServers(
         touched.add((list: hit, member: -1));
         continue;
       }
-      merged.add(UserServer(
-        id: _adoptSourceId(srv.id, takenIds),
-        name: srv.name,
-        enabled: srv.enabled,
-        tagPrefix: srv.tagPrefix ?? '',
-        detourPolicy: srv.detourPolicy ?? DetourPolicy.defaults,
-        tls: srv.tls ?? TlsPolicy.none,
-        origin: UserSource.manual,
-        rawBody: body,
-        // Фича 478 — прочие warnings записи; вердикт страховки срезан (§489).
-        warnings: srv.warnings,
-        // §578/§656 — поля записи из файла.
-        skipTailscalePresets: srv.skipTailscalePresets,
-        allowLocal: srv.allowLocal,
-        allowLan: srv.allowLan,
-        allowGateway: srv.allowGateway,
-      ));
+      merged.add(
+        UserServer(
+          id: _adoptSourceId(srv.id, takenIds),
+          name: srv.name,
+          enabled: srv.enabled,
+          tagPrefix: srv.tagPrefix ?? '',
+          detourPolicy: srv.detourPolicy ?? DetourPolicy.defaults,
+          tls: srv.tls ?? TlsPolicy.none,
+          origin: UserSource.manual,
+          rawBody: body,
+          // Фича 478 — прочие warnings записи; вердикт страховки срезан (§489).
+          warnings: srv.warnings,
+          // §578/§656 — поля записи из файла.
+          skipTailscalePresets: srv.skipTailscalePresets,
+          allowLocal: srv.allowLocal,
+          allowLan: srv.allowLan,
+          allowGateway: srv.allowGateway,
+        ),
+      );
       pendingLinks.add((
         at: merged.length - 1,
         member: -1,
@@ -4231,10 +4367,23 @@ BackupServerMerge mergeBackupServers(
     }
 
     // Член папки 0.x: папка — имя.
-    final at =
-        _folder0xAt(merged, srv, folderByName, takenIds, added, position);
-    applied += _mergeFolderMember(merged, at, srv, body, NodeLink.none, touched,
-        landings: landings);
+    final at = _folder0xAt(
+      merged,
+      srv,
+      folderByName,
+      takenIds,
+      added,
+      position,
+    );
+    applied += _mergeFolderMember(
+      merged,
+      at,
+      srv,
+      body,
+      NodeLink.none,
+      touched,
+      landings: landings,
+    );
   }
 
   applied += _bindBackupAutoGroups(merged, autoGroups, linkIds, landings);
@@ -4342,8 +4491,10 @@ NodeLink Function(NodeLink link, {int? at, bool legacy}) _backupLinkMapper({
   final fileRawAt = <int, Set<String>>{};
   void addFile(int at, String prefix, String name) {
     if (name.isEmpty || at < 0 || at >= merged.length) return;
-    final here =
-        NodeLink(folderId: merged[at].id, tag: landings[(at, name)] ?? name);
+    final here = NodeLink(
+      folderId: merged[at].id,
+      tag: landings[(at, name)] ?? name,
+    );
     for (final form in _fileFinalForms(prefix, name)) {
       (fileFinal[form] ??= {}).add(here);
     }
@@ -4409,19 +4560,20 @@ NodeLink Function(NodeLink link, {int? at, bool legacy}) _backupLinkMapper({
       final carrier = merged[at];
       if (carrier is FolderServers) {
         if (fileRawAt[at]?.contains(t) ?? false) {
-          return NodeLink(
-              folderId: carrier.id, tag: landings[(at, t)] ?? t);
+          return NodeLink(folderId: carrier.id, tag: landings[(at, t)] ?? t);
         }
-        final lifted =
-            liftSiblingLink(link, carrier.id, containerRawTagSet(carrier));
+        final lifted = liftSiblingLink(
+          link,
+          carrier.id,
+          containerRawTagSet(carrier),
+        );
         if (!lifted.isRoot) return lifted;
       }
     }
     Set<NodeLink> hits(
       Map<String, Set<NodeLink>> byFinal,
       Map<String, Set<NodeLink>> byRaw,
-    ) =>
-        {...?byFinal[t], if (legacy) ...?byRaw[t]};
+    ) => {...?byFinal[t], if (legacy) ...?byRaw[t]};
     final fromFile = hits(fileFinal, fileRaw);
     if (fromFile.isNotEmpty) {
       return fromFile.length == 1 ? fromFile.single : link;
@@ -4447,9 +4599,9 @@ List<NodeSpec> _nodesOf(String raw) {
 /// файла без хвостового пробела (`"d:"`) финальный тег стороны-экспортёра
 /// `d:G`, а модель LxBox хранит `d:` и показывает `d: G` (§439 п. 9).
 Set<String> _fileFinalForms(String prefix, String raw) => {
-      TagResolver.displayTag(prefix, raw),
-      if (prefix.isNotEmpty) '$prefix$raw',
-    };
+  TagResolver.displayTag(prefix, raw),
+  if (prefix.isNotEmpty) '$prefix$raw',
+};
 
 /// Член папки [folderAt]: дедуп по канону тела в пределах этой папки, новые
 /// в конец. Возвращает, сколько применилось (0 — узнан, применять нечего).
@@ -4464,7 +4616,9 @@ int _mergeFolderMember(
 }) {
   final folder = merged[folderAt] as FolderServers;
   final canon = canonicalNodeBody(body);
-  final hit = folder.members.indexWhere((m) => canonicalNodeBody(m.raw) == canon);
+  final hit = folder.members.indexWhere(
+    (m) => canonicalNodeBody(m.raw) == canon,
+  );
   if (hit >= 0) {
     final here = folder.members[hit].node?.tag ?? '';
     if (srv.name.isNotEmpty && here.isNotEmpty) {
@@ -4525,13 +4679,15 @@ int _folder0xAt(
 ) {
   final at = folderByName[srv.folder];
   if (at != null && at >= 0) return at;
-  merged.add(FolderServers(
-    id: _adoptSourceId('', takenIds),
-    name: srv.folder,
-    enabled: true,
-    tagPrefix: '',
-    detourPolicy: DetourPolicy.defaults,
-  ));
+  merged.add(
+    FolderServers(
+      id: _adoptSourceId('', takenIds),
+      name: srv.folder,
+      enabled: true,
+      tagPrefix: '',
+      detourPolicy: DetourPolicy.defaults,
+    ),
+  );
   folderByName[srv.folder] = merged.length - 1;
   added[merged.last.id] = position;
   return merged.length - 1;
@@ -4558,15 +4714,18 @@ int _mergeFolderAutoGroup(
   final folder = merged[folderAt] as FolderServers;
   final group = srv.autoGroup!;
   final hit = folder.members.indexWhere(
-      (m) => m.node is AutoSelectSpec && m.node!.tag == group.tag);
+    (m) => m.node is AutoSelectSpec && m.node!.tag == group.tag,
+  );
   if (hit >= 0) {
     pending.add((folderAt: folderAt, member: hit, srv: srv, fresh: false));
     return 0;
   }
-  merged[folderAt] = folder.copyWith(members: [
-    ...folder.members,
-    FolderMember.auto(group, enabled: srv.enabled, warnings: srv.warnings),
-  ]);
+  merged[folderAt] = folder.copyWith(
+    members: [
+      ...folder.members,
+      FolderMember.auto(group, enabled: srv.enabled, warnings: srv.warnings),
+    ],
+  );
   pending.add((
     folderAt: folderAt,
     member: folder.members.length,
@@ -4606,8 +4765,11 @@ int _bindBackupAutoGroups(
         ]),
       );
     }
-    final member = FolderMember.auto(group,
-        enabled: p.srv.enabled, warnings: p.srv.warnings);
+    final member = FolderMember.auto(
+      group,
+      enabled: p.srv.enabled,
+      warnings: p.srv.warnings,
+    );
     if (folder.members[p.member] == member) continue;
     merged[p.folderAt] = folder.copyWith(
       members: folder.members.toList()..[p.member] = member,

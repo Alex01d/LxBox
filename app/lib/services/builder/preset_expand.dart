@@ -1283,6 +1283,15 @@ dynamic substituteVars(
   for (final e in globalVars.entries) {
     varsMap.putIfAbsent(e.key, () => e.value);
   }
+  // Declared preset lists follow the same typed contract as global lists.
+  // Passing their raw newline text to the walker produces one invalid CIDR
+  // (or suffix) instead of expanding array elements. Keep legacy scalars as is.
+  for (final v in preset.vars) {
+    final value = varsMap[v.name];
+    if (!v.isRef && v.type == 'text_list' && value is String) {
+      varsMap[v.name] = coerceVarValue(value, v.type, name: v.name);
+    }
+  }
   return (vars: varsMap, error: error);
 }
 

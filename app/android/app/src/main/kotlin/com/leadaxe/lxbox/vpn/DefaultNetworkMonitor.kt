@@ -13,21 +13,19 @@ import kotlinx.coroutines.launch
 import java.net.NetworkInterface
 
 object DefaultNetworkMonitor {
-    /// §087 — окно debounce для force-reset на смену интерфейса (мс). Android
-    /// при переходе шлёт пачку callback'ов; копим тишину и ресетим один раз.
+    /// Debounce window for force-reset after an underlying network change.
     private const val RESET_DEBOUNCE_MS = 1500L
 
     var defaultNetwork: Network? = null
     private var listener: InterfaceUpdateListener? = null
     private var scope: CoroutineScope? = null
 
-    /// §087 — callback на genuine смену интерфейса (BoxService → resetNetwork()).
+    /// Callback for an underlying network replacement (BoxService → resetNetwork()).
     private var onNetworkSwitch: (() -> Unit)? = null
 
-    /// §087 — имя последнего реального интерфейса (baseline для детекта смены).
-    /// `@Volatile`: пишется из notifySync (attach-thread) и checkUpdate (actor).
-    @Volatile
-    private var lastIfName: String? = null
+    /// Tracks the Android Network as well as its interface name: Wi-Fi can
+    /// reconnect as a new Network while retaining `wlan0`.
+    private val networkIdentity = NetworkIdentityTracker()
     private var resetJob: Job? = null
 
     suspend fun start(scope: CoroutineScope, onNetworkSwitch: () -> Unit) {
@@ -62,7 +60,7 @@ object DefaultNetworkMonitor {
         resetJob?.cancel()
         resetJob = null
         onNetworkSwitch = null
-        lastIfName = null
+        networkIdentity.clear()
         scope = null
         listener = null
     }
@@ -88,6 +86,7 @@ object DefaultNetworkMonitor {
     private fun notifySync(network: Network?, listener: InterfaceUpdateListener) {
         runCatching {
             if (network == null) {
+                networkIdentity.disconnect()
                 listener.updateDefaultInterface("", -1, false, false)
                 return@runCatching
             }
@@ -100,7 +99,7 @@ object DefaultNetworkMonitor {
             for (attempt in 0 until 10) {
                 try {
                     val ni = NetworkInterface.getByName(ifName) ?: continue
-                    lastIfName = ifName  // §087 — baseline для детекта последующих смен
+                    networkIdentity.seedIfAbsent(network.networkHandle, ifName)
                     listener.updateDefaultInterface(ifName, ni.index, isMetered(network), false)
                     return@runCatching
                 } catch (_: Exception) {
@@ -118,9 +117,9 @@ object DefaultNetworkMonitor {
         val l = listener ?: return
         val s = scope ?: return  // service already dead — don't touch Go objects
         if (network == null) {
-            // §087 — disconnect: НЕ трогаем lastIfName (сохраняем baseline, чтобы
-            // switch через "" к ДРУГОМУ интерфейсу всё равно детектился) и НЕ
-            // ресетим (нет сети для re-dial).
+            // Disconnect is transient; keep the previous identity so a new
+            // Android Network can be detected even when it reuses the same NIC.
+            networkIdentity.disconnect()
             s.launch(Dispatchers.IO) {
                 runCatching { l.updateDefaultInterface("", -1, false, false) }
             }
@@ -132,8 +131,7 @@ object DefaultNetworkMonitor {
         for (attempt in 0 until 10) {
             try {
                 val ni = NetworkInterface.getByName(ifName) ?: continue
-                maybeResetOnSwitch(ifName, s)  // §087
-                lastIfName = ifName
+                maybeResetOnSwitch(network.networkHandle, ifName, s)
                 val metered = isMetered(network)
                 s.launch(Dispatchers.IO) {
                     runCatching { l.updateDefaultInterface(ifName, ni.index, metered, false) }
@@ -145,17 +143,13 @@ object DefaultNetworkMonitor {
         }
     }
 
-    /// §087 — force-reset стейл-соединений на genuine смену интерфейса.
-    ///
-    /// `checkUpdate` дёргается из `DefaultNetworkListener` на ЛЮБОЙ
-    /// `onCapabilitiesChanged`, поэтому reset только на реальный switch:
-    /// `prev → new`, оба непустые и разные. НЕ на первый connect (prev пуст),
-    /// capability-update (prev == new) или disconnect (см. ветку network==null).
-    /// Иначе — регрессия класса sing-box #3400 (убить весь TCP на каждый чих).
-    /// Debounced: пачка переходов схлопывается в один resetNetwork().
-    private fun maybeResetOnSwitch(newIfName: String, s: CoroutineScope) {
-        val prev = lastIfName
-        if (prev.isNullOrEmpty() || newIfName.isEmpty() || prev == newIfName) return
+    /// A replacement Network handle triggers reset even if Android reuses the
+    /// same interface name. Repeated capability updates on that handle do not.
+    /// The tracker ignores the first attachment and empty interface names, while
+    /// disconnects retain the previous identity until a replacement appears.
+    /// Debounce collapses callback bursts into one resetNetwork().
+    private fun maybeResetOnSwitch(networkHandle: Long, newIfName: String, s: CoroutineScope) {
+        if (!networkIdentity.observe(networkHandle, newIfName)) return
         resetJob?.cancel()
         resetJob = s.launch(Dispatchers.IO) {
             delay(RESET_DEBOUNCE_MS)

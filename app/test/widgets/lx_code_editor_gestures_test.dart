@@ -1,4 +1,7 @@
 import 'package:flutter/gestures.dart';
+import 'package:flutter/rendering.dart' show PlatformViewHitTestBehavior;
+import 'package:flutter/services.dart' show PlatformViewController;
+import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lxbox/widgets/lx_code_editor.dart';
 
@@ -6,6 +9,43 @@ import 'package:lxbox/widgets/lx_code_editor.dart';
 /// распознаватель platform view против drag вкладок / страницы в арене
 /// (`testWidgets` — часы сэмплинга жестов есть только внутри теста).
 void main() {
+  testWidgets('editor factories can initialize an actual platform surface', (
+    tester,
+  ) async {
+    final factories = lxEditorGestureRecognizers(
+      takesAtDown: () => false,
+      takesDrag: (_) => true,
+      slop: () => kTouchSlop,
+    );
+    expect(factories.map((factory) => factory.type).toSet(), {
+      LxEditorDragRecognizer,
+      LongPressGestureRecognizer,
+    });
+    final recognizers = factories.map((factory) => factory.constructor()).toList();
+    expect(recognizers.whereType<LxEditorDragRecognizer>(), hasLength(1));
+    expect(recognizers.whereType<LongPressGestureRecognizer>(), hasLength(1));
+    for (final recognizer in recognizers) {
+      recognizer.dispose();
+    }
+    // Use the same production factory set in Flutter's real render object:
+    // two Factory<OneSequenceGestureRecognizer> entries assert here even when
+    // their constructors happen to return different recognizer subclasses.
+    await tester.pumpWidget(Directionality(
+      textDirection: TextDirection.ltr,
+      child: SizedBox(
+        width: 200,
+        height: 200,
+        child: PlatformViewSurface(
+          controller: _PlatformController(),
+          gestureRecognizers: factories,
+          hitTestBehavior: PlatformViewHitTestBehavior.opaque,
+        ),
+      ),
+    ));
+    expect(tester.takeException(), isNull);
+    await tester.pumpWidget(const SizedBox.shrink());
+  });
+
   group('lxEditorOwnsDrag', () {
     bool owns(
       Offset d, {
@@ -145,6 +185,20 @@ void main() {
       expect(r, (true, false));
     });
   });
+}
+
+class _PlatformController extends PlatformViewController {
+  @override
+  int get viewId => 700;
+
+  @override
+  Future<void> dispatchPointerEvent(PointerEvent event) async {}
+
+  @override
+  Future<void> dispose() async {}
+
+  @override
+  Future<void> clearFocus() async {}
 }
 
 class _Probe extends LxEditorDragRecognizer {

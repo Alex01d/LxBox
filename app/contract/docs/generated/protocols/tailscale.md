@@ -55,6 +55,14 @@ The node body itself — the sing-box JSON kept in the launcher state. The path 
   - Default: `false`
 - <a id="body-hostname"></a>**`hostname`** — Host name announced to the tailnet.
   - Type: string
+- <a id="body-awg"></a>**`awg`** — Atomic AWG2/AWG3 peer-framing profile; validated by the core. Both peers must use a compatible profile.
+  - Type: json, secret
+  - Only written when: lx fork only, build tag `with_tailscale_awg`
+  - On a core that lacks it the whole node is dropped at build: `tailscale_awg_core_unsupported`
+- <a id="body-underlay-mode"></a>**`underlay_mode`** — Outer carrier mode: auto (UDP and DERP) or derp (TCP only); explicit detour owns all peer and control/DERP traffic.
+  - Type: string
+  - Only written when: lx fork only, build tag `with_tailscale_awg`
+  - On a core that lacks it the whole node is dropped at build: `tailscale_awg_core_unsupported`
 - <a id="body-accept-routes"></a>**`accept_routes`** — Accept routes advertised by other nodes.
   - Type: bool
   - Default: `false`
@@ -182,4 +190,11 @@ Every code that can be raised on a node of this scheme, including the ones comin
 - `listen_port` — invalid value
 - `relay_server_port` — invalid value
 - `system_interface_mtu` — invalid value
+
+**Left out when the running core is too old**
+
+- `awg` — needs lx fork only, build tag `with_tailscale_awg`
+- `awg` — on a core that lacks it the whole node is dropped (`tailscale_awg_core_unsupported`)
+- `underlay_mode` — needs lx fork only, build tag `with_tailscale_awg`
+- `underlay_mode` — on a core that lacks it the whole node is dropped (`tailscale_awg_core_unsupported`)
 

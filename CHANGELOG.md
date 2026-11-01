@@ -8,6 +8,18 @@
 
 ## [Unreleased]
 
+- **Embedded Tailscale AWG engineering support (task 700, contract 1.2.0).**
+  Ordinary Tailscale, AWG2/AWG3 profiles and optional interactive Headscale login
+  share the existing VPN service. Protected CIDR/private-DNS rules and fatal
+  capability checks prevent silent transport downgrade. Atomic exports use
+  backup marker3; ordinary exports keep marker2. An explicit local AAR override
+  leaves the published core pin and artifact selection intact.
+- **Android transport recovery and editor input (tasks 700/701).** Detect a
+  replacement default Network even when its interface name is unchanged; keep
+  JSON editor gesture factory types distinct. Protected DNS coexists with the
+  endpoint's ordinary resolver. Physical/mobile and cross-platform acceptance
+  remain separate from engineering source validation.
+
 ## [2.25.19] — 2026-11-01
 
 ### Added
