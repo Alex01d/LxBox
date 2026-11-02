@@ -129,4 +129,36 @@ void main() {
     await tester.pump(const Duration(milliseconds: 200));
     expect(find.textContaining('8 ok'), findsOneWidget);
   });
+
+  testWidgets('a thrown probeStart shows the error and Start comes back',
+      (tester) async {
+    fake.throwingMethods.add('probeStart');
+    final entry = SubscriptionEntry(
+      list: SubscriptionServers(
+        id: 'sub-1',
+        name: 'Sub',
+        enabled: true,
+        tagPrefix: '',
+        detourPolicy: DetourPolicy.defaults,
+        url: 'https://example.com/sub',
+        nodes: [_node('n1')],
+      ),
+    );
+    final c = SubscriptionController()..debugSetEntries([entry]);
+    await tester.pumpWidget(MaterialApp(
+      home: SubscriptionDetailScreen(entry: entry, controller: c),
+    ));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byIcon(Icons.speed));
+    await _until(tester, () => fake.callsOf('probeStart') == 1,
+        what: 'probeStart called');
+    await _until(tester, () => find.byIcon(Icons.speed).evaluate().isNotEmpty,
+        what: 'Start available again');
+
+    expect(find.textContaining('probeStart failed'), findsOneWidget);
+    expect(find.textContaining('Testing…'), findsNothing);
+    expect(find.text('Stopping…'), findsNothing);
+    await tester.pump(const Duration(milliseconds: 20));
+  });
 }

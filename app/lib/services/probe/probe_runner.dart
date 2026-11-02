@@ -6,6 +6,8 @@ import '../../vpn/box_vpn_client.dart';
 import '../../vpn/cc_channel.dart';
 import '../app_log.dart';
 import '../builder/core_chain_capability.dart';
+import '../error_format.dart';
+import '../l10n/locale_controller.dart';
 import 'probe_config.dart';
 import 'probe_lifecycle.dart';
 
@@ -54,10 +56,17 @@ class ProbeResult {
 /// шёл бы поверх активного детура/цепочки, а не по чистой ноде, и выключенные
 /// ноды выпадали бы из конфига — вводило в заблуждение (§236 UI-rework).
 class ProbeRunner {
-  ProbeRunner({CcChannel? cc}) : _cc = cc ?? CcChannel.instance;
+  ProbeRunner({CcChannel? cc, Duration stopDeadline = kProbeStopDeadline})
+      : _cc = cc ?? CcChannel.instance,
+        _stopDeadline = stopDeadline;
+
+  static const kProbeStopDeadline = Duration(seconds: 10);
 
   final CcChannel _cc;
+  final Duration _stopDeadline;
   bool _cancelled = false;
+  Completer<String>? _abandonedRun;
+  Timer? _stopDeadlineTimer;
 
   /// §669 — владелец текущей probe-сессии этого прогона (0 — сессии нет).
   /// Все probe-вызовы несут его: `finally` старого прогона не закроет сессию,
@@ -74,12 +83,19 @@ class ProbeRunner {
   /// [ProbeLifecycle.haltAll].
   void cancel() {
     _cancelled = true;
+    if (_abandonedRun != null) {
+      _stopDeadlineTimer ??= Timer(_stopDeadline, _abandonRun);
+    }
     final id = _runId;
     if (id != 0) {
       unawaited(_cc.probeCancel(id).catchError((Object e) {
         AppLog.I.warning('Probe cancel failed: $e');
       }));
     }
+  }
+
+  void _abandonRun() {
+    _abandonedRun?.completeError(TimeoutException(null, _stopDeadline));
   }
 
   /// Прогоняет тест по всем [nodes] (null-слот → вердикт 'broken', индекс
@@ -97,87 +113,112 @@ class ProbeRunner {
     Map<int, TlsLayers> tlsByIndex = const {},
   }) async {
     _cancelled = false;
+    final abandonedRun = Completer<String>();
+    _abandonedRun = abandonedRun;
     // §286 — регистрируем отмену в общем реестре: stop VPN / смерть туннеля /
     // сворадивание дёрнут ProbeLifecycle.haltAll() → cancel() здесь, и sweep
     // прекратится, даже если экран деталей папки не в фокусе. Снимаем в finally.
     final canceller = ProbeLifecycle.I.register(cancel);
     try {
-      // §518/§523 — конфигов может быть несколько: дорогие по памяти узлы
-      // гейтятся по kProbeMaxNaivePerConfig (naive — Chromium-движок на узел)
-      // и kProbeMaxWireguardPerConfig (WG/AWG — ≈17.5 МБ предвыделенных пулов
-      // на endpoint; проба = дайл, ядро будит ВСЕ endpoint'ы конфига). Десяток
-      // в одном конфиге = OOM всего процесса. Батчи прогоняются
-      // ПОСЛЕДОВАТЕЛЬНО, каждый своей probe-сессией: `ProbeSession.start`
-      // поверх живой сессии — рестарт (`ProbeSession.kt`), а `probeStop` ниже
-      // зовётся после каждого батча, так что движки/пулы предыдущего батча
-      // освобождаются до старта следующего. Без naive и WG батч один, и прогон
-      // дословно как до §518.
-      // §546 — гард реестра в probe судит `min_core` по той же версии ядра,
-      // что и боевая сборка (`CoreVersionCache`, кэш на сессию).
-      final coreVersion = await CoreVersionCache.ensure(
-          () => BoxVpnClient().getCoreVersion());
-      // §606 — anti-DPI туннеля (фрагментация, mixed-case SNI) и в пробе.
-      final vars = await loadProbeVars();
-      final batches =
-          buildProbeBatches(nodes,
-              coreVersion: coreVersion, vars: vars, tlsByIndex: tlsByIndex);
-
-      // Битые/несобираемые/группы — вердикт сразу, без ядра. Вердикты лежат
-      // в первом батче (§518 `_assemble`), покрывают весь список целиком.
-      final broken = batches.isEmpty
-          ? buildProbeConfig(nodes, coreVersion: coreVersion, vars: vars)
-              .brokenByIndex
-          : batches.first.brokenByIndex;
-      broken.forEach((i, why) {
-        onResult(
-            i,
-            ProbeResult(
-              switch (why) {
-                'broken' => ProbeStatus.broken,
-                'group' => ProbeStatus.group, // §336
-                _ => ProbeStatus.invalid,
-              },
-              message: why,
-            ));
-      });
-      if (batches.isEmpty) return '';
-
-      for (final cfg in batches) {
-        if (_cancelled) return '';
-        if (cfg.configJson == null) continue;
-        final started = await _cc.probeStart(cfg.configJson!);
-        if (!started.ok) {
-          final err = started.error;
-          // VPN активен → probe-сессию не поднять. UI гейтит тест ещё до run()
-          // (getVpnStatus), но между проверкой и probeStart VPN мог стартовать —
-          // ловим здесь маркером, не боевой веткой.
-          if (_looksLikeVpnRunning(err)) return kProbeVpnRunning;
-          AppLog.I.warning('Probe session failed to start: $err');
-          return err;
-        }
-        final runId = started.runId;
-        _runId = runId;
-        try {
-          // §669 — Stop пришёл, пока сессия поднималась: замеров не начинаем.
-          if (_cancelled) return '';
-          await _runPool(
-            cfg.tagByIndex,
-            test: (tag) => _cc.probeUrlTest(tag,
-                runId: runId, link: url, timeoutMs: timeoutMs),
+      return await Future.any([
+        _runBatches(nodes,
+            url: url,
+            timeoutMs: timeoutMs,
             onResult: onResult,
-          );
-        } finally {
-          // Сессию гасим ПОСЛЕ каждого батча, а не в конце прогона: иначе
-          // движки naive-узлов и WG-пулы (§523) предыдущего батча жили бы до
-          // конца sweep'а и гейт не давал бы ничего.
-          _runId = 0;
-          await _cc.probeStop(runId);
-        }
-      }
-      return '';
+            tlsByIndex: tlsByIndex),
+        abandonedRun.future,
+      ]);
+    } catch (e) {
+      AppLog.I.warning('Probe run failed: $e');
+      return getLocalText.s("Error: %s", formatUserError(e).render());
     } finally {
+      _stopDeadlineTimer?.cancel();
+      _stopDeadlineTimer = null;
+      _abandonedRun = null;
       ProbeLifecycle.I.deregister(canceller);
     }
+  }
+
+  Future<String> _runBatches(
+    List<NodeSpec?> nodes, {
+    required String url,
+    required int timeoutMs,
+    required void Function(int index, ProbeResult result) onResult,
+    required Map<int, TlsLayers> tlsByIndex,
+  }) async {
+    // §518/§523 — конфигов может быть несколько: дорогие по памяти узлы
+    // гейтятся по kProbeMaxNaivePerConfig (naive — Chromium-движок на узел)
+    // и kProbeMaxWireguardPerConfig (WG/AWG — ≈17.5 МБ предвыделенных пулов
+    // на endpoint; проба = дайл, ядро будит ВСЕ endpoint'ы конфига). Десяток
+    // в одном конфиге = OOM всего процесса. Батчи прогоняются
+    // ПОСЛЕДОВАТЕЛЬНО, каждый своей probe-сессией: `ProbeSession.start`
+    // поверх живой сессии — рестарт (`ProbeSession.kt`), а `probeStop` ниже
+    // зовётся после каждого батча, так что движки/пулы предыдущего батча
+    // освобождаются до старта следующего. Без naive и WG батч один, и прогон
+    // дословно как до §518.
+    // §546 — гард реестра в probe судит `min_core` по той же версии ядра,
+    // что и боевая сборка (`CoreVersionCache`, кэш на сессию).
+    final coreVersion = await CoreVersionCache.ensure(
+        () => BoxVpnClient().getCoreVersion());
+    // §606 — anti-DPI туннеля (фрагментация, mixed-case SNI) и в пробе.
+    final vars = await loadProbeVars();
+    final batches =
+        buildProbeBatches(nodes,
+            coreVersion: coreVersion, vars: vars, tlsByIndex: tlsByIndex);
+
+    // Битые/несобираемые/группы — вердикт сразу, без ядра. Вердикты лежат
+    // в первом батче (§518 `_assemble`), покрывают весь список целиком.
+    final broken = batches.isEmpty
+        ? buildProbeConfig(nodes, coreVersion: coreVersion, vars: vars)
+            .brokenByIndex
+        : batches.first.brokenByIndex;
+    broken.forEach((i, why) {
+      onResult(
+          i,
+          ProbeResult(
+            switch (why) {
+              'broken' => ProbeStatus.broken,
+              'group' => ProbeStatus.group, // §336
+              _ => ProbeStatus.invalid,
+            },
+            message: why,
+          ));
+    });
+    if (batches.isEmpty) return '';
+
+    for (final cfg in batches) {
+      if (_cancelled) return '';
+      if (cfg.configJson == null) continue;
+      final started = await _cc.probeStart(cfg.configJson!);
+      if (!started.ok) {
+        final err = started.error;
+        // VPN активен → probe-сессию не поднять. UI гейтит тест ещё до run()
+        // (getVpnStatus), но между проверкой и probeStart VPN мог стартовать —
+        // ловим здесь маркером, не боевой веткой.
+        if (_looksLikeVpnRunning(err)) return kProbeVpnRunning;
+        AppLog.I.warning('Probe session failed to start: $err');
+        return err;
+      }
+      final runId = started.runId;
+      _runId = runId;
+      try {
+        // §669 — Stop пришёл, пока сессия поднималась: замеров не начинаем.
+        if (_cancelled) return '';
+        await _runPool(
+          cfg.tagByIndex,
+          test: (tag) => _cc.probeUrlTest(tag,
+              runId: runId, link: url, timeoutMs: timeoutMs),
+          onResult: onResult,
+        );
+      } finally {
+        // Сессию гасим ПОСЛЕ каждого батча, а не в конце прогона: иначе
+        // движки naive-узлов и WG-пулы (§523) предыдущего батча жили бы до
+        // конца sweep'а и гейт не давал бы ничего.
+        _runId = 0;
+        await _cc.probeStop(runId);
+      }
+    }
+    return '';
   }
 
   static bool _looksLikeVpnRunning(String err) =>
@@ -195,7 +236,13 @@ class ProbeRunner {
         if (_cancelled) return;
         if (next >= queue.length) return;
         final entry = queue[next++];
-        final r = await test(entry.value);
+        final CcDelayResult r;
+        try {
+          r = await test(entry.value);
+        } catch (_) {
+          cancel();
+          rethrow;
+        }
         if (_cancelled) return;
         // §669 — сессию перехватил другой прогон (новый probeStart её
         // закрыл): этот прогон вытеснен, вердикт «stale run» узлу не пишем.

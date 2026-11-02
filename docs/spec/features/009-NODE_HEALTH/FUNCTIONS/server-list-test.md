@@ -20,6 +20,9 @@ button in the bar above the list starts and stops the test; each node gets a
 badge, a summary appears on top; the "Test actions" menu applies decisions to
 the results.
 
+On iOS without the tunnel (§712), the test runs while the core is stopped and
+ends when the app leaves the foreground.
+
 ## Parameters
 
 | Parameter | Values | Default |
@@ -91,6 +94,9 @@ Summary: `Test servers` → `Testing… N done` → `N ok · N err · N broken`.
   its session nor resets its indicator.
 - A fatal session start error is shown as text; errors of individual nodes —
   only in their badges.
+- A failed call to the core ends the test with an error shown as text. After
+  Stop the test always ends: if the core has not answered in 10 s, the bar
+  returns to Start and the error says so.
 
 ## Boundaries
 
@@ -118,3 +124,4 @@ Summary: `Test servers` → `Testing… N done` → `N ok · N err · N broken`.
 | 11 | [546](../../../tasks/546-emitters-drop-registry-rule-copies.md) | — | Registry check in the test session — by the core version of the live build |
 | 12 | [604](../../../tasks/604-dns-build-health-directions-bugs.md) | Done | No global URL — the template's ping URL, not the core default |
 | 13 | [669](../../../tasks/669-probe-session-cancel-stop-timeout-race.md) | In progress | Stop aborts started measurements, `Stopping…` state, session close capped, an old run does not close a new one |
+| 14 | [712](../../../tasks/712-ios-test-servers-and-probe-failure.md) | Simulator, no merge | iOS test session; a failed call ends the test with an error; Stop has a 10 s limit |

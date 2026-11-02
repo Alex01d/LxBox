@@ -55,6 +55,10 @@
 
 ### Fixed
 
+- **Test servers: a failed core call no longer hangs the test
+  ([task 712](docs/spec/tasks/712-ios-test-servers-and-probe-failure.md)).**
+  The test ends with the error as text, and Start comes back. After Stop, the
+  test ends even if the core does not answer, within 10 s.
 - **Tailscale Network tab of a signed-out node could erase the saved exit
   node ([task 706](docs/spec/tasks/706-tailscale-network-tab-logged-out.md)).**
   Offline, the tab compared the recorded `exit_node` with an exit the core did

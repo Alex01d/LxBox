@@ -21,6 +21,9 @@ class FakeProbeSession {
   /// Не-null — `probeStop` своей сессии ждёт его (долгий `closeService`).
   Completer<void>? stopGate;
 
+  Completer<void>? startGate;
+  final throwingMethods = <String>{};
+
   int callsOf(String method) => calls.where((c) => c.method == method).length;
 
   List<int> runIdsOf(String method) => [
@@ -36,8 +39,13 @@ class FakeProbeSession {
     calls.add(call);
     final args = (call.arguments as Map?) ?? const {};
     final runId = (args['runId'] as int?) ?? 0;
+    if (throwingMethods.contains(call.method)) {
+      throw PlatformException(code: 'boom', message: '${call.method} failed');
+    }
     switch (call.method) {
       case 'probeStart':
+        final gate = startGate;
+        if (gate != null) await gate.future;
         _closeLive();
         live = ++_nextId;
         _liveCancelled = false;

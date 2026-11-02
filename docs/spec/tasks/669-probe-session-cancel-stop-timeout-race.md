@@ -144,6 +144,19 @@ won't be able to start again — nothing happens. Got to force stop the whole ap
   вмешивается; `Stopping…` держится не дольше ~3 с; logcat `ProbeSession`
   без «probe close timed out» на обычных конфигах.
 
+## Дополнение из §712
+
+[§712](712-ios-test-servers-and-probe-failure.md), 2026-11-03. Правка в общем
+Dart, действует и на Android. Р1–Р3 не меняются.
+
+- `cancel()` во время прогона запускает таймер на 10 с. Если `run()` к этому
+  сроку не завершился, он возвращает ошибку `Error: timeout 10s`. Обычный путь
+  укладывается в потолок закрытия 3 с, таймер срабатывает, только когда нативный
+  вызов не ответил.
+- Оставшийся прогон закрывает свою сессию, когда вызов вернётся. Владелец-runId
+  (Р1) не даёт ему задеть новый прогон.
+- `Stopping…` теперь держится, пока сессия не закрыта, но не дольше 10 с.
+
 ## Docs to update
 
 - `docs/spec/features/009-NODE_HEALTH/FEATURE.md` / `FUNCTIONS/*` — отмена
