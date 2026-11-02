@@ -185,6 +185,19 @@ test config to keep in sync.
 
 ⚠ The core is controlled through the **libbox CommandClient**, not Clash HTTP (the Clash API was removed in §122). An `experimental.clash_api` block in a config is a **fatal startup failure** on our core (built without `with_clash_api`): `clash api is not included in this build`. Do not put it in a config you intend to test.
 
+## Running on iOS Simulator
+
+iOS has startup only, with no tunnel and no core ([§708](spec/tasks/708-ios-clean-startup.md)). Use iPhone 17 with iOS 26.5 or newer. CI has no iOS job, so checks are manual.
+
+```bash
+cd app
+flutter build ios --simulator --debug
+xcrun simctl install <device id> build/ios/iphonesimulator/Runner.app
+xcrun simctl launch <device id> com.leadaxe.lxbox
+```
+
+Warnings and errors are in `applog.txt` in the app's `Documents` folder. Find it with `xcrun simctl get_app_container <device id> com.leadaxe.lxbox data`. A clean start doesn't create the file.
+
 ## CI (GitHub Actions)
 
 Workflow [`.github/workflows/ci.yml`](../.github/workflows/ci.yml); the full release protocol is in [RELEASE_PROCESS.md](RELEASE_PROCESS.md).

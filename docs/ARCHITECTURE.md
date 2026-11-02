@@ -1609,13 +1609,18 @@ BoxService (per instance, recreated with every new BoxVpnService)
 
 ### Channel Contract
 
-The three Flutter–Android channels live in `VpnPlugin.kt`:
+On Android these channels live in `VpnPlugin.kt`, except `/utils` and `/wifi_history`, which live in `MainActivity.kt`:
 
 | Channel | Type | Direction |
 |---|---|---|
 | `com.leadaxe.lxbox/methods` | MethodChannel | Bidirectional (Dart → Native; Dart ← Native for `wifi_history`) |
 | `com.leadaxe.lxbox/status_events` | EventChannel | Native → Dart (TunnelStatus broadcasts) |
 | `lxbox/coreLog` | EventChannel | Native → Dart (sing-box log lines) |
+| `com.leadaxe.lxbox/utils` | MethodChannel | Dart → Native (URLs, permissions, platform facts) |
+| `com.leadaxe.lxbox/wifi_history` | MethodChannel | Bidirectional (§051) |
+| `lxbox/cc/*` | EventChannel | Native → Dart (CommandClient data, ephemeral, see the two-channel invariant above) |
+
+**iOS (§708).** `app/ios/Runner/LxBoxChannels.swift` answers only what app startup calls: part of `/methods` and `/utils`, plus `status_events`, `lxbox/coreLog` and `lxbox/cc/openconnect`, which never emit. There is no tunnel and no core, so `getVpnStatus` is always `Stopped`. Every other method returns `FlutterMethodNotImplemented`, which reaches Dart as `MissingPluginException` and stays visible in AppLog. The exact table is in [§708](spec/tasks/708-ios-clean-startup.md).
 
 **The MethodChannel methods** (the groups follow the `_Methods` constants in `box_vpn_client.dart`):
 
@@ -2149,7 +2154,7 @@ LxBox is a monolith, but architecturally it holds several self-contained layers 
 
 **The quality gates have been passed:** the §049 audit (atomic CAS, the F1 split, the F2–F26 fixes) and the §050 closeout.
 
-**iOS:** absent. A cross-platform package would be a separate task (a Network Extension).
+**iOS:** startup only, no tunnel ([§708](spec/tasks/708-ios-clean-startup.md)). A cross-platform package would be a separate task (a Network Extension).
 
 ### Layer 2 — CommandClient channel
 

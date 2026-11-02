@@ -30,6 +30,8 @@ No settings of its own. Steps (from "needed to work" to "nice to have"):
 | 3 | Quick Settings tile | not asked yet | the system add-tile dialog (Android 13+); on older versions — silently skipped |
 | 4 | Check for updates? | not asked yet, not a dev build | Skip / Enable update auto-check |
 
+On iOS no step shows a prompt. Steps 1 and 2 have nothing to ask, step 3 is silently skipped, step 4 is not asked, and the update check stays off.
+
 ## Inputs / Outputs
 
 **Inputs:** the home screen opening; the state of permissions and battery
@@ -77,3 +79,4 @@ optimization; the install channel.
 | 2 | [395](../../../tasks/395-update-check-consent.md) | — | The update check question; off by default; "back" — by channel |
 | 3 | [422](../../../tasks/422-support-feed-gated-by-update-consent.md) | implemented | The same consent opens the network to the support feed |
 | 4 | [605](../../../tasks/605-service-live-automation-workspaces-bugs.md) | Implemented | The question uses the update checker's dev-build rule |
+| 5 | [708](../../../tasks/708-ios-clean-startup.md) | Implemented | iOS: no first-launch prompts, update check stays off |

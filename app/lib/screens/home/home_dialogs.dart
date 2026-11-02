@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io' show Platform;
 
 import 'package:flutter/material.dart';
 
@@ -417,6 +418,9 @@ Future<void> maybeShowAddTilePrompt(BuildContext context, BoxVpnClient vpn) asyn
 const _updatePromptKey = SettingsStorage.updateCheckPromptVar;
 
 Future<void> maybeShowUpdateCheckPrompt(BuildContext context) async {
+  // §708 — на iOS не спрашиваем: в релизах GitHub только APK под Android.
+  // Флаг не трогаем, `auto_check_updates` остаётся false — запросов нет.
+  if (Platform.isIOS) return;
   final asked = await SettingsStorage.getVar(_updatePromptKey, '0');
   if (asked == '1') return;
   // dev-сборка: чекер и так молчит (`_isDevBuild`), вопрос был бы шумом.

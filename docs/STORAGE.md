@@ -144,6 +144,8 @@ Every key is described in detail in the sections below.
 
 Every path is relative to the **Android internal documents directory** (`getApplicationDocumentsDirectory()`). On a device that directory is unreachable without root or the Debug API (`GET /state/storage`).
 
+On iOS (§708) the same call resolves to the app's `Documents` folder. The native `getFilesDir` is `Library/Application Support/lxbox`, which holds `singbox_config.json`. Both move or change when the tunnel arrives.
+
 ```
 getApplicationDocumentsDirectory()/         # Android: Context.getDir("flutter") = app_flutter/
 ├── lxbox_settings.json                     # [workspace]
@@ -1409,6 +1411,8 @@ CRUD: `getWifiHistory()` / `addToWifiHistory(ssid, bssid)` / `removeFromWifiHist
 
 A JSON mirror of the Android prefs that historically lived **only** in the native
 `SharedPreferences` (`boxvpn_boot.*`). The implementation is `lib/services/settings_storage/native_prefs.dart`.
+
+On iOS (§708) there is no `boxvpn_boot.*`. The native copy is `UserDefaults` under `lxbox.native_prefs.<key>`, with the defaults below. JSON stays the truth, as on Android.
 
 ```jsonc
 {
