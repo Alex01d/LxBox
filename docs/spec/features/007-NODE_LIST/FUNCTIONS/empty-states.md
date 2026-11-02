@@ -16,7 +16,7 @@ server, connect the VPN or pick another Direction.
 When there is nothing to show, the list's place is taken not by emptiness
 but by the next step: add a server, connect, or choose another Direction.
 
-On iOS without the tunnel (§709), once the core stops in the background the list is empty again and "Tap to connect" returns.
+On iOS without the tunnel (§711), once the core stops in the background the list is empty again and "Tap to connect" returns.
 
 ## Parameters
 
@@ -73,4 +73,4 @@ selected Direction.
 | 3 | [095](../../../tasks/095-filter-mode-workspace.md) | DONE | Without the tunnel the node header is hidden |
 | 4 | [328](../../../tasks/328-no-servers-hint-on-home.md) | Implemented | Hint by zero servers, not by an empty config |
 | 5 | [579](../../../tasks/579-networks-pseudo-direction.md) | Implemented | Without Directions, NETWORKS is shown |
-| 6 | [709](../../../tasks/709-ios-core-in-app-no-vpn.md) | Simulator, no merge | iOS: state after the core stops in the background |
+| 6 | [711](../../../tasks/711-ios-core-in-app-no-vpn.md) | Simulator, no merge | iOS: state after the core stops in the background |

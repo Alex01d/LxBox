@@ -19,7 +19,7 @@ crash), memory snapshots the core takes on its own when approaching the memory
 limit, and the system reasons for process termination. After a core panic the
 home screen offers to share the report once.
 
-On iOS (§709) core panics are reported and archived the same way. A kill while suspended leaves no report, and system exit reasons are not available.
+On iOS (§711) core panics are reported and archived the same way. A kill while suspended leaves no report, and system exit reasons are not available.
 
 ## Parameters
 
@@ -102,4 +102,4 @@ process exit history.
 | 6 | [316](../../../tasks/316-kernel-crash-reports-access.md) | device-verified | Real report path, archive, banner once per failure, Crashes tab |
 | 7 | [318](../../../tasks/318-oom-reports-access.md) | DEVICE-PENDING | Memory snapshots: OOM tab, API, rotation 5 |
 | 8 | [334](../../../tasks/334-on-launch-after-crash-cache-reset.md) | ✅ DEVICE-PENDING | The fact of a crash is an event with independent subscribers |
-| 9 | [709](../../../tasks/709-ios-core-in-app-no-vpn.md) | Simulator, no merge | iOS: same reports and cache reset, no system exit reasons |
+| 9 | [711](../../../tasks/711-ios-core-in-app-no-vpn.md) | Simulator, no merge | iOS: same reports and cache reset, no system exit reasons |

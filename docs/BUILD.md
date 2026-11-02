@@ -187,7 +187,7 @@ test config to keep in sync.
 
 ## Running on iOS Simulator
 
-The iOS app runs the core inside the app with no tunnel ([§709](spec/tasks/709-ios-core-in-app-no-vpn.md)). Use iPhone 17 with iOS 26.5 or newer. CI has no iOS job, so checks are manual. To connect, select Proxy in VPN Settings, Mode tab.
+The iOS app runs the core inside the app with no tunnel ([§711](spec/tasks/711-ios-core-in-app-no-vpn.md)). Use iPhone 17 with iOS 26.5 or newer. CI has no iOS job, so checks are manual. To connect, select Proxy in VPN Settings, Mode tab.
 
 ```bash
 ./scripts/build-libbox-ios.sh

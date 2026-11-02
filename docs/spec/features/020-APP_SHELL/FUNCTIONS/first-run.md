@@ -79,4 +79,4 @@ optimization; the install channel.
 | 2 | [395](../../../tasks/395-update-check-consent.md) | — | The update check question; off by default; "back" — by channel |
 | 3 | [422](../../../tasks/422-support-feed-gated-by-update-consent.md) | implemented | The same consent opens the network to the support feed |
 | 4 | [605](../../../tasks/605-service-live-automation-workspaces-bugs.md) | Implemented | The question uses the update checker's dev-build rule |
-| 5 | [708](../../../tasks/708-ios-clean-startup.md) | Implemented | iOS: no first-launch prompts, update check stays off |
+| 5 | [710](../../../tasks/710-ios-clean-startup.md) | Implemented | iOS: no first-launch prompts, update check stays off |

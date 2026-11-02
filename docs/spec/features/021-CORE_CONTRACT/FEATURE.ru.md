@@ -40,7 +40,7 @@
 |-----|----------|-----|
 | Пин ядра | `v1.14.2-lx.8` | `app/android/libbox.version` — единственный источник |
 | Поставка AAR | GitHub Releases форка: `libbox-<ver>.aar` + `SHA256SUMS`, проверка хеша; AAR в git не лежит | `scripts/fetch-libbox.sh`; CI — шаг «Fetch sing-box-lx core» в job `android` |
-| Поставка ядра iOS | локальная сборка по пину (`scripts/build-libbox-ios.sh`), без опубликованного хеша, не в git | только для разработки, выпускать нельзя; для релиза нужен iOS-артефакт и хеш в Releases форка (§709) |
+| Поставка ядра iOS | локальная сборка по пину (`scripts/build-libbox-ios.sh`), без опубликованного хеша, не в git | только для разработки, выпускать нельзя; для релиза нужен iOS-артефакт и хеш в Releases форка (§711) |
 | Теги сборки AAR | `with_gvisor, with_quic, with_wireguard, with_utls, with_naive_outbound, with_xhttp, with_awg, with_lx_command, with_lx_idle_suspend, with_lx_chain, with_openvpn, with_openconnect, with_tailscale` + `ts_omit_*`; **без** `with_clash_api` | зашиты в ядре; libbox их не отдаёт, приложение держит зеркало набора со своим пином — юнит «пин тегов ядра совпадает с `libbox.version`» краснеет до сверки |
 | Управление ядром | libbox CommandClient (push-потоки + unary RPC) | Clash HTTP API удалён (§122) |
 
@@ -134,7 +134,7 @@ logcat/дамп. Клиент при этом не патчит поведени
 | 9 | [522](../../tasks/522-kernel-lx9-xmux-local-cancel.md) · [526](../../tasks/526-kernel-lx10-upstream-sync-naive-addr.md) | Released v2.25.3 | 1.14.1-lx.9, lx.10 |
 | 10 | [535](../../tasks/535-kernel-1-14-2-lx1-pin-lx-wg-keys-endpoint-state.md) | Реализовано | 1.14.2-lx.1: блок `lx`, `endpointState` |
 | 11 | [557](../../tasks/557-kernel-lx4-wg-endpoint-toggle.md) | Реализовано | 1.14.2-lx.4: вкл/выкл WG/AWG на лету |
-| 12 | [709](../../tasks/709-ios-core-in-app-no-vpn.md) | Simulator | Ядро iOS: локальная сборка по пину, явное исключение, выпускать нельзя |
+| 12 | [711](../../tasks/711-ios-core-in-app-no-vpn.md) | Simulator | Ядро iOS: локальная сборка по пину, явное исключение, выпускать нельзя |
 | 12 | без задачи — [KERNEL.md → Version history](../../../KERNEL.md#version-history-the-lxbox-relevant-parts), [CHANGELOG 2.25.8](../../../../CHANGELOG.md) | Выпущено v2.25.8 | 1.14.2-lx.5…lx.8: синк `stable`, три зависания MASQUE, XHTTP `max_connections 3` без `xmux` (lx.6); клиент не менялся, задача не заводилась — бамп записан пином, KERNEL.md и changelog |
 | 13 | без задачи — KERNEL.md, [CHANGELOG 2.25.9](../../../../CHANGELOG.md) | Выпущено v2.25.9 | 1.14.2-lx.9…lx.11: канал управления Tailscale по HTTPS (SPEC 111), прямой UDP-путь (SPEC 112), ещё один синк `stable`; Java-поверхность идентична lx.8 |
 
