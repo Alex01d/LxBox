@@ -141,7 +141,7 @@ Event channels `com.leadaxe.lxbox/status_events`, `lxbox/coreLog`, `lxbox/cc/ope
 
 ## Risks and edge cases
 
-- **Start does not work.** With a server added, tapping Start stays on `Disconnected` and the `Errors (1)` banner appears, with `MissingPluginException` for `isForeignVpnActive` in the log. This conflicts with §055 item 6 until the bridge task. Accepted for now, because no iOS build ships.
+- **Start does not work (handled in [§709](709-ios-core-in-app-no-vpn.md)).** With a server added, tapping Start stays on `Disconnected` and the `Errors (1)` banner appears, with `MissingPluginException` for `isForeignVpnActive` in the log. This conflicts with §055 item 6 until the bridge task. Accepted for now, because no iOS build ships.
 - **Empty core version.** Registry gates judge fields by core version at config build. A config built with an empty version must not be treated as correct for a real core. Re-check when the core is linked.
 - **Android rows in App Settings.** Battery and tile rows stay visible and now report "fine" or "unsupported". Cleaned up in a later task.
 - **`main.dart` stays fragile.** Any new startup method without an iOS answer again skips everything after it. Acceptance 1 catches this, but only when someone runs it, because CI has no iOS job and `flutter analyze` excludes `ios/**`.

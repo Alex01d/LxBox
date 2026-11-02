@@ -144,7 +144,7 @@ Every key is described in detail in the sections below.
 
 Every path is relative to the **Android internal documents directory** (`getApplicationDocumentsDirectory()`). On a device that directory is unreachable without root or the Debug API (`GET /state/storage`).
 
-On iOS (§708) the same call resolves to the app's `Documents` folder. The native `getFilesDir` is `Library/Application Support/lxbox`, which holds `singbox_config.json`. Both move or change when the tunnel arrives.
+On iOS (§708, §709) the same call resolves to the app's `Documents` folder. The native `getFilesDir` and the core's `workingPath` are `Library/Application Support/lxbox`, which holds `singbox_config.json`, `cache.db` and crash reports. `basePath` is `tmp` on a device, because `command.sock` does not fit the socket path limit elsewhere, and Simulator uses a loopback port instead. The core also writes `configuration.json`, a copy of the config, to `basePath` at each start and leaves it there after Stop. `tempPath` is `Library/Caches/lxbox-core`. A reinstall or update moves the container, so the saved config is dropped and rebuilt. `has_tun` is accepted and not stored.
 
 ```
 getApplicationDocumentsDirectory()/         # Android: Context.getDir("flutter") = app_flutter/

@@ -1,14 +1,8 @@
 import Flutter
 import Foundation
+import Libbox
 
-/// §708 — iOS side of the channel contract in `PlatformChannels`, only what app startup calls.
-/// There is no tunnel and no core yet, so the status is always `Stopped`. Every other method
-/// answers `FlutterMethodNotImplemented`, so missing native work stays visible in AppLog.
 final class LxBoxChannels {
-  private static let configFileName = "singbox_config.json"
-  private static let prefsPrefix = "lxbox.native_prefs."
-
-  /// Defaults match `docs/STORAGE.md`: native-to-JSON seeding runs once, so a wrong answer sticks.
   private static let boolGetters: [String: (key: String, fallback: Bool)] = [
     "getAutoStart": ("auto_start", false),
     "getKeepOnExit": ("keep_on_exit", true),
@@ -26,22 +20,15 @@ final class LxBoxChannels {
     "setAutoRedirect": "auto_redirect",
   ]
 
-  private let defaults = UserDefaults.standard
-  private let silentStream = SilentStream()
+  private let client = CoreCommandClient()
+  private let service: CoreService
+  private let silentStream = ChannelSink()
   private var channels: [NSObject] = []
 
-  private lazy var filesDirectory: URL = {
-    let support = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
-    let directory = support.appendingPathComponent("lxbox", isDirectory: true)
-    try? FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
-    return directory
-  }()
-
-  private var configFile: URL {
-    filesDirectory.appendingPathComponent(Self.configFileName)
-  }
-
   init(messenger: FlutterBinaryMessenger) {
+    CoreRuntime.setup()
+    service = CoreService(client: client)
+
     let methods = FlutterMethodChannel(name: "com.leadaxe.lxbox/methods", binaryMessenger: messenger)
     methods.setMethodCallHandler { [weak self] call, result in
       self?.handleMethods(call, result)
@@ -51,50 +38,147 @@ final class LxBoxChannels {
       self?.handleUtils(call, result)
     }
     channels = [methods, utils]
-    for name in ["com.leadaxe.lxbox/status_events", "lxbox/coreLog", "lxbox/cc/openconnect"] {
-      let channel = FlutterEventChannel(name: name, binaryMessenger: messenger)
-      channel.setStreamHandler(silentStream)
-      channels.append(channel)
+
+    client.connectionsEmitter.sink.onListened = { [weak self] in
+      DispatchQueue.global(qos: .userInitiated).async { self?.client.reEmitConnections() }
     }
+    addEventChannel("com.leadaxe.lxbox/status_events", service.statusSink, messenger)
+    addEventChannel("lxbox/coreLog", service.logSink, messenger)
+    addEventChannel("lxbox/cc/status", client.statusEmitter.sink, messenger)
+    addEventChannel("lxbox/cc/outbounds", client.outboundsEmitter.sink, messenger)
+    addEventChannel("lxbox/cc/groups", client.groupsEmitter.sink, messenger)
+    addEventChannel("lxbox/cc/connections", client.connectionsEmitter.sink, messenger)
+    addEventChannel("lxbox/cc/openconnect", silentStream, messenger)
+  }
+
+  private func addEventChannel(_ name: String, _ handler: FlutterStreamHandler & NSObjectProtocol, _ messenger: FlutterBinaryMessenger) {
+    let channel = FlutterEventChannel(name: name, binaryMessenger: messenger)
+    channel.setStreamHandler(handler)
+    channels.append(channel)
   }
 
   private func handleMethods(_ call: FlutterMethodCall, _ result: @escaping FlutterResult) {
     let arguments = call.arguments as? [String: Any]
     if let getter = Self.boolGetters[call.method] {
-      result(defaults.object(forKey: Self.prefsPrefix + getter.key) as? Bool ?? getter.fallback)
+      result(NativePrefs.bool(getter.key, fallback: getter.fallback))
       return
     }
     if let key = Self.boolSetters[call.method] {
-      defaults.set(arguments?["enabled"] as? Bool ?? false, forKey: Self.prefsPrefix + key)
+      let enabled = arguments?["enabled"] as? Bool ?? false
+      NativePrefs.set(enabled, for: key)
+      if call.method == "setCoreLogsVerbose" {
+        service.setVerboseLogs(enabled)
+      }
       result(true)
       return
     }
     switch call.method {
     case "getFilesDir":
-      result(filesDirectory.path)
+      result(CoreRuntime.filesDirectory.path)
     case "saveConfig":
       result(saveConfig(arguments?["config"] as? String ?? ""))
     case "getConfig":
-      result((try? String(contentsOf: configFile, encoding: .utf8)) ?? "{}")
+      result((try? String(contentsOf: CoreRuntime.configFile, encoding: .utf8)) ?? "{}")
+    case "checkConfig":
+      let text = arguments?["config"] as? String ?? ""
+      respondOffMain(result) { Self.checkConfig(text) }
+    case "formatConfig":
+      let text = arguments?["config"] as? String ?? ""
+      respondOffMain(result) { Self.formatConfig(text) }
+
+    case "startVPN":
+      service.start()
+      result(true)
+    case "stopVPN":
+      service.stop(result)
+    case "forceStopVPN":
+      service.forceStop()
+      result(true)
+    case "reloadVPN":
+      service.reload()
+      result(true)
+    case "resetNetwork":
+      service.resetNetwork()
+      result(true)
+    case "clearDnsCache":
+      service.clearDnsCache()
+      result(true)
     case "getVpnStatus":
-      result(["status": "Stopped", "revoked": false])
+      result(["status": service.status.rawValue, "revoked": false])
+    case "getTunnelUptimeMs":
+      result(service.uptimeMs)
     case "getCoreVersion":
-      result("")
+      result(LibboxVersion())
+    case "getMemoryInfo":
+      result(Self.memoryInfo())
+
     case "getBackgroundMode":
-      result(defaults.string(forKey: Self.prefsPrefix + "background_mode") ?? "never")
+      result(NativePrefs.string("background_mode", fallback: "never"))
     case "setBackgroundMode":
-      defaults.set(arguments?["mode"] as? String ?? "never", forKey: Self.prefsPrefix + "background_mode")
+      NativePrefs.set(arguments?["mode"] as? String ?? "never", for: "background_mode")
       result(true)
     case "getMemoryLimit":
-      result(defaults.string(forKey: Self.prefsPrefix + "memory_limit") ?? "auto")
+      result(NativePrefs.string("memory_limit", fallback: "auto"))
     case "setMemoryLimit":
-      defaults.set(arguments?["value"] as? String ?? "auto", forKey: Self.prefsPrefix + "memory_limit")
+      NativePrefs.set(arguments?["value"] as? String ?? "auto", for: "memory_limit")
+      CoreRuntime.reloadMemoryLimit()
       result(true)
-    case "setHasTun", "setAppLanguage", "setAutomationEnabled":
+
+    case "ccResyncForReopen":
+      client.resyncForReopen()
       result(true)
+    case "ccConnectScreen":
+      client.connectScreenRef()
+      result(true)
+    case "ccDisconnectScreen":
+      client.disconnectScreenRef()
+      result(true)
+    case "ccPauseClients":
+      client.pauseClients()
+      result(true)
+    case "ccResumeClients":
+      client.resumeClients()
+      result(true)
+    case "ccSetStatusFast":
+      client.setStatusFast(arguments?["fast"] as? Bool ?? false)
+      result(true)
+    case "ccCancelPing":
+      respondOffMain(result) { [client] in
+        client.cancelPing()
+        return true
+      }
+    case "ccGetGroups":
+      respondOffMain(result) { [client] in client.isAlive ? client.getGroups() : nil }
+    case "ccGetOutbounds":
+      respondOffMain(result) { [client] in client.isAlive ? client.getOutbounds() : nil }
+    case "ccGetRunningConfig":
+      respondOffMain(result) { [client] in client.isAlive ? client.getRunningConfig() : nil }
+    case "ccSelectOutbound":
+      let group = arguments?["group"] as? String ?? ""
+      let tag = arguments?["tag"] as? String ?? ""
+      respondOffMain(result) { [client] in client.selectOutbound(group: group, tag: tag) }
+    case "ccUrlTestOutbound":
+      let tag = arguments?["tag"] as? String ?? ""
+      let link = arguments?["link"] as? String ?? ""
+      let timeoutMs = Int32(arguments?["timeoutMs"] as? Int ?? 0)
+      respondOffMain(result) { [client] in client.urlTestOutbound(tag: tag, link: link, timeoutMs: timeoutMs) }
+    case "ccUrlTestGroup":
+      let tag = arguments?["tag"] as? String ?? ""
+      respondOffMain(result) { [client] in client.urlTestGroup(tag: tag) }
+    case "ccCloseConnection":
+      let id = arguments?["id"] as? String ?? ""
+      respondOffMain(result) { [client] in client.closeConnection(id: id) }
+    case "ccCloseConnections":
+      respondOffMain(result) { [client] in client.closeConnections() }
+
+    case "setHasTun", "setAppLanguage", "setAutomationEnabled", "setAutomationActiveState",
+      "setNotificationTitle", "setNotificationText":
+      result(true)
+    case "isForeignVpnActive", "getCurrentSessionAllowBypass":
+      result(false)
     case "getAppLanguageState":
       result(["supported": false])
-    case "isIgnoringBatteryOptimizations":
+    case "isIgnoringBatteryOptimizations", "areNotificationsEnabled":
       result(true)
     case "requestAddTile":
       result("unsupported")
@@ -118,23 +202,45 @@ final class LxBoxChannels {
     }
   }
 
+  private func respondOffMain(_ result: @escaping FlutterResult, _ work: @escaping () -> Any?) {
+    DispatchQueue.global(qos: .userInitiated).async {
+      let value = work()
+      DispatchQueue.main.async { result(value) }
+    }
+  }
+
   private func saveConfig(_ config: String) -> Bool {
     do {
-      try Data(config.utf8).write(to: configFile, options: .atomic)
+      try Data(config.utf8).write(to: CoreRuntime.configFile, options: .atomic)
       return true
     } catch {
       return false
     }
   }
-}
 
-/// No tunnel means no status transitions and no core logs, so these streams never emit.
-private final class SilentStream: NSObject, FlutterStreamHandler {
-  func onListen(withArguments _: Any?, eventSink _: @escaping FlutterEventSink) -> FlutterError? {
-    nil
+  private static func checkConfig(_ text: String) -> [String: Any] {
+    var error: NSError?
+    LibboxCheckConfig(text, &error)
+    if let error {
+      return ["ok": false, "error": error.localizedDescription]
+    }
+    return ["ok": true]
   }
 
-  func onCancel(withArguments _: Any?) -> FlutterError? {
-    nil
+  private static func formatConfig(_ text: String) -> String? {
+    guard !text.isEmpty else { return nil }
+    var error: NSError?
+    return LibboxFormatConfig(text, &error)?.value
+  }
+
+  private static func memoryInfo() -> [String: Any] {
+    var info = task_vm_info_data_t()
+    var count = mach_msg_type_number_t(MemoryLayout<task_vm_info_data_t>.size / MemoryLayout<natural_t>.size)
+    let status = withUnsafeMutablePointer(to: &info) {
+      $0.withMemoryRebound(to: integer_t.self, capacity: Int(count)) {
+        task_info(mach_task_self_, task_flavor_t(TASK_VM_INFO), $0, &count)
+      }
+    }
+    return ["totalPss": status == KERN_SUCCESS ? Int(info.phys_footprint) : 0]
   }
 }

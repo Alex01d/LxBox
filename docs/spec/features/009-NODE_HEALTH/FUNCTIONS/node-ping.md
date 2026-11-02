@@ -18,6 +18,8 @@ item in the node menu, all visible nodes — via the ping button on the home
 screen, automatically — 5 s after connecting. The result is shown on the right
 of the node row as `NNMS` or `ERR`, colored by the scale.
 
+On iOS without the tunnel (§709), a ping in progress ends when the app leaves the foreground, because the core stops.
+
 ## Parameters
 
 | Parameter | Value |
@@ -106,3 +108,4 @@ recalculation of the "root causes" for detour.
 | 11 | [367](../../../tasks/367-autoping-after-inplace-reload.md) | ✅ Fixed | Auto-ping also after a config reload on a live tunnel |
 | 12 | [557](../../../tasks/557-kernel-lx4-wg-endpoint-toggle.md) | Implemented | A disabled endpoint — a dash instead of a measurement |
 | 13 | [677](../../../tasks/677-autoping-tail-skips-round-robin-groups.md) | Done | The end of a run forces a group test only for Fastest (`least_test`) |
+| 14 | [709](../../../tasks/709-ios-core-in-app-no-vpn.md) | Simulator, no merge | iOS: ping ends with the foreground |

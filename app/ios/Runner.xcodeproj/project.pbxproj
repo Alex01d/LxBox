@@ -7,6 +7,11 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		70900000000000000000A002 /* CoreRuntime.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70900000000000000000A001 /* CoreRuntime.swift */; };
+		70900000000000000000A004 /* CorePlatform.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70900000000000000000A003 /* CorePlatform.swift */; };
+		70900000000000000000A006 /* CoreService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70900000000000000000A005 /* CoreService.swift */; };
+		70900000000000000000A008 /* CoreCommandClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70900000000000000000A007 /* CoreCommandClient.swift */; };
+		70900000000000000000A102 /* Libbox.xcframework in Frameworks */ = {isa = PBXBuildFile; fileRef = 70900000000000000000A101 /* Libbox.xcframework */; };
 		1498D2341E8E89220040F4C2 /* GeneratedPluginRegistrant.m in Sources */ = {isa = PBXBuildFile; fileRef = 1498D2331E8E89220040F4C2 /* GeneratedPluginRegistrant.m */; };
 		331C808B294A63AB00263BE5 /* RunnerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 331C807B294A618700263BE5 /* RunnerTests.swift */; };
 		3B3967161E833CAA004F5970 /* AppFrameworkInfo.plist in Resources */ = {isa = PBXBuildFile; fileRef = 3B3967151E833CAA004F5970 /* AppFrameworkInfo.plist */; };
@@ -45,6 +50,11 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		70900000000000000000A001 /* CoreRuntime.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CoreRuntime.swift; sourceTree = "<group>"; };
+		70900000000000000000A003 /* CorePlatform.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CorePlatform.swift; sourceTree = "<group>"; };
+		70900000000000000000A005 /* CoreService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CoreService.swift; sourceTree = "<group>"; };
+		70900000000000000000A007 /* CoreCommandClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CoreCommandClient.swift; sourceTree = "<group>"; };
+		70900000000000000000A101 /* Libbox.xcframework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcframework; name = Libbox.xcframework; path = Frameworks/Libbox.xcframework; sourceTree = "<group>"; };
 		0675A389C94BD935F39707BE /* Pods-RunnerTests.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-RunnerTests.release.xcconfig"; path = "Target Support Files/Pods-RunnerTests/Pods-RunnerTests.release.xcconfig"; sourceTree = "<group>"; };
 		1498D2321E8E86230040F4C2 /* GeneratedPluginRegistrant.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = GeneratedPluginRegistrant.h; sourceTree = "<group>"; };
 		1498D2331E8E89220040F4C2 /* GeneratedPluginRegistrant.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = GeneratedPluginRegistrant.m; sourceTree = "<group>"; };
@@ -80,6 +90,7 @@
 			files = (
 				78A318202AECB46A00862997 /* FlutterGeneratedPluginSwiftPackage in Frameworks */,
 				630B5E842F55AB8B827125AB /* Pods_Runner.framework in Frameworks */,
+				70900000000000000000A102 /* Libbox.xcframework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -117,6 +128,7 @@
 		97A816BBD28FF7BEAF7DE1A3 /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
+				70900000000000000000A101 /* Libbox.xcframework */,
 				623D215BF8279B8EF5F1F0FE /* Pods_Runner.framework */,
 				A0206099D512D16F949DC135 /* Pods_RunnerTests.framework */,
 			);
@@ -155,6 +167,10 @@
 				1498D2331E8E89220040F4C2 /* GeneratedPluginRegistrant.m */,
 				74858FAE1ED2DC5600515810 /* AppDelegate.swift */,
 				70800000000000000000A001 /* LxBoxChannels.swift */,
+				70900000000000000000A001 /* CoreRuntime.swift */,
+				70900000000000000000A003 /* CorePlatform.swift */,
+				70900000000000000000A005 /* CoreService.swift */,
+				70900000000000000000A007 /* CoreCommandClient.swift */,
 				7884E8672EC3CC0400C636F2 /* SceneDelegate.swift */,
 				74858FAD1ED2DC5600515810 /* Runner-Bridging-Header.h */,
 			);
@@ -377,6 +393,10 @@
 			files = (
 				74858FAF1ED2DC5600515810 /* AppDelegate.swift in Sources */,
 				70800000000000000000A002 /* LxBoxChannels.swift in Sources */,
+				70900000000000000000A002 /* CoreRuntime.swift in Sources */,
+				70900000000000000000A004 /* CorePlatform.swift in Sources */,
+				70900000000000000000A006 /* CoreService.swift in Sources */,
+				70900000000000000000A008 /* CoreCommandClient.swift in Sources */,
 				1498D2341E8E89220040F4C2 /* GeneratedPluginRegistrant.m in Sources */,
 				7884E8682EC3CC0700C636F2 /* SceneDelegate.swift in Sources */,
 			);
@@ -476,6 +496,23 @@
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
+				);
+				OTHER_LDFLAGS = (
+					"$(inherited)",
+					"-lresolv",
+					"-lc++",
+					"-framework",
+					"SystemConfiguration",
+					"-framework",
+					"Security",
+					"-framework",
+					"CFNetwork",
+					"-framework",
+					"CoreFoundation",
+					"-framework",
+					"Foundation",
+					"-framework",
+					"UIKit",
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = com.leadaxe.lxbox;
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -659,6 +696,23 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
+				OTHER_LDFLAGS = (
+					"$(inherited)",
+					"-lresolv",
+					"-lc++",
+					"-framework",
+					"SystemConfiguration",
+					"-framework",
+					"Security",
+					"-framework",
+					"CFNetwork",
+					"-framework",
+					"CoreFoundation",
+					"-framework",
+					"Foundation",
+					"-framework",
+					"UIKit",
+				);
 				PRODUCT_BUNDLE_IDENTIFIER = com.leadaxe.lxbox;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_OBJC_BRIDGING_HEADER = "Runner/Runner-Bridging-Header.h";
@@ -680,6 +734,23 @@
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
+				);
+				OTHER_LDFLAGS = (
+					"$(inherited)",
+					"-lresolv",
+					"-lc++",
+					"-framework",
+					"SystemConfiguration",
+					"-framework",
+					"Security",
+					"-framework",
+					"CFNetwork",
+					"-framework",
+					"CoreFoundation",
+					"-framework",
+					"Foundation",
+					"-framework",
+					"UIKit",
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = com.leadaxe.lxbox;
 				PRODUCT_NAME = "$(TARGET_NAME)";

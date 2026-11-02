@@ -19,6 +19,8 @@ the service notification. Keeps an honest status: every transitional phase has
 a deadline, after which a hung core is forcibly shut down and the user gets
 the reason.
 
+On iOS without the tunnel (§709), Start runs the core inside the app, in Proxy mode only. VPN mode stops with a reason. Leaving the app stops the core, and the user taps Start on return.
+
 ## Parameters
 
 No settings of its own. Fixed deadlines:
@@ -100,3 +102,4 @@ Stop / Reconnect buttons.
 | 17 | [415](../../../tasks/415-stop-timeout-budget.md) | Done | Stop budget ladder 9 < 10 < 12 s |
 | 18 | [519](../../../tasks/519-connecting-timeout-post-start.md) | Released v2.25.3 | The connecting deadline grows with the number of WG/AWG nodes |
 | 19 | [605](../../../tasks/605-service-live-automation-workspaces-bugs.md) | Implemented | The start error notification is not removed together with the persistent one |
+| 20 | [709](../../../tasks/709-ios-core-in-app-no-vpn.md) | Simulator, no merge | iOS: core inside the app, Proxy mode only, stops when the app leaves the foreground |

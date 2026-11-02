@@ -18,6 +18,8 @@
 индикатор записи профайлера и время подключения. Тап по полосе открывает
 Statistics.
 
+На iOS без туннеля (§709) ничто не переживает уход из приложения: при возврате статус Disconnected, холодный запуск всегда начинается со Stopped.
+
 ## Параметры
 
 Своих настроек нет.
@@ -85,3 +87,4 @@ Statistics.
 | 5 | [194](../../../tasks/194-connection-counters-clarity.md) | ✅ Реализовано, device-verify pending | Соединения приложений и к серверам — раздельно |
 | 6 | [276](../../../tasks/276-revoked-status-contract.md) | Done, device-verified | Перехват VPN-слота отличим от остановки |
 | 7 | [361](../../../tasks/361-late-started-status-after-service-destroy.md) | ✅ Исправлено | Запоздалый «Started» после гибели службы не вешает статус |
+| 8 | [709](../../../tasks/709-ios-core-in-app-no-vpn.md) | Simulator, без merge | iOS: статус после ухода из приложения без туннеля |

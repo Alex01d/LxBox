@@ -25,6 +25,10 @@ Tailscale calls in use (tasks 579 and 581; upstream API, no fork delta; names fr
 `getLastSeen()` are Unix seconds; `TailscalePingResult.getLatencyMs()` is a double in
 milliseconds. `startTailscaleSSHSession` is not used.
 
+## The iOS core (§709)
+
+`scripts/build-libbox-ios.sh` builds `app/ios/Frameworks/Libbox.xcframework` locally from the same pin, `app/android/libbox.version`, with `build_libbox -target apple -platform ios`. Tag set: `sharedTags` plus `with_dhcp` and `grpcnotrace`, and `with_low_memory` on iOS, which covers `kCoreBuildTags`. It is not in git and has no published hash, so it is dev only and must not ship. The fork's release job publishes no iOS artifact today.
+
 ## Where the AAR comes from
 
 | | |

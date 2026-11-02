@@ -161,6 +161,7 @@ The threat: another app on the same device uses the client's local proxy or API.
 | Measure | How it works | Why |
 |---------|---------------|-----|
 | **TUN-only inbound** | By default there is no SOCKS5/HTTP proxy on localhost: traffic enters only through TUN | Through an open proxy without auth any app quietly uses the VPN |
+| **iOS without a tunnel** | Only Local proxy mode runs (§709), so the loopback port is the only inbound, with auth on by default | iOS has no tunnel yet, and "TUN-only" above does not describe it |
 | **Proxy auth off localhost** | If `proxy_listen` is not a loopback address, auth is forced on and cannot be turned off | A proxy visible on the LAN without a password is an open relay |
 | **No Clash HTTP API** | The core is built without `with_clash_api`; an `experimental.clash_api` block in the config stops the start with an error (§122). The core is controlled through the libbox CommandClient — an in-process channel with no network socket | An open localhost API is a known vulnerability of mobile VLESS clients. No HTTP surface — nothing to scan or brute-force |
 | **Debug API off by default** | The local HTTP Debug API (subscriptions, rules, settings, `PUT /config`) does not start until it is turned on (`debug_enabled` defaults to `false`). With an empty Bearer token the server does not start either | A default install has no local HTTP server |
@@ -200,7 +201,7 @@ DNS queries from nodes without `allow_gateway` are rejected by a rule in `dns.ru
 
 ## 5. Secrets on the device
 
-All secrets sit in the app's private storage as plain text. There is no storage encryption and none is planned: protection comes from the Android sandbox.
+All secrets sit in the app's private storage as plain text. There is no storage encryption and none is planned: protection comes from the Android sandbox. On iOS (§709) the same holds under the iOS app sandbox, and the core also keeps `configuration.json`, a copy of the config with node credentials, in `tmp`. It stays after Stop.
 
 Backups come in two formats:
 - **native** — a settings snapshot with categories on the Backup screen;

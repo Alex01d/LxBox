@@ -1,0 +1,292 @@
+import Flutter
+import Foundation
+import Libbox
+import UIKit
+
+final class ChannelSink: NSObject, FlutterStreamHandler {
+  var onListened: (() -> Void)?
+  private var sink: FlutterEventSink?
+
+  func onListen(withArguments _: Any?, eventSink: @escaping FlutterEventSink) -> FlutterError? {
+    sink = eventSink
+    onListened?()
+    return nil
+  }
+
+  func onCancel(withArguments _: Any?) -> FlutterError? {
+    sink = nil
+    return nil
+  }
+
+  var isListening: Bool { sink != nil }
+
+  func send(_ value: Any) {
+    sink?(value)
+  }
+}
+
+final class CoreService {
+  enum Status: String {
+    case starting = "Starting"
+    case started = "Started"
+    case stopping = "Stopping"
+    case stopped = "Stopped"
+  }
+
+  private static let stopWaitSeconds = 9.0
+  private static let logQueueMax = 4096
+  private static let logBatchMax = 200
+
+  let statusSink = ChannelSink()
+  let logSink = ChannelSink()
+  let client: CoreCommandClient
+
+  private(set) var status = Status.stopped
+  private var startedAt: Date?
+  private var stopWaiters: [FlutterResult] = []
+  private var backgroundTask = UIBackgroundTaskIdentifier.invalid
+
+  private let queue = DispatchQueue(label: "lxbox.core", qos: .userInitiated)
+  private let platform = CorePlatform()
+  private let serverLock = NSLock()
+  private var server: LibboxCommandServer?
+
+  private let logLock = NSLock()
+  private var logQueue: [String] = []
+  private var logDrainScheduled = false
+  private var verboseLogs = NativePrefs.bool("core_logs_verbose", fallback: false)
+
+  private static let ansiEscape = try? NSRegularExpression(pattern: "\\u001B\\[[0-9;]*[A-Za-z]|\\u001B")
+  private static let traceOrDebug = try? NSRegularExpression(pattern: "\\b(TRACE|DEBUG)\\b")
+
+  init(client: CoreCommandClient) {
+    self.client = client
+    platform.onDebugMessage = { [weak self] in self?.writeLog($0) }
+    platform.onServiceStop = { [weak self] in
+      DispatchQueue.main.async { self?.stop(nil) }
+    }
+    platform.onServiceReload = { [weak self] in self?.reloadOnQueue() }
+    NotificationCenter.default.addObserver(
+      self,
+      selector: #selector(didEnterBackground),
+      name: UIApplication.didEnterBackgroundNotification,
+      object: nil
+    )
+  }
+
+  var uptimeMs: Int {
+    guard status == .started, let startedAt else { return 0 }
+    return Int(Date().timeIntervalSince(startedAt) * 1000)
+  }
+
+  func setVerboseLogs(_ enabled: Bool) {
+    logLock.lock()
+    verboseLogs = enabled
+    logLock.unlock()
+  }
+
+  func start() {
+    guard status == .stopped else { return }
+    setStatus(.starting)
+    queue.async { [weak self] in self?.runStart() }
+  }
+
+  private func runStart() {
+    CoreRuntime.waitUntilReady()
+    if let setupError = CoreRuntime.setupError {
+      failStart("Core init failed: \(setupError)", coreError: setupError)
+      return
+    }
+    let config = (try? String(contentsOf: CoreRuntime.configFile, encoding: .utf8)) ?? ""
+    if config.isEmpty || config == "{}" {
+      failStart("Empty configuration", coreError: nil)
+      return
+    }
+    do {
+      var error: NSError?
+      guard let server = LibboxNewCommandServer(platform, platform, &error) else {
+        throw error ?? NSError(domain: "LxBox", code: 0, userInfo: [NSLocalizedDescriptionKey: "No command server"])
+      }
+      setServer(server)
+      try server.start()
+      try server.startOrReloadService(config, options: LibboxOverrideOptions())
+    } catch {
+      failStart("Failed to start service: \(error.localizedDescription)", coreError: error.localizedDescription)
+      return
+    }
+    DispatchQueue.main.async { [weak self] in self?.finishStart() }
+  }
+
+  private func finishStart() {
+    guard status == .starting else { return }
+    startedAt = Date()
+    client.startStatus()
+    setStatus(.started)
+  }
+
+  private func failStart(_ message: String, coreError: String?) {
+    teardown()
+    DispatchQueue.main.async { [weak self] in
+      self?.setStatus(.stopped, error: message, coreError: coreError)
+    }
+  }
+
+  func stop(_ reply: FlutterResult?) {
+    if status == .stopped {
+      reply?(true)
+      return
+    }
+    if let reply {
+      stopWaiters.append(reply)
+    }
+    if status == .stopping { return }
+    setStatus(.stopping)
+    DispatchQueue.main.asyncAfter(deadline: .now() + Self.stopWaitSeconds) { [weak self] in
+      self?.finishStopWaiters(false)
+    }
+    queue.async { [weak self] in
+      self?.teardown()
+      DispatchQueue.main.async { self?.setStatus(.stopped) }
+    }
+  }
+
+  func forceStop() {
+    guard status != .stopped else { return }
+    DispatchQueue.global(qos: .userInitiated).async { [weak self] in self?.teardown() }
+    setStatus(.stopped)
+  }
+
+  private func teardown() {
+    client.shutdownAll()
+    guard let server = takeServer() else {
+      platform.reset()
+      return
+    }
+    server.close()
+    do {
+      try server.closeService()
+    } catch {
+      NSLog("[core] closeService failed: %@", error.localizedDescription)
+    }
+    platform.reset()
+  }
+
+  private func setServer(_ server: LibboxCommandServer) {
+    serverLock.lock()
+    self.server = server
+    serverLock.unlock()
+  }
+
+  private func currentServer() -> LibboxCommandServer? {
+    serverLock.lock()
+    defer { serverLock.unlock() }
+    return server
+  }
+
+  private func takeServer() -> LibboxCommandServer? {
+    serverLock.lock()
+    defer { serverLock.unlock() }
+    let current = server
+    server = nil
+    return current
+  }
+
+  func reload() {
+    guard status == .started else { return }
+    queue.async { [weak self] in self?.reloadOnQueue() }
+  }
+
+  private func reloadOnQueue() {
+    guard let server = currentServer() else { return }
+    let config = (try? String(contentsOf: CoreRuntime.configFile, encoding: .utf8)) ?? ""
+    if config.isEmpty || config == "{}" {
+      NSLog("[core] reload skipped: empty config")
+      return
+    }
+    do {
+      try server.startOrReloadService(config, options: LibboxOverrideOptions())
+    } catch {
+      server.setError("ios: reload: \(error.localizedDescription)")
+    }
+  }
+
+  func resetNetwork() {
+    queue.async { [weak self] in self?.currentServer()?.resetNetwork() }
+  }
+
+  func clearDnsCache() {
+    CoreRuntime.deleteCacheDb()
+    reload()
+  }
+
+  private func setStatus(_ newStatus: Status, error: String? = nil, coreError: String? = nil) {
+    if status == newStatus, error == nil { return }
+    status = newStatus
+    if newStatus == .stopped {
+      startedAt = nil
+    }
+    var event: [String: Any] = ["status": newStatus.rawValue]
+    if let error {
+      event["error"] = error
+    }
+    if let coreError, !coreError.isEmpty {
+      event["core_error"] = coreError
+    }
+    statusSink.send(event)
+    if newStatus == .stopped {
+      finishStopWaiters(true)
+      endBackgroundTask()
+    }
+  }
+
+  private func finishStopWaiters(_ stopped: Bool) {
+    let waiters = stopWaiters
+    stopWaiters = []
+    waiters.forEach { $0(stopped) }
+  }
+
+  @objc private func didEnterBackground() {
+    guard status == .started || status == .starting else { return }
+    backgroundTask = UIApplication.shared.beginBackgroundTask { [weak self] in
+      self?.forceStop()
+      self?.endBackgroundTask()
+    }
+    stop(nil)
+  }
+
+  private func endBackgroundTask() {
+    guard backgroundTask != .invalid else { return }
+    UIApplication.shared.endBackgroundTask(backgroundTask)
+    backgroundTask = .invalid
+  }
+
+  private func writeLog(_ message: String) {
+    let range = NSRange(message.startIndex..., in: message)
+    let plain = Self.ansiEscape?.stringByReplacingMatches(in: message, range: range, withTemplate: "") ?? message
+    let plainRange = NSRange(plain.startIndex..., in: plain)
+    logLock.lock()
+    defer { logLock.unlock() }
+    if !verboseLogs, Self.traceOrDebug?.firstMatch(in: plain, range: plainRange) != nil { return }
+    if logQueue.count >= Self.logQueueMax { return }
+    logQueue.append(plain)
+    if !logDrainScheduled {
+      logDrainScheduled = true
+      DispatchQueue.main.async { [weak self] in self?.drainLog() }
+    }
+  }
+
+  private func drainLog() {
+    logLock.lock()
+    let batch = Array(logQueue.prefix(Self.logBatchMax))
+    logQueue.removeFirst(batch.count)
+    let more = !logQueue.isEmpty
+    logDrainScheduled = more
+    logLock.unlock()
+    if logSink.isListening, !batch.isEmpty {
+      logSink.send(batch)
+    }
+    if more {
+      DispatchQueue.main.async { [weak self] in self?.drainLog() }
+    }
+  }
+}

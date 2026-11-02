@@ -187,9 +187,10 @@ test config to keep in sync.
 
 ## Running on iOS Simulator
 
-iOS has startup only, with no tunnel and no core ([§708](spec/tasks/708-ios-clean-startup.md)). Use iPhone 17 with iOS 26.5 or newer. CI has no iOS job, so checks are manual.
+The iOS app runs the core inside the app with no tunnel ([§709](spec/tasks/709-ios-core-in-app-no-vpn.md)). Use iPhone 17 with iOS 26.5 or newer. CI has no iOS job, so checks are manual. To connect, select Proxy in VPN Settings, Mode tab.
 
 ```bash
+./scripts/build-libbox-ios.sh
 cd app
 flutter build ios --simulator --debug
 xcrun simctl install <device id> build/ios/iphonesimulator/Runner.app
