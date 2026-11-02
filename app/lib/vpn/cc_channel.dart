@@ -472,8 +472,68 @@ class CcChannel {
 
   /// §707 — сохранить принятый файл: API 29+ — в Downloads, ниже —
   /// системным «Сохранить как». Сохранённый уходит из входящих.
-  Future<CcTaildropResult> taildropSave(String tag, String name) =>
-      _taildropCall('ccTaildropSave', {'tag': tag, 'name': name});
+  /// [downloadsOnly] (итер. 5, Debug API) — ниже API 29 отказ вместо
+  /// системного диалога.
+  Future<CcTaildropResult> taildropSave(String tag, String name,
+          {bool downloadsOnly = false}) =>
+      _taildropCall('ccTaildropSave', {
+        'tag': tag,
+        'name': name,
+        if (downloadsOnly) 'downloads_only': true,
+      });
+
+  /// §707 итер. 5 — отправка пиру из байтов ([bytes] с именем [name]) или
+  /// заметкой ([text], имя даёт натив) тем же нативным путём, что «Send
+  /// file…»; ждёт итога до [wait]. `status` — `sent`, `cancelled`,
+  /// `in_progress` (не уложилась в [wait], передача идёт) или `error`;
+  /// [CcTaildropResult.name] — имя отправленного файла.
+  Future<CcTaildropResult> taildropSendBytes(
+    String tag,
+    String peerId,
+    String peerName, {
+    String? name,
+    Uint8List? bytes,
+    String? text,
+    Duration wait = const Duration(seconds: 60),
+  }) =>
+      _taildropCall('ccTaildropSendBytes', {
+        'tag': tag,
+        'peer_id': peerId,
+        'peer_name': peerName,
+        'name': ?name,
+        'bytes': ?bytes,
+        'text': ?text,
+        'wait_ms': wait.inMilliseconds,
+      });
+
+  /// §707 итер. 5 — разовый снимок входящих узла [tag] (форма потока
+  /// [taildropInbox]) с `sha256` принятых файлов. `null` — VPN не поднят,
+  /// ядро не ответило или канала нет.
+  Future<CcTaildropInbox?> taildropInboxSnapshot(String tag) async {
+    try {
+      final r = await _methods
+          .invokeMethod<Object?>('ccTaildropInboxSnapshot', {'tag': tag});
+      if (r is! Map) return null;
+      return CcTaildropInbox.fromMap(_asMap(r));
+    } on PlatformException {
+      return null;
+    } on MissingPluginException {
+      return null;
+    }
+  }
+
+  /// §707 итер. 5 — счётчики разбора служебных файлов с начала процесса
+  /// (натив, только в памяти). `null` — канала нет.
+  Future<Map<String, dynamic>?> taildropServiceStats() async {
+    try {
+      final r = await _methods.invokeMethod<Object?>('taildropServiceStats');
+      return r is Map ? _asMap(r) : null;
+    } on PlatformException {
+      return null;
+    } on MissingPluginException {
+      return null;
+    }
+  }
 
   /// §707 — системный выбор файлов и отправка выбранного пиру.
   Future<CcTaildropResult> taildropPickAndSend(
@@ -498,6 +558,92 @@ class CcChannel {
       return CcTaildropResult(status: 'error', error: e.message ?? e.code);
     } on MissingPluginException {
       return const CcTaildropResult(status: 'error', error: 'not available');
+    }
+  }
+
+  /// §707 итер. 2 — автосохранение принятых файлов узла [tag] в Downloads:
+  /// настройка устройства (native SharedPreferences, не бэкап). `null` —
+  /// канала нет (тесты, не Android).
+  Future<CcTaildropAutoSave?> taildropAutoSave(String tag) async {
+    try {
+      final r = await _methods
+          .invokeMethod<Object?>('taildropAutoSaveState', {'tag': tag});
+      if (r is! Map) return null;
+      return CcTaildropAutoSave.fromMap(_asMap(r));
+    } on PlatformException {
+      return null;
+    } on MissingPluginException {
+      return null;
+    }
+  }
+
+  /// `true` — записано.
+  Future<bool> setTaildropAutoSave(String tag, bool enabled) async {
+    try {
+      return await _methods.invokeMethod<bool>(
+              'taildropSetAutoSave', {'tag': tag, 'enabled': enabled}) ==
+          true;
+    } on PlatformException {
+      return false;
+    } on MissingPluginException {
+      return false;
+    }
+  }
+
+  /// §707 итер. 4 — разрешения служебных файлов Taildrop от устройства
+  /// [peerId] узла [tag]: вид команды (`kinds` реестра `service_files.json`,
+  /// список даёт натив) → разрешено. Настройка устройства (не бэкап).
+  /// `null` — канала нет (тесты, не Android).
+  Future<Map<String, bool>?> taildropPermissions(
+      String tag, String peerId) async {
+    try {
+      final r = await _methods.invokeMethod<Object?>(
+          'taildropPermissions', {'tag': tag, 'peer_id': peerId});
+      if (r is! Map) return null;
+      return {
+        for (final e in r.entries)
+          if (e.key is String) e.key as String: e.value == true,
+      };
+    } on PlatformException {
+      return null;
+    } on MissingPluginException {
+      return null;
+    }
+  }
+
+  /// Разрешить / запретить вид [kind] от устройства [peerId] узла [tag].
+  /// [peerName] — имя устройства на момент выдачи: файл без `senderID`
+  /// (ядро после перезапуска) сверяется с ним (SERVICE_FILES §5).
+  /// `true` — записано.
+  Future<bool> setTaildropPermission(String tag, String peerId,
+      String peerName, String kind, bool allowed) async {
+    try {
+      return await _methods.invokeMethod<bool>('taildropSetPermission', {
+            'tag': tag,
+            'peer_id': peerId,
+            'peer_name': peerName,
+            'kind': kind,
+            'allowed': allowed,
+          }) ==
+          true;
+    } on PlatformException {
+      return false;
+    } on MissingPluginException {
+      return false;
+    }
+  }
+
+  /// Узлы [tags] удалены или переименованы — их записи (автосохранение и
+  /// разрешения служебных файлов, §707 итер. 4) убираются.
+  Future<void> forgetTaildropAutoSave(Iterable<String> tags) async {
+    if (tags.isEmpty) return;
+    try {
+      await _methods.invokeMethod<bool>(
+          'taildropForgetAutoSave', {'tags': tags.toList()});
+    } on PlatformException {
+      // best-effort
+    } on MissingPluginException {
+      // юнит-тест / не Android
     }
   }
 
@@ -1071,20 +1217,31 @@ class CcTaildropFile {
   const CcTaildropFile({
     required this.name,
     this.size = 0,
+    this.senderId = '',
     this.senderName = '',
     this.modifiedAt = 0,
+    this.sha256 = '',
   });
 
   final String name;
   final int size;
+
+  /// Stable ID отправителя (ядро lx.30-rc.2+, пусто после перезапуска ядра).
+  final String senderId;
   final String senderName;
   final int modifiedAt;
+
+  /// §707 итер. 5 — sha256 файла на диске, только у
+  /// [CcChannel.taildropInboxSnapshot]; пусто — не считался.
+  final String sha256;
 
   factory CcTaildropFile.fromMap(Map<String, dynamic> m) => CcTaildropFile(
         name: '${m['name'] ?? ''}',
         size: CcTailscalePeer._int(m['size']),
+        senderId: '${m['sender_id'] ?? ''}',
         senderName: '${m['sender_name'] ?? ''}',
         modifiedAt: CcTailscalePeer._int(m['modified_at']),
+        sha256: '${m['sha256'] ?? ''}',
       );
 }
 
@@ -1121,16 +1278,41 @@ class CcTaildropReceiving {
 /// §707 — ответ сохранения / выбора файлов: `status` — `saved`, `started`,
 /// `cancelled` или `error`; [where] у сохранения — `downloads` | `document`.
 class CcTaildropResult {
-  const CcTaildropResult({required this.status, this.where = '', this.error = ''});
+  const CcTaildropResult({
+    required this.status,
+    this.where = '',
+    this.error = '',
+    this.name = '',
+  });
 
   final String status;
   final String where;
   final String error;
 
+  /// §707 итер. 5 — имя файла: у сохранения в Downloads — имя записи
+  /// (занятое получает суффикс), у отправки из байтов — отправленное.
+  final String name;
+
   factory CcTaildropResult.fromMap(Map<String, dynamic> m) => CcTaildropResult(
         status: '${m['status'] ?? 'error'}',
         where: '${m['where'] ?? ''}',
         error: '${m['error'] ?? ''}',
+        name: '${m['name'] ?? ''}',
+      );
+}
+
+/// §707 итер. 2 — переключатель автосохранения узла: [enabled] — включён,
+/// [supported] — Android 10+ (MediaStore без разрешений).
+class CcTaildropAutoSave {
+  const CcTaildropAutoSave({required this.enabled, required this.supported});
+
+  final bool enabled;
+  final bool supported;
+
+  factory CcTaildropAutoSave.fromMap(Map<String, dynamic> m) =>
+      CcTaildropAutoSave(
+        enabled: m['enabled'] == true,
+        supported: m['supported'] == true,
       );
 }
 

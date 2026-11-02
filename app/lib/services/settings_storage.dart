@@ -159,12 +159,15 @@ class SettingsStorage {
     'dns_strategy',
     'ipv6_enabled',
     'log_level',
+    'masque_idle_timeout',
+    'mtu_align',
     'proxy_auth',
     'proxy_listen',
     'proxy_pass',
     'proxy_port',
     'proxy_type',
     'proxy_user',
+    'quic_sniff_decoy',
     'resolve_enabled',
     'resolve_strategy',
     'route_address_enable',
@@ -186,6 +189,10 @@ class SettingsStorage {
     'urltest_tolerance',
     'urltest_url',
     'vpn_mode',
+    'wg_build_max',
+    'wg_idle_suspend',
+    'wg_idle_suspend_reachable',
+    'wg_lazy_build',
   };
 
   // ---------------------------------------------------------------------------
@@ -214,10 +221,6 @@ class SettingsStorage {
     kMixinsKey, // §704 — миксины итогового конфига
     'ping_options',
     'route_final',
-    'route_idle_suspend', // §215 — idle-suspend threshold (lx.wg.idle_suspend)
-    'route_idle_suspend_reachable', // §272 — reachable idle window (lx.wg.idle_suspend_reachable)
-    'wg_build_max', // §542 — WG/AWG build budget (lx.wg.build_max)
-    'wg_lazy_build', // §542 — WG/AWG lazy build (lx.wg.lazy_build)
     'enabled_groups', // §125 — DEPRECATED (читается только миграцией; safe-мусор)
     'directions', // §125/§393 — Направления роутинга (template→storage)
     'directions_migrated', // §125/§393 — guard one-shot миграции
@@ -623,35 +626,6 @@ class SettingsStorage {
 
   static Future<void> saveRouteFinal(String outbound, {bool flush = true}) =>
       _saveRouteFinal(outbound, flush: flush);
-
-  // §215 — idle-suspend threshold (lx.wg.idle_suspend, kernel SPEC 020)
-
-  static Future<String> getIdleSuspend() => _getIdleSuspend();
-
-  static Future<void> saveIdleSuspend(String threshold, {bool flush = true}) =>
-      _saveIdleSuspend(threshold, flush: flush);
-
-  // §272 — reachable idle window (lx.wg.idle_suspend_reachable, SPEC 020)
-
-  static Future<String> getIdleSuspendReachable() => _getIdleSuspendReachable();
-
-  static Future<void> saveIdleSuspendReachable(String threshold,
-          {bool flush = true}) =>
-      _saveIdleSuspendReachable(threshold, flush: flush);
-
-  // §542 — WG/AWG build budget (lx.wg.build_max, SPEC 097); 0 = no cap
-
-  static Future<int> getWgBuildMax() => _getWgBuildMax();
-
-  static Future<void> saveWgBuildMax(int value, {bool flush = true}) =>
-      _saveWgBuildMax(value, flush: flush);
-
-  // §542 — WG/AWG lazy build (lx.wg.lazy_build, SPEC 097); default true
-
-  static Future<bool> getWgLazyBuild() => _getWgLazyBuild();
-
-  static Future<void> saveWgLazyBuild(bool enabled, {bool flush = true}) =>
-      _saveWgLazyBuild(enabled, flush: flush);
 
   /// §612 — один раз до первой сборки: `urltest_passive_check` (§611)
   /// true/отсутствует → автовыбор `least_test` становится `failover`; ключ

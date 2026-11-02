@@ -11,7 +11,7 @@ deletes them.
 |-------|-------|
 | Feature | [032-TAILDROP](../FEATURE.md) |
 | Promises | P4–P7 |
-| State | ✅ partly implemented, 2026-11-02 ([707](../../../tasks/707-taildrop-send-receive-files.md)): no Cancel / Save / Delete buttons in receive notifications yet; not verified on a device |
+| State | ✅ implemented, 2026-11-02 ([707](../../../tasks/707-taildrop-send-receive-files.md)): iterations 1–2 — per-node inbox, Cancel / Save / Delete in receive notifications (Save there on Android 10+ only), auto-save switch; notification buttons and auto-save not verified on a device |
 
 ## What it does
 
@@ -32,6 +32,7 @@ Network tab of the node that received the file.
 | Notification when received | "file from X", Save, Delete |
 | Inbox block | Network tab of the node, under Devices; per file Save, Delete |
 | Save target | Downloads |
+| Auto-save | switch "Save received files to Downloads" in the Settings block of the node's Network tab; per node; off by default; kept on the device, not in the backup; Android 10+ |
 | Tap on a notification | the Network tab of the receiving node |
 
 ## Inputs / Outputs
@@ -50,6 +51,12 @@ the inbox block on the Network tab.
 - A received file stays in the inbox across app and VPN restarts until it is
   saved or deleted (P6). Deleting the node deletes its inbox together with its
   state.
+- With auto-save on, a received file goes to Downloads and leaves the
+  inbox by itself; the notification reads "Saved to Downloads" and a tap
+  opens the file. If saving fails, the file stays in the inbox and the
+  "received" notification offers Save and Delete. Files already in the inbox
+  are moved the same way when the switch is turned on, when the app starts
+  and when the VPN starts.
 - A saved file leaves the inbox; Downloads holds the copy the user keeps.
 - With the VPN down or the node not running nothing is received (P7); the
   inbox block still lists what was received earlier.
@@ -79,4 +86,5 @@ the inbox block on the Network tab.
 
 | # | Revision | Status | Summary |
 |---|----------|--------|---------|
+| 2 | [707](../../../tasks/707-taildrop-send-receive-files.md) | In progress | Auto-save to Downloads per node switch; Cancel / Save / Delete in receive notifications |
 | 1 | [707](../../../tasks/707-taildrop-send-receive-files.md) | Partly implemented | Per-node inbox (`<state_directory>/taildrop`), legacy folder move, Inbox block on the Network tab (Save, Delete, cancel receiving), notification tap → the node's tab; buttons in receive notifications — next iteration |

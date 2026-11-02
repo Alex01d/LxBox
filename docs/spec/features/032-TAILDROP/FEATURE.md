@@ -111,6 +111,7 @@ never reads the clipboard on its own, only on an explicit tap.
 
 | Knob | Values | Default |
 |------|--------|---------|
+| Node → "Allow Taildrop" (files and command files) | on / off; off — the core refuses incoming and outgoing transfers, the node is not in Share, no inbox and no "Send file…", commands are not handled; a node field in the core config, in the backup; needs a core option (requested 2026-11-02) | off (owner decision 2026-11-02) |
 | Share screen → Node | a running Tailscale node; asked only when there are several | the only one |
 | Share screen → Device | an online own device of that node's tailnet | — |
 | Network tab → peer row → "Send file…" | system file picker, one or more files | — |
@@ -128,10 +129,11 @@ by all Tailscale nodes. The build sets each node's to
 with the node's state directory; an explicit `taildrop_directory` in the node
 body is left alone.
 Core build: the pinned core already carries Taildrop; no rebuild is needed.
-Clipboard protocol:
-the file name prefix, the size limit, the TTL and the encoding are constants of
-the launcher contract (`docs/contract` and the registry); current values —
-prefix `lxclip-`, at most 64 KiB, TTL 2 minutes, valid UTF-8 without BOM.
+Command files
+(clipboard, links): the name format, the size limit, the TTL and the format
+version are constants of the launcher contract (`docs/contract` and the
+registry); proposed values — `lx-<time>-<tag>.json`, at most 64 KiB, TTL 2
+minutes, UTF-8 JSON without BOM, `"lx": 1`.
 
 ## Inputs / Outputs
 
@@ -219,7 +221,7 @@ Node deleted   → its Taildrop directory removed with its state
 | Send files | Sends files to an own online device from the system "Share" menu or from a peer row on the Network tab, with node and peer choice and progress in a notification. | P1–P3, P7 | [send-files.md](FUNCTIONS/send-files.md) |
 | Inbox | Accepts files from own devices without a prompt into the node's inbox, notifies with Cancel / Save / Delete, shows the inbox on the Network tab and deletes it with the node. | P4–P7 | [inbox.md](FUNCTIONS/inbox.md) |
 | Share text | Turns shared text or a link into a `note-YYYY-MM-DD-HHMM.txt` file and sends it as a regular Taildrop file. | P8 | [share-text.md](FUNCTIONS/share-text.md) |
-| Clipboard sync | Sends the phone's clipboard to the chosen PC from a Quick Settings tile and puts clipboard text from an allowed launcher into the phone's clipboard. | P9–P12 | [clipboard-sync.md](FUNCTIONS/clipboard-sync.md) |
+| Command files (clipboard, links) | Sends the clipboard (tile) and links (Share) to the chosen PC as command files; runs clipboard and link commands from an allowed device. | P9–P12 | [clipboard-sync.md](FUNCTIONS/clipboard-sync.md) |
 
 ## Related features
 

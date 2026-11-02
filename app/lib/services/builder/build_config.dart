@@ -36,6 +36,7 @@ import 'registry_gate.dart';
 import 'rule_set_registry.dart';
 import 'server_list_build.dart';
 import 'source_replace_build.dart';
+import 'taildrop_emit.dart';
 import 'validator.dart';
 
 /// Результат сборки — готовый JSON + валидация + warnings + generated-vars
@@ -151,33 +152,6 @@ class BuildSettings {
   /// поведение, post-step no-op).
   final VpnModeConfig? vpnMode;
 
-  /// §215: порог простоя для idle-suspend недостижимых WG/AWG эндпоинтов
-  /// (ядро SPEC 020, `lx.wg.idle_suspend` — §535, до пина v1.14.2-lx.1 ключ
-  /// звался `route.lx_idle_suspend`). Duration-строка (`"5m"`, `"30s"`).
-  /// Пусто = фича выключена (поле не пишется, дефолт ядра = idle-тик
-  /// не запускается).
-  final String idleSuspend;
-
-  /// §272: второе, длинное окно простоя для ДОСТИЖИМЫХ эндпоинтов
-  /// (ядро SPEC 020 rev. 2026-07-15, `lx.wg.idle_suspend_reachable` — §535).
-  /// Пусто = достижимые не засыпают. Эмитится ТОЛЬКО при непустом
-  /// [idleSuspend] — ядро отвергает reachable без базового порога.
-  final String idleSuspendReachable;
-
-  /// §542 — `lx.wg.build_max` (ядро SPEC 097): сколько WG/AWG эндпоинтов
-  /// держать собранными одновременно; сверх лимита самый давний разбирается.
-  /// `0` = без потолка (пишется как `0`, ядро это допускает). Было константой
-  /// §536 (5), теперь настройка `wg_build_max`. Эмитится только вместе с
-  /// [idleSuspend]. `build_overflow` не пишем — дефолт ядра `wait`.
-  final int wgBuildMax;
-
-  /// §542 — `lx.wg.lazy_build` (ядро SPEC 097): WG/AWG эндпоинт собирается
-  /// при первом дайле, а не на старте. Было константой §536 (`true`), теперь
-  /// настройка `wg_lazy_build`. `false` → не пишем ни `lazy_build`, ни
-  /// `build_max` (бюджет в UI гаснет вместе с тумблером; ядро `build_max`
-  /// без `lazy_build` принимает, но выключенный пункт не должен действовать).
-  final bool wgLazyBuild;
-
   /// §435 — корень для `state_directory` узлов Tailscale: native
   /// `Context.filesDir` (тот же канал, что у §316). Каталог узла —
   /// `<корень>/tailscale/<имя>` подставляется при эмиссии, если в теле поля
@@ -206,10 +180,6 @@ class BuildSettings {
     this.coreBuildTags = kCoreBuildTags,
     this.tunApps,
     this.vpnMode,
-    this.idleSuspend = '',
-    this.idleSuspendReachable = '',
-    this.wgBuildMax = 5,
-    this.wgLazyBuild = true,
     this.tailscaleStateRoot = '',
     this.tailscaleStateDirs,
     this.mixins = const [],
@@ -716,6 +686,10 @@ Future<BuildResult?> _buildConfig({
       ep.map['taildrop_directory'] = '$state/taildrop';
     }
   }
+  // §707 итер. 4 — Taildrop узла выключен, пока в теле нет явного
+  // `disable_taildrop: false` (контракт 1.1.150); на ядре ниже `min_core`
+  // поля нет совсем. Хранимое тело не трогается.
+  applyTaildropDefault(ctx.endpoints, coreVersion: settings.coreVersion);
 
   if (ctx.endpoints.isNotEmpty) {
     final baseEndpoints = config['endpoints'] as List<dynamic>? ?? const [];
@@ -834,41 +808,11 @@ Future<BuildResult?> _buildConfig({
   route['rules'] = ruleSets.getRules();
   config['route'] = route;
 
-  // §215 — idle-suspend недостижимых WG/AWG эндпоинтов (ядро SPEC 020).
-  // Пишем поле только когда порог задан (непустой), чтобы сохранить
-  // omitempty-семантику ядра: отсутствие/пусто = фича выключена (идл-тик
-  // не запускается — безопасный kill-switch).
-  //
-  // §535 — ключи сна переехали из `route` в корневой блок `lx.wg`
-  // (ядро SPEC 098, пин v1.14.2-lx.1). Старые `route.lx_idle_*` ядро ещё
-  // принимает, но пишет WARN на каждый ключ, поэтому эмитим ТОЛЬКО новые
-  // имена: одно место записи, без дублей (значение в обоих местах = WARN,
-  // разное значение = ядро не стартует).
-  final idle = settings.idleSuspend.trim();
-  if (idle.isNotEmpty) {
-    final wg = <String, dynamic>{'idle_suspend': idle};
-    // §272 — reachable-окно валидно ТОЛЬКО при включённом базовом пороге
-    // (ядро: "lx.wg.idle_suspend_reachable requires lx.wg.idle_suspend").
-    final reachable = settings.idleSuspendReachable.trim();
-    if (reachable.isNotEmpty) {
-      wg['idle_suspend_reachable'] = reachable;
-    }
-    // §536 — ленивая сборка WG/AWG эндпоинтов (ядро SPEC 097). Решение
-    // владельца 24.09.2026: включаем всегда рядом с порогом сна. Ядро
-    // требует `lazy_build` вместе с `idle_suspend`, поэтому оба ключа живут
-    // в этой же ветке: нет порога сна — нет и блока `lx`.
-    // `build_overflow` НЕ пишем (дефолт ядра `wait` нас устраивает),
-    // `lx.masque.idle_timeout` тоже: у WARP MASQUE-узлов свой idle_timeout
-    // внутри самого узла.
-    // §542 — оба значения из настроек. Тумблер lazy выключен → ни
-    // `lazy_build`, ни `build_max`; `0` в build_max пишется как есть (ядро:
-    // без потолка).
-    if (settings.wgLazyBuild) {
-      wg['lazy_build'] = true;
-      wg['build_max'] = settings.wgBuildMax < 0 ? 0 : settings.wgBuildMax;
-    }
-    config['lx'] = <String, dynamic>{'wg': wg};
-  }
+  // Корневой блок `lx` ядра (SPEC 098) пишет `config` шаблона (§709 итер. 3,
+  // контракт 1.1.151): переменные секций Network / WireGuard / QUIC, ключ —
+  // только при значении, отличном от дефолта ядра. Пустой `lx` ядро (≥ lx.13)
+  // читает как отсутствующий — снимаем его, чтобы конфиг не менялся.
+  if (config['lx'] is Map && (config['lx'] as Map).isEmpty) config.remove('lx');
 
   // §125 — деградация dangling route_final → vpn-1. Ссылка на удалённое Направление
   // или legacy ✨auto (которого больше нет, Решение 2/3) схлопывается в vpn-1
