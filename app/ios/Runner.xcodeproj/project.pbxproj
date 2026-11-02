@@ -11,6 +11,7 @@
 		70900000000000000000A004 /* CorePlatform.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70900000000000000000A003 /* CorePlatform.swift */; };
 		70900000000000000000A006 /* CoreService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70900000000000000000A005 /* CoreService.swift */; };
 		70900000000000000000A008 /* CoreCommandClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70900000000000000000A007 /* CoreCommandClient.swift */; };
+		70900000000000000000A00C /* CoreProbeSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70900000000000000000A00B /* CoreProbeSession.swift */; };
 		70900000000000000000A102 /* Libbox.xcframework in Frameworks */ = {isa = PBXBuildFile; fileRef = 70900000000000000000A101 /* Libbox.xcframework */; };
 		1498D2341E8E89220040F4C2 /* GeneratedPluginRegistrant.m in Sources */ = {isa = PBXBuildFile; fileRef = 1498D2331E8E89220040F4C2 /* GeneratedPluginRegistrant.m */; };
 		331C808B294A63AB00263BE5 /* RunnerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 331C807B294A618700263BE5 /* RunnerTests.swift */; };
@@ -54,6 +55,7 @@
 		70900000000000000000A003 /* CorePlatform.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CorePlatform.swift; sourceTree = "<group>"; };
 		70900000000000000000A005 /* CoreService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CoreService.swift; sourceTree = "<group>"; };
 		70900000000000000000A007 /* CoreCommandClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CoreCommandClient.swift; sourceTree = "<group>"; };
+		70900000000000000000A00B /* CoreProbeSession.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CoreProbeSession.swift; sourceTree = "<group>"; };
 		70900000000000000000A101 /* Libbox.xcframework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcframework; name = Libbox.xcframework; path = Frameworks/Libbox.xcframework; sourceTree = "<group>"; };
 		0675A389C94BD935F39707BE /* Pods-RunnerTests.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-RunnerTests.release.xcconfig"; path = "Target Support Files/Pods-RunnerTests/Pods-RunnerTests.release.xcconfig"; sourceTree = "<group>"; };
 		1498D2321E8E86230040F4C2 /* GeneratedPluginRegistrant.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = GeneratedPluginRegistrant.h; sourceTree = "<group>"; };
@@ -171,6 +173,7 @@
 				70900000000000000000A003 /* CorePlatform.swift */,
 				70900000000000000000A005 /* CoreService.swift */,
 				70900000000000000000A007 /* CoreCommandClient.swift */,
+				70900000000000000000A00B /* CoreProbeSession.swift */,
 				7884E8672EC3CC0400C636F2 /* SceneDelegate.swift */,
 				74858FAD1ED2DC5600515810 /* Runner-Bridging-Header.h */,
 			);
@@ -397,6 +400,7 @@
 				70900000000000000000A004 /* CorePlatform.swift in Sources */,
 				70900000000000000000A006 /* CoreService.swift in Sources */,
 				70900000000000000000A008 /* CoreCommandClient.swift in Sources */,
+				70900000000000000000A00C /* CoreProbeSession.swift in Sources */,
 				1498D2341E8E89220040F4C2 /* GeneratedPluginRegistrant.m in Sources */,
 				7884E8682EC3CC0700C636F2 /* SceneDelegate.swift in Sources */,
 			);

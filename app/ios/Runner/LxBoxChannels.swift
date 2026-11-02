@@ -171,6 +171,35 @@ final class LxBoxChannels {
     case "ccCloseConnections":
       respondOffMain(result) { [client] in client.closeConnections() }
 
+    case "probeStart":
+      service.startProbe(config: arguments?["config"] as? String ?? "", result)
+    case "probeUrlTest":
+      let runId = arguments?["runId"] as? Int ?? 0
+      let tag = arguments?["tag"] as? String ?? ""
+      let link = arguments?["link"] as? String ?? ""
+      let timeoutMs = Int32(arguments?["timeoutMs"] as? Int ?? 0)
+      respondOffMain(result) { [probe = service.probe] in
+        probe.urlTest(runId: runId, tag: tag, link: link, timeoutMs: timeoutMs)
+      }
+    case "probeGetUrl":
+      let runId = arguments?["runId"] as? Int ?? 0
+      let tag = arguments?["tag"] as? String ?? ""
+      let link = arguments?["link"] as? String ?? ""
+      let timeoutMs = Int32(arguments?["timeoutMs"] as? Int ?? 0)
+      let maxBytes = Int32(arguments?["maxBytes"] as? Int ?? 0)
+      let userAgent = arguments?["userAgent"] as? String ?? ""
+      respondOffMain(result) { [probe = service.probe] in
+        probe.getUrl(runId: runId, tag: tag, link: link, timeoutMs: timeoutMs, maxBytes: maxBytes, userAgent: userAgent)
+      }
+    case "probeCancel":
+      let runId = arguments?["runId"] as? Int ?? 0
+      respondOffMain(result) { [probe = service.probe] in
+        probe.cancel(runId: runId)
+        return nil
+      }
+    case "probeStop":
+      service.stopProbe(runId: arguments?["runId"] as? Int ?? 0, result)
+
     case "setHasTun", "setAppLanguage", "setAutomationEnabled", "setAutomationActiveState",
       "setNotificationTitle", "setNotificationText":
       result(true)

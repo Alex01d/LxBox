@@ -40,6 +40,7 @@ final class CoreService {
   let statusSink = ChannelSink()
   let logSink = ChannelSink()
   let client: CoreCommandClient
+  let probe = CoreProbeSession()
 
   private(set) var status = Status.stopped
   private var startedAt: Date?
@@ -66,6 +67,9 @@ final class CoreService {
       DispatchQueue.main.async { self?.stop(nil) }
     }
     platform.onServiceReload = { [weak self] in self?.reloadOnQueue() }
+    probe.onServiceStop = { [weak self] in
+      self?.queue.async { self?.probe.stop() }
+    }
     NotificationCenter.default.addObserver(
       self,
       selector: #selector(didEnterBackground),
@@ -93,6 +97,7 @@ final class CoreService {
 
   private func runStart() {
     CoreRuntime.waitUntilReady()
+    probe.stop()
     if let setupError = CoreRuntime.setupError {
       failStart("Core init failed: \(setupError)", coreError: setupError)
       return
@@ -128,6 +133,32 @@ final class CoreService {
     teardown()
     DispatchQueue.main.async { [weak self] in
       self?.setStatus(.stopped, error: message, coreError: coreError)
+    }
+  }
+
+  func startProbe(config: String, _ reply: @escaping FlutterResult) {
+    queue.async { [weak self] in
+      guard let self else { return }
+      let answer = self.probeStartAnswer(config: config)
+      DispatchQueue.main.async { reply(answer) }
+    }
+  }
+
+  private func probeStartAnswer(config: String) -> [String: Any] {
+    CoreRuntime.waitUntilReady()
+    if let setupError = CoreRuntime.setupError {
+      return CoreProbeSession.startResult(error: "Core init failed: \(setupError)")
+    }
+    if currentServer() != nil {
+      return CoreProbeSession.startResult(error: "VPN is running")
+    }
+    return probe.start(config: config)
+  }
+
+  func stopProbe(runId: Int, _ reply: @escaping FlutterResult) {
+    queue.async { [weak self] in
+      self?.probe.stop(runId: runId)
+      DispatchQueue.main.async { reply(nil) }
     }
   }
 
@@ -246,12 +277,26 @@ final class CoreService {
   }
 
   @objc private func didEnterBackground() {
+    if status == .stopped, probe.isActive {
+      closeProbeInBackground()
+      return
+    }
     guard status == .started || status == .starting else { return }
     backgroundTask = UIApplication.shared.beginBackgroundTask { [weak self] in
       self?.forceStop()
       self?.endBackgroundTask()
     }
     stop(nil)
+  }
+
+  private func closeProbeInBackground() {
+    backgroundTask = UIApplication.shared.beginBackgroundTask { [weak self] in
+      self?.endBackgroundTask()
+    }
+    queue.async { [weak self] in
+      self?.probe.stop()
+      DispatchQueue.main.async { self?.endBackgroundTask() }
+    }
   }
 
   private func endBackgroundTask() {

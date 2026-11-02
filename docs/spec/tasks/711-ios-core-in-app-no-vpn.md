@@ -25,7 +25,7 @@ This is a test bench for work that needs no paid Apple team. Most of it carries 
 - Traffic from other apps. Only the app that is on screen runs, so nothing else can use the proxy on the device.
 - Changing settings, defaults or the template for this limitation (D1).
 - Tailscale, Taildrop, OpenConnect, the DNS profiler, connection test, pprof, split tunneling, notifications.
-- "Test servers" (`probe*`). It needs its own core session rules from §236F, so it gets a separate task.
+- "Test servers" (`probe*`). It needs its own core session rules from §236F, so it has its own task, [§712](712-ios-test-servers-and-probe-failure.md).
 - Publishing an iOS core in fork releases (D3).
 - `codex/tailscale-awg` and `handshake-fragmentation-fix`.
 
@@ -158,7 +158,7 @@ Event channels, now emitting:
 | `lxbox/cc/groups`, `lxbox/cc/outbounds` | Same maps as the unary RPCs |
 | `lxbox/cc/connections` | Full snapshot from the delta accumulator, re-emitted on listen |
 
-Everything else stays `FlutterMethodNotImplemented`. Known result: Dart catches `ccGetDnsGroups`, the Tailscale, Taildrop and connection test families, `getAppInfo` and `getLogcatTail`. `probe*`, `ccGetUrlViaOutbound`, `getInstalledApps`, `getPool` and some Settings buttons surface an error, which is accepted for this task.
+Everything else stays `FlutterMethodNotImplemented`. Known result: Dart catches `ccGetDnsGroups`, the Tailscale, Taildrop and connection test families, `getAppInfo` and `getLogcatTail`. `ccGetUrlViaOutbound`, `getInstalledApps`, `getPool` and some Settings buttons surface an error, which is accepted for this task. `probe*` was on this list too, but it hung instead of surfacing an error, and [§712](712-ios-test-servers-and-probe-failure.md) fixes it.
 
 ### The core binary
 
@@ -288,9 +288,9 @@ The full suite has not run on this merge. A push to `ios-app` runs no CI, so sta
 - Rest of the real iPhone run: traffic through the node, OOM false alarm, command client over the socket, whether `reality verification failed` appears on a path without this Mac's tunnel, and the target device (iPhone 17, iOS 26.5 or newer).
 - Full suite on the merge with `develop`.
 - Conns tab after leaving the app while it is open: it keeps the last list, with one row shown as active, after the core has stopped. Not compared with Android.
-- Node Diagnostics (§392) on iOS: `ccGetUrlViaOutbound` while Connected, `probeGetUrl` with "Test servers".
+- Node Diagnostics (§392) on iOS: `ccGetUrlViaOutbound` while Connected. `probeGetUrl` is done in [§712](712-ios-test-servers-and-probe-failure.md).
 - Tunnel: Network Extension, App Group, real memory limit. Needs the paid team, which the project owner provides later.
-- "Test servers" (`probe*`), which must also work once the tunnel exists.
+- "Test servers" (`probe*`) is done in [§712](712-ios-test-servers-and-probe-failure.md). It must also work once the tunnel exists.
 - A shared error model, per §055 item 6.
 - An iOS artifact and hash in fork releases, before real distribution.
 - Hide settings with no meaning on iOS.

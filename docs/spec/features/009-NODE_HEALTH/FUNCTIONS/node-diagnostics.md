@@ -20,6 +20,9 @@ Answers the questions ping cannot: "ping works but sites don't open",
 through this node to the chosen service and shows the reply as is — without
 switching the active node and without touching live connections.
 
+On iOS without the tunnel (§712), the check works while the core is stopped.
+While it runs, the check is not available yet.
+
 ## Parameters
 
 | Check | Address |
@@ -99,3 +102,4 @@ address, exchange time or error text.
 | 2 | [497](../../../tasks/497-node-notifications-tab.md) | Released v2.25.0 | Node notifications in the details |
 | 3 | [501](../../../tasks/501-diagnostics-notifications-merge.md) | Released v2.25.0 | Notifications inside the Diagnostics tab, dot on the label |
 | 4 | [546](../../../tasks/546-emitters-drop-registry-rule-copies.md) | — | Registry check in the session — by the core version of the live build |
+| 5 | [712](../../../tasks/712-ios-test-servers-and-probe-failure.md) | Simulator, no merge | iOS: the check works while the core is stopped |

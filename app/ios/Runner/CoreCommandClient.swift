@@ -475,7 +475,7 @@ final class SnapshotEmitter {
   }
 }
 
-private final class ClientHandler: NSObject, LibboxCommandClientHandlerProtocol {
+final class ClientHandler: NSObject, LibboxCommandClientHandlerProtocol {
   var onDisconnected: (() -> Void)?
   var onStatus: ((LibboxStatusMessage) -> Void)?
   var onOutbounds: ((LibboxOutboundGroupItemIteratorProtocol) -> Void)?
