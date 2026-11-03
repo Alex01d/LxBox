@@ -35,7 +35,7 @@ A hidden setting keeps its stored value, so a backup taken on iOS still restores
 | Usage region, Auto | Country of the mobile network, then device locale | Device locale only. The network lookup is not ported |
 | Identity sent to panels | `LxBox-android/<version>`, OS `android` | `LxBox-ios/<version>`, OS `ios` (§714 D7) |
 | Camera prompt language | System's own text | Our text in English, Russian or Chinese, by system language (§714 D8) |
-| File picker | A tap returns the file | A tap, then Open. To check on a real iPhone (§714 D9) |
+| File picker | A tap returns the file | A tap, then Open, seen on a real iPhone (§714 D9) |
 
 ## Still visible, not working, no decision yet
 

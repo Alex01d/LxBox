@@ -137,12 +137,14 @@ Release build of `f661d071` on iPhone 15 with iOS 26.3.1, core `v1.14.4-lx.30`, 
 | Usage region | Works |
 | Tap outside closes the number pad | Works |
 | Backup export and import through the file picker | Works |
-| File picker, Recents and one tap (D9) | Not reported yet |
+| File picker (D9) | Same as Simulator: a tap selects the file, an Open button appears, Open returns it, then the Import backup dialog. Recents not reported |
 
 ### Found during implementation
 
 - **Region with a bare `ru`.** `-AppleLanguages (ru) -AppleLocale ru_BY` shows `страна не определена`, with or without `ru.lproj`, so this change does not cause it. `ru-BY` works. On iOS Auto reads only the device locale, because `networkCountry` is not ported. Check on a real iPhone.
 - **Update check.** Hiding its rows was not enough. A value restored from Android would keep the check running with no way to turn it off, so the check itself is gated.
+
+- **Why the picker needs Open.** `pickFileSafely` passes `allowMultiple: false` to `FilePicker.pickFiles`, but file_picker 12.3.0 does not forward that deprecated parameter, and `file_picker_darwin` opens `pickFiles` with multiple selection on. Its `pickFile` opens with multiple selection off. Not changed, waits for a decision.
 
 ## Docs to update
 
