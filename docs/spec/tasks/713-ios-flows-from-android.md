@@ -128,6 +128,8 @@ Debug build on iPhone 17 Simulator with iOS 26.5, Flutter 3.47.9, core `v1.14.4-
 | # | Result | Evidence |
 |---|---|---|
 | 1 | Pass | Servers field keeps `vless://a--b"c@192.0.2.1:443#teh`. Code field keeps `"teh--x"`. `flutter analyze`: no issues. 120 tests pass in 22 related files |
+| 2 | Pass, Simulator only | `Info.plist` in the built app holds the string. "Scan QR code" opens the same empty scanner as before, because Simulator has no camera. A real iPhone is still needed for the permission prompt |
+| 3 | Pass, last step not run | "User guide" opens `github.com` in Safari, "Google Play" opens `play.google.com`. The clipboard kept its earlier text. A link with no handler and no fallback was not reached from the UI |
 
 ## Docs to update
 

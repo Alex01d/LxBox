@@ -1,6 +1,7 @@
 import Flutter
 import Foundation
 import Libbox
+import UIKit
 
 final class LxBoxChannels {
   private static let boolGetters: [String: (key: String, fallback: Bool)] = [
@@ -220,6 +221,8 @@ final class LxBoxChannels {
 
   private func handleUtils(_ call: FlutterMethodCall, _ result: @escaping FlutterResult) {
     switch call.method {
+    case "openUrl":
+      openUrl(call.arguments as? [String: Any], result)
     case "installSource":
       result(nil)
     case "isTelevision":
@@ -229,6 +232,37 @@ final class LxBoxChannels {
     default:
       result(FlutterMethodNotImplemented)
     }
+  }
+
+  private func openUrl(_ arguments: [String: Any]?, _ result: @escaping FlutterResult) {
+    guard let url = arguments?["url"] as? String else {
+      result(FlutterError(code: "INVALID_URL", message: "URL is null", details: nil))
+      return
+    }
+    let fallback = arguments?["fallbackUrl"] as? String
+    open(url) { [weak self] opened in
+      if opened {
+        result(nil)
+      } else if let fallback {
+        self?.open(fallback) { opened in
+          result(opened ? nil : Self.noHandlerError(url))
+        }
+      } else {
+        result(Self.noHandlerError(url))
+      }
+    }
+  }
+
+  private func open(_ link: String, _ completion: @escaping (Bool) -> Void) {
+    guard let url = URL(string: link) else {
+      completion(false)
+      return
+    }
+    UIApplication.shared.open(url, options: [:], completionHandler: completion)
+  }
+
+  private static func noHandlerError(_ url: String) -> FlutterError {
+    FlutterError(code: "NO_ACTIVITY", message: "No handler for \(url)", details: nil)
   }
 
   private func respondOffMain(_ result: @escaping FlutterResult, _ work: @escaping () -> Any?) {
