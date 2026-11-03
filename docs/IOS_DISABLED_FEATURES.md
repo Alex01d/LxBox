@@ -44,4 +44,4 @@ A hidden setting keeps its stored value, so a backup taken on iOS still restores
 | Google push (FCM) preset | Off by default. Its package condition never matches |
 | Tailscale, Taildrop, OpenConnect screens | Native calls not ported |
 | Send to TV | Depends on the camera, not tested |
-| Text in settings that stayed | Debug API mentions `adb forward`. Memory limit says Auto sets no threshold, on iOS it means 50 MB. System HTTP proxy mentions Android 10 |
+| Text in settings that stayed | Debug API mentions `adb forward`. Memory limit says Auto sets no threshold, on iOS it means 50 MB. System HTTP proxy mentions Android 10. The Rules tab says rules can match by app |

@@ -7,6 +7,7 @@ import '../../controllers/home_controller.dart';
 import '../../services/app_info_cache.dart';
 import '../../services/diagnostics/connection_test.dart';
 import '../../services/l10n/locale_controller.dart';
+import '../../services/platform_features.dart';
 import '../../services/ui_helpers.dart';
 import '../../vpn/cc_channel.dart';
 import '../../widgets/banner_palette.dart';
@@ -212,40 +213,42 @@ class _UrlCheckTabState extends State<UrlCheckTab>
             isDense: true,
           ),
         ),
-        const SizedBox(height: 12),
-        Row(
-          children: [
-            Text(
-              getLocalText.s("App"),
-              style: Theme.of(context).textTheme.bodyMedium,
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Align(
-                alignment: Alignment.centerLeft,
-                child: _packageName.isEmpty
-                    ? TextButton.icon(
-                        onPressed: _running ? null : _pickApp,
-                        icon: const Icon(Icons.apps, size: 18),
-                        label: Text(getLocalText.s("Any app")),
-                      )
-                    : InputChip(
-                        label: Text(
-                          _appLabel(_packageName),
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                        onPressed: _running ? null : _pickApp,
-                        onDeleted: _running
-                            ? null
-                            : () => setState(() {
-                                  _packageName = '';
-                                  _resetResult();
-                                }),
-                      ),
+        if (PlatformFeatures.hasPerAppRouting) ...[
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Text(
+                getLocalText.s("App"),
+                style: Theme.of(context).textTheme.bodyMedium,
               ),
-            ),
-          ],
-        ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Align(
+                  alignment: Alignment.centerLeft,
+                  child: _packageName.isEmpty
+                      ? TextButton.icon(
+                          onPressed: _running ? null : _pickApp,
+                          icon: const Icon(Icons.apps, size: 18),
+                          label: Text(getLocalText.s("Any app")),
+                        )
+                      : InputChip(
+                          label: Text(
+                            _appLabel(_packageName),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          onPressed: _running ? null : _pickApp,
+                          onDeleted: _running
+                              ? null
+                              : () => setState(() {
+                                    _packageName = '';
+                                    _resetResult();
+                                  }),
+                        ),
+                ),
+              ),
+            ],
+          ),
+        ],
         const SizedBox(height: 8),
         SegmentedButton<ConnectionTestDepth>(
           showSelectedIcon: false,

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../models/custom_rule.dart';
+import '../../../services/platform_features.dart';
 import '../../../widgets/outbound_picker.dart';
 import '../edit_controller.dart';
 import '../sections/apps_section.dart';
@@ -89,13 +90,15 @@ class ParamsTab extends StatelessWidget {
             label: 'Action',
           ),
           const SizedBox(height: 16),
-          const Divider(),
-          AppsSection(
-            packages: c.packages,
-            onTap: actions.onPickApps,
-            onClear: () => c.setPackages(const []),
-          ),
-          const SizedBox(height: 8),
+          if (PlatformFeatures.hasPerAppRouting) ...[
+            const Divider(),
+            AppsSection(
+              packages: c.packages,
+              onTap: actions.onPickApps,
+              onClear: () => c.setPackages(const []),
+            ),
+            const SizedBox(height: 8),
+          ],
         ],
         const Divider(),
         Text(getLocalText.s("Source"), style: theme.textTheme.titleSmall),

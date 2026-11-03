@@ -23,6 +23,7 @@ import '../services/error_format.dart';
 import '../services/file_export.dart';
 import '../services/file_import.dart';
 import '../services/l10n/template_aware_state.dart';
+import '../services/platform_features.dart';
 import '../services/preset_nodes_view.dart';
 import '../services/preset_on_change.dart';
 import '../services/rule_display_names.dart';
@@ -179,7 +180,9 @@ class _RoutingScreenState extends State<RoutingScreen>
   void initState() {
     super.initState();
     _tabController = TabController(
-      length: RoutingTab.values.length,
+      length: PlatformFeatures.hasPerAppRouting
+          ? RoutingTab.values.length
+          : RoutingTab.values.length - 1,
       vsync: this,
       initialIndex: widget.initialTab.index,
     );
@@ -402,7 +405,8 @@ class _RoutingScreenState extends State<RoutingScreen>
             Tab(text: getLocalText.s("Presets")),
             Tab(text: getLocalText.s("Rules")),
             Tab(text: getLocalText.s("DNS")),
-            Tab(text: getLocalText.s("Tunnel apps")),
+            if (PlatformFeatures.hasPerAppRouting)
+              Tab(text: getLocalText.s("Tunnel apps")),
           ],
         ),
       ),
@@ -454,10 +458,11 @@ class _RoutingScreenState extends State<RoutingScreen>
           ),
 
           // ─── Tunnel apps: §046 OS-level split-tunneling ───
-          TunAppsTab(
-            homeController: widget.homeController,
-            subController: widget.subController,
-          ),
+          if (PlatformFeatures.hasPerAppRouting)
+            TunAppsTab(
+              homeController: widget.homeController,
+              subController: widget.subController,
+            ),
         ],
       ),
     );
