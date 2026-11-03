@@ -10,6 +10,8 @@ final class CoreCommandClient {
   let outboundsEmitter = SnapshotEmitter()
   let groupsEmitter = SnapshotEmitter()
   let connectionsEmitter = SnapshotEmitter()
+  let dnsQueriesEmitter = BatchEmitter()
+  let connectionTestEmitter = BatchEmitter()
 
   private let ops = DispatchQueue(label: "lxbox.core.client", qos: .userInitiated)
   private let lock = NSLock()
@@ -17,8 +19,13 @@ final class CoreCommandClient {
   private var statusClient: LibboxCommandClient?
   private var screenClient: LibboxCommandClient?
   private var pingClient: LibboxCommandClient?
+  private var profilerClient: LibboxCommandClient?
+  private var connectionTestClient: LibboxCommandClient?
+  private var connectionTestSession: LibboxConnectionTestSession?
   private var statusHandler: ClientHandler?
   private var screenHandler: ClientHandler?
+  private var profilerHandler: ClientHandler?
+  private var connectionTestHandler: ConnectionTestHandler?
   private let pingHandler = ClientHandler()
 
   private var tunnelAlive = false
@@ -28,9 +35,12 @@ final class CoreCommandClient {
   private var statusInterval = statusIntervalNormal
   private var statusGeneration = 0
   private var screenGeneration = 0
+  private var profilerGeneration = 0
+  private var connectionTestGeneration = 0
 
   private let connectionsLock = NSLock()
   private var connections: LibboxConnections?
+  private var profilerConnections: LibboxConnections?
 
   var isAlive: Bool { locked { tunnelAlive } }
 
@@ -113,6 +123,7 @@ final class CoreCommandClient {
         return tunnelAlive
       }
       disconnect(takeScreenClient())
+      disconnect(takeProfilerClient())
       cancelPing()
       if alive { connectStatus() }
     }
@@ -128,12 +139,16 @@ final class CoreCommandClient {
         statusInterval = Self.statusIntervalNormal
         statusGeneration += 1
         screenGeneration += 1
+        profilerGeneration += 1
       }
       disconnect(takeStatusClient())
       disconnect(takeScreenClient())
+      disconnect(takeProfilerClient())
       cancelPing()
+      closeConnectionTest()
       connectionsLock.lock()
       connections = nil
+      profilerConnections = nil
       connectionsLock.unlock()
     }
   }
@@ -150,6 +165,14 @@ final class CoreCommandClient {
     locked {
       let client = screenClient
       screenClient = nil
+      return client
+    }
+  }
+
+  private func takeProfilerClient() -> LibboxCommandClient? {
+    locked {
+      let client = profilerClient
+      profilerClient = nil
       return client
     }
   }
@@ -229,6 +252,100 @@ final class CoreCommandClient {
     } catch {
       NSLog("[core] screen client failed: %@", error.localizedDescription)
     }
+  }
+
+  func connectProfiler() {
+    ops.async { [self] in connectProfilerClient() }
+  }
+
+  func disconnectProfiler() {
+    ops.async { [self] in disconnect(takeProfilerClient()) }
+  }
+
+  private func connectProfilerClient() {
+    let setup: Int? = locked {
+      guard tunnelAlive else { return nil }
+      profilerGeneration += 1
+      return profilerGeneration
+    }
+    guard let generation = setup else { return }
+    connectionsLock.lock()
+    if profilerConnections == nil {
+      profilerConnections = LibboxConnections()
+    }
+    connectionsLock.unlock()
+    let handler = ClientHandler()
+    handler.onConnectionEvents = { [weak self] events in self?.applyProfilerConnectionEvents(events, generation) }
+    handler.onDnsQuery = { [weak self] query in self?.emitDnsQuery(query) }
+    let options = LibboxCommandClientOptions()
+    options.addCommand(LibboxCommandConnections)
+    options.addCommand(LibboxCommandDNS)
+    options.dnsIncludeAnswers = true
+    guard let client = LibboxNewCommandClient(handler, options) else { return }
+    do {
+      try client.connect()
+      let previous: LibboxCommandClient? = locked {
+        let current = profilerClient
+        profilerClient = client
+        profilerHandler = handler
+        return current
+      }
+      disconnect(previous)
+    } catch {
+      NSLog("[core] profiler client failed: %@", error.localizedDescription)
+    }
+  }
+
+  func startConnectionTest(link: String, packageName: String, depth: Int32, fresh: Bool) {
+    ops.async { [self] in
+      closeConnectionTest()
+      let generation: Int = locked {
+        connectionTestGeneration += 1
+        return connectionTestGeneration
+      }
+      let handler = ConnectionTestHandler { [weak self] event in
+        guard let self, self.locked({ generation == self.connectionTestGeneration }) else { return }
+        self.connectionTestEmitter.offer(event)
+      }
+      guard let client = LibboxNewCommandClient(ClientHandler(), LibboxCommandClientOptions()) else { return }
+      guard let request = LibboxNewConnectionTestRequest() else { return }
+      request.setLink(link)
+      if !packageName.isEmpty {
+        request.setPackageName(packageName)
+      }
+      request.setAppDNS(true)
+      request.setDepth(depth)
+      request.setFresh(fresh)
+      do {
+        try client.connect()
+        let session = try client.startConnectionTest(request, handler: handler)
+        locked {
+          connectionTestClient = client
+          connectionTestSession = session
+          connectionTestHandler = handler
+        }
+      } catch {
+        disconnect(client)
+        connectionTestEmitter.offer(["event": "error", "message": error.localizedDescription])
+      }
+    }
+  }
+
+  func stopConnectionTest() {
+    ops.async { [self] in closeConnectionTest() }
+  }
+
+  private func closeConnectionTest() {
+    let (client, session): (LibboxCommandClient?, LibboxConnectionTestSession?) = locked {
+      connectionTestGeneration += 1
+      let current = (connectionTestClient, connectionTestSession)
+      connectionTestClient = nil
+      connectionTestSession = nil
+      connectionTestHandler = nil
+      return current
+    }
+    session?.cancel()
+    disconnect(client)
   }
 
   private func ensurePingClient() -> LibboxCommandClient? {
@@ -372,6 +489,59 @@ final class CoreCommandClient {
     connectionsEmitter.offer(Self.serialize(connections))
   }
 
+  private func applyProfilerConnectionEvents(_ events: LibboxConnectionEvents, _ generation: Int) {
+    guard locked({ generation == profilerGeneration }) else { return }
+    connectionsLock.lock()
+    defer { connectionsLock.unlock() }
+    guard let profilerConnections else { return }
+    profilerConnections.apply(events)
+    profilerConnections.filterState(Int32(LibboxConnectionStateAll))
+    connectionsEmitter.offer(Self.serialize(profilerConnections))
+  }
+
+  private func emitDnsQuery(_ query: LibboxDnsQuery) {
+    var answers: [[String: Any]] = []
+    if let iterator = query.answers() {
+      while iterator.hasNext() {
+        if let answer = iterator.next() {
+          answers.append(["name": answer.name, "type": answer.type, "rdata": answer.rData, "ttl": answer.ttl])
+        }
+      }
+    }
+    var attempts: [[String: Any]] = []
+    if let iterator = query.attempts() {
+      while iterator.hasNext() {
+        if let attempt = iterator.next() {
+          attempts.append([
+            "server": attempt.server,
+            "serverType": attempt.serverType,
+            "outcome": attempt.outcome,
+            "rttMs": attempt.rttMs,
+          ])
+        }
+      }
+    }
+    dnsQueriesEmitter.offer([
+      "domain": query.domain,
+      "queryType": query.queryType,
+      "rcode": query.rcode,
+      "ttl": query.ttl,
+      "source": query.source,
+      "failed": query.failed,
+      "error": query.error,
+      "packageName": Self.strings(query.processInfo?.packageNames()).first ?? "",
+      "processPath": query.processInfo?.processPath ?? "",
+      "dnsServer": query.dnsServer,
+      "dnsServerType": query.dnsServerType,
+      "outbound": Self.strings(query.outbound()).filter { !$0.isEmpty },
+      "answers": answers,
+      "groupPath": Self.strings(query.groupPath()).filter { !$0.isEmpty },
+      "attempts": attempts,
+      "fanned": query.fanned,
+      "survival": query.survival,
+    ] as [String: Any])
+  }
+
   func reEmitConnections() {
     connectionsLock.lock()
     defer { connectionsLock.unlock() }
@@ -475,12 +645,122 @@ final class SnapshotEmitter {
   }
 }
 
+final class BatchEmitter {
+  private static let queueMax = 4096
+
+  let sink = ChannelSink()
+  private let lock = NSLock()
+  private var queue: [Any] = []
+  private var scheduled = false
+
+  func offer(_ event: Any) {
+    lock.lock()
+    if queue.count < Self.queueMax {
+      queue.append(event)
+    }
+    let schedule = !scheduled
+    scheduled = true
+    lock.unlock()
+    guard schedule else { return }
+    DispatchQueue.main.async { [self] in
+      lock.lock()
+      let batch = queue
+      queue = []
+      scheduled = false
+      lock.unlock()
+      if !batch.isEmpty {
+        sink.send(batch)
+      }
+    }
+  }
+}
+
+final class ConnectionTestHandler: NSObject, LibboxConnectionTestHandlerProtocol {
+  private let emit: ([String: Any]) -> Void
+
+  init(emit: @escaping ([String: Any]) -> Void) {
+    self.emit = emit
+  }
+
+  func onStage(_ stage: LibboxConnectionTestStage?) {
+    guard let stage else { return }
+    emit([
+      "event": "stage",
+      "id": stage.id_(),
+      "parent": stage.parent(),
+      "kind": stage.kind(),
+      "subject": stage.subject(),
+      "start_ms": stage.startMs(),
+      "duration_ms": stage.durationMs(),
+      "result": stage.result(),
+      "error": stage.errorMessage(),
+      "attrs": Self.attributes(stage.attrs()),
+    ])
+  }
+
+  func onResult(_ result: LibboxConnectionTestResult?) {
+    guard let result else { return }
+    emit([
+      "event": "result",
+      "error": result.errorMessage(),
+      "root_cause": result.rootCause(),
+      "findings": Self.findings(result.findings()),
+      "http_status": result.httpStatus(),
+      "content_type": result.contentType(),
+      "body_bytes": result.body()?.count ?? 0,
+      "truncated": result.truncated(),
+      "elapsed_ms": result.elapsedMs(),
+      "stages_truncated": result.stagesTruncated(),
+    ])
+  }
+
+  func onError(_ message: String?) {
+    emit(["event": "error", "message": message ?? "failed"])
+  }
+
+  private static func attributes(_ iterator: LibboxConnectionTestAttrIteratorProtocol?) -> [[String: String]] {
+    guard let iterator else { return [] }
+    var attributes: [[String: String]] = []
+    while iterator.hasNext() {
+      if let attribute = iterator.next() {
+        attributes.append(["key": attribute.key(), "value": attribute.value()])
+      }
+    }
+    return attributes
+  }
+
+  private static func findings(_ iterator: LibboxConnectionTestFindingIteratorProtocol?) -> [[String: Any]] {
+    guard let iterator else { return [] }
+    var findings: [[String: Any]] = []
+    while iterator.hasNext() {
+      guard let finding = iterator.next() else { continue }
+      findings.append([
+        "code": finding.code(),
+        "level": finding.level(),
+        "stages": stages(finding.stages()),
+        "attrs": attributes(finding.attrs()),
+      ])
+    }
+    return findings
+  }
+
+  private static func stages(_ iterator: LibboxInt32IteratorProtocol?) -> [Int32] {
+    guard let iterator else { return [] }
+    var stages: [Int32] = []
+    while iterator.hasNext() {
+      stages.append(iterator.next())
+    }
+    return stages
+  }
+}
+
 final class ClientHandler: NSObject, LibboxCommandClientHandlerProtocol {
   var onDisconnected: (() -> Void)?
   var onStatus: ((LibboxStatusMessage) -> Void)?
   var onOutbounds: ((LibboxOutboundGroupItemIteratorProtocol) -> Void)?
   var onGroups: ((LibboxOutboundGroupIteratorProtocol) -> Void)?
   var onConnectionEvents: ((LibboxConnectionEvents) -> Void)?
+  var onDnsQuery: ((LibboxDnsQuery) -> Void)?
 
   func connected() {}
   func disconnected(_: String?) { onDisconnected?() }
@@ -501,5 +781,7 @@ final class ClientHandler: NSObject, LibboxCommandClientHandlerProtocol {
   func write(_ events: LibboxConnectionEvents?) {
     if let events { onConnectionEvents?(events) }
   }
-  func write(_: LibboxDnsQuery?) {}
+  func write(_ query: LibboxDnsQuery?) {
+    if let query { onDnsQuery?(query) }
+  }
 }

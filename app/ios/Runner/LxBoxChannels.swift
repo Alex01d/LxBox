@@ -49,6 +49,8 @@ final class LxBoxChannels {
     addEventChannel("lxbox/cc/outbounds", client.outboundsEmitter.sink, messenger)
     addEventChannel("lxbox/cc/groups", client.groupsEmitter.sink, messenger)
     addEventChannel("lxbox/cc/connections", client.connectionsEmitter.sink, messenger)
+    addEventChannel("lxbox/cc/dns", client.dnsQueriesEmitter.sink, messenger)
+    addEventChannel("lxbox/cc/connection_test", client.connectionTestEmitter.sink, messenger)
     addEventChannel("lxbox/cc/openconnect", silentStream, messenger)
   }
 
@@ -133,6 +135,25 @@ final class LxBoxChannels {
       result(true)
     case "ccDisconnectScreen":
       client.disconnectScreenRef()
+      result(true)
+    case "ccConnectProfiler":
+      client.connectProfiler()
+      result(true)
+    case "ccDisconnectProfiler":
+      client.disconnectProfiler()
+      result(true)
+    case "ccStartConnectionTest":
+      let link = arguments?["link"] as? String ?? ""
+      let packageName = arguments?["package_name"] as? String ?? ""
+      let depth = Int32(arguments?["depth"] as? Int ?? 0)
+      let fresh = arguments?["fresh"] as? Bool ?? false
+      let alive = client.isAlive
+      if alive {
+        client.startConnectionTest(link: link, packageName: packageName, depth: depth, fresh: fresh)
+      }
+      result(alive)
+    case "ccStopConnectionTest":
+      client.stopConnectionTest()
       result(true)
     case "ccPauseClients":
       client.pauseClients()

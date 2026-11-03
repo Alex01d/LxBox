@@ -81,7 +81,7 @@ Flags per field, because `TextField` has no theme for them, and a subclass would
 | Method or channel | Source | iOS |
 |---|---|---|
 | `openUrl` on `/utils` | `MainActivity.openUrlOrFallback` | `UIApplication.open`, then `fallbackUrl`, then error `NO_ACTIVITY`, so Dart keeps its clipboard fallback. Error `INVALID_URL` with no URL |
-| `ccStartConnectionTest`, `ccStopConnectionTest`, `lxbox/cc/connection_test` | `BoxCommandClient`, §687 | Own client and session per test, generation check on callbacks, batches. Returns `false` when the core is down, so Dart keeps its `VPN is not running` text for that case |
+| `ccStartConnectionTest`, `ccStopConnectionTest`, `lxbox/cc/connection_test` | `BoxCommandClient`, §687 | Own client and session per test, generation check on callbacks, batches. Returns `false` when the core is down, as on Android |
 | `ccConnectProfiler`, `ccDisconnectProfiler`, `lxbox/cc/dns` | `BoxCommandClient`, §168, §261 | One client with `CommandConnections` and `CommandDNS`, answers included. Its own `LibboxConnections`, because two clients on one crash the core (§170). Same `lxbox/cc/connections` output. `ccResyncForReopen` also closes it |
 | `ccGetUrlViaOutbound`, `ccGetRules`, `ccGetDnsGroups`, `ccGetPool`, `ccSetEndpointEnabled`, `ccGetWireGuardStatus` | `BoxCommandClient` | Unary on the ping client, same keys. `null` when the client is down. Endpoint errors keep their codes |
 | `quitApp` | `VpnPlugin`, §639 | Reply `true`, stop the core with a 3 s budget, then `exit(0)` no earlier than 250 ms after the call |
@@ -113,7 +113,7 @@ Debug build, iPhone 17 Simulator with iOS 26.5, core `v1.14.4-lx.30`, each chang
 1. Servers field: `vless://a--b"c@192.0.2.1:443#teh` stays as typed. Same in the code field, a template variable field and a Test URL field.
 2. `Info.plist` in the built app holds the string. "Scan QR code" still opens.
 3. "User guide" opens Safari. Clipboard is untouched. A link with no handler falls back to the clipboard as before.
-4. URL Check while Connected shows stages and a result. Core stopped: `VPN is not running`. Stop during a test works.
+4. URL Check while Connected shows stages and a result. Core stopped: Run is disabled. Stop during a test works.
 5. Profiler START while Connected: events appear, connections and DNS. STOP ends it. No `MissingPluginException`.
 6. Node Diagnostics while Connected gives a result. WireGuard status and node on/off work on an AWG node. DNS tab reads groups.
 7. Quit & reopen while Connected: process ends, relaunch shows Disconnected, no crash banner, port closed.
@@ -130,6 +130,8 @@ Debug build on iPhone 17 Simulator with iOS 26.5, Flutter 3.47.9, core `v1.14.4-
 | 1 | Pass | Servers field keeps `vless://a--b"c@192.0.2.1:443#teh`. Code field keeps `"teh--x"`. `flutter analyze`: no issues. 120 tests pass in 22 related files |
 | 2 | Pass, Simulator only | `Info.plist` in the built app holds the string. "Scan QR code" opens the same empty scanner as before, because Simulator has no camera. A real iPhone is still needed for the permission prompt |
 | 3 | Pass, last step not run | "User guide" opens `github.com` in Safari, "Google Play" opens `play.google.com`. The clipboard kept its earlier text. A link with no handler and no fallback was not reached from the UI |
+| 4 | Pass, stop mid-run not reached | Connected, `https://cp.cloudflare.com/`: `HTTP 204 · 239 ms` with stages and findings. `https://192.0.2.1/`: `Failed at target_tls 192.0.2.1: EOF`, with the failed stage and causes. Core stopped: Run is disabled with `Start VPN to run a check`, so Dart never reaches the native call. A test ended too fast to tap away during it. No new line in `applog.txt` |
+| 5 | Pass | Connected, START, then `curl` for 4 hosts through `mixed-in`: 17 events, DNS and TCP with rules, chains and `cached`. STOP ends it. No new line in `applog.txt`. The 2 TCP events from URL Check appear too |
 
 ## Docs to update
 
