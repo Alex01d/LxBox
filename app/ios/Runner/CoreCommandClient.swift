@@ -474,17 +474,6 @@ final class CoreCommandClient {
     }
   }
 
-  func getRules() -> [[String: Any]]? {
-    guard let client = ensurePingClient(), let iterator = try? client.getRules() else { return nil }
-    var rules: [[String: Any]] = []
-    while iterator.hasNext() {
-      if let rule = iterator.next() {
-        rules.append(["type": rule.type, "payload": rule.payload, "action": rule.action, "isDNS": rule.isDNS])
-      }
-    }
-    return rules
-  }
-
   func getDnsGroups() -> [[String: Any]]? {
     guard let client = ensurePingClient(), let iterator = try? client.getDNSGroups() else { return nil }
     var groups: [[String: Any]] = []

@@ -199,8 +199,6 @@ final class LxBoxChannels {
       respondOffMain(result) { [client] in
         client.getUrlViaOutbound(tag: tag, link: link, timeoutMs: timeoutMs, maxBytes: maxBytes, userAgent: userAgent)
       }
-    case "ccGetRules":
-      respondOffMain(result) { [client] in client.getRules() }
     case "ccGetDnsGroups":
       respondOffMain(result) { [client] in client.getDnsGroups() }
     case "ccGetPool":
