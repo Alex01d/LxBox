@@ -141,7 +141,7 @@ Debug build on iPhone 17 Simulator with iOS 26.5, Flutter 3.47.9, core `v1.14.4-
 | 9 | Pass, Share not run | Save to file writes the full backup, 25352 bytes. Pick file, Merge: `0 added, 50 already here`. Replace all: summary with Restart now, process ends, crash log empty. Settings file identical to a snapshot taken before the imports, core starts on relaunch. `lx-backup.json` saved and imported: `Imported 7 rule(s), 2 items not applied, replaced 7 rule(s)` |
 | 10 | Pass, full suite pending | Nothing under `app/android/` beyond the merge. `flutter analyze`: no issues, 120 tests pass in 22 related files. Swift has no comments. Full suite runs on CI, which a push to `ios-app` does not start |
 
-Not checked: a real iPhone, the camera prompt, Send to TV, a round-robin pool with slots, a link with no handler, Stop during a URL Check, the Tunnel apps tab with saved packages, Flutter pin 3.47.1. Text fields: the same flags went to 80 sites, and 2 of them were driven by hand.
+Not checked: Send to TV, a round-robin pool with slots, a link with no handler, Stop during a URL Check, the Tunnel apps tab with saved packages, Flutter pin 3.47.1. Scan QR code on a real iPhone is in [§714](714-ios-platform-differences.md). Text fields: the same flags went to 80 sites, and 2 of them were driven by hand.
 
 ### Found during implementation
 

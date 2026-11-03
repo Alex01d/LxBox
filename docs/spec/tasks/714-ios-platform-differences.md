@@ -125,7 +125,18 @@ Debug build on iPhone 17 Simulator with iOS 26.5, Flutter 3.47.9, core `v1.14.4-
 | 7 | Pass, prompt not shown | The built app has `ru.lproj` and `zh-Hans.lproj` with the camera string, and `Info.plist` keeps the English one. Launched with `-AppleLanguages (ru-BY)`: Russian UI, region `BY`. Without arguments: English UI, region `BY`. Simulator has no camera, so the prompt itself needs a real iPhone |
 | 8 | Pass, full suite pending | Nothing under `app/android/` beyond the merge. `flutter analyze`: no issues. 423 tests pass in 37 related files. Screen gates have no widget tests, they were checked by hand above. Full suite runs on CI, which a push to `ios-app` does not start |
 
-Not checked: a real iPhone, the camera prompt, a real panel with `LxBox-ios`, the app on an Android device.
+Not checked: a real panel with `LxBox-ios`, the app on an Android device.
+
+### Results on a real iPhone, 2026-11-03
+
+Release build of `f661d071` on iPhone 15 with iOS 26.3.1, core `v1.14.4-lx.30`, signed by a Personal Team in a throwaway copy of the project. This is not the target device, so it tests device behaviour only. Results are as reported by Pavel.
+
+| Check | Result |
+|---|---|
+| Scan QR code | Works |
+| Usage region | Works |
+| Tap outside closes the number pad | Works |
+| File picker, Recents and one tap (D9) | Not checked yet |
 
 ### Found during implementation
 
