@@ -41,7 +41,7 @@ Made by Pavel on 2026-11-03.
 | D6 | Quit & reopen uses `exit(0)` | Keep |
 | D7 | Panels see `LxBox-android`, OS `android`, no version or model. Backups say `platform: android` | Send iOS in full: `LxBox-ios/<version>`, `x-device-os: ios`, real version and model, `platform: ios`. Accepted risk: a panel that matches the `LxBox-android` token may not recognize the client |
 | D8 | Camera prompt in English only | Add Russian and Chinese now, though Simulator cannot show the prompt |
-| D9 | File picker needs a tap and Open | No change. Check on a real iPhone first |
+| D9 | File picker needs a tap and Open | No change. Checked on a real iPhone, and Pavel left it as is on 2026-11-03 |
 | D10 | Text field flags also reach Android | Keep on both |
 
 ## Solution
@@ -144,7 +144,7 @@ Release build of `f661d071` on iPhone 15 with iOS 26.3.1, core `v1.14.4-lx.30`, 
 - **Region with a bare `ru`.** `-AppleLanguages (ru) -AppleLocale ru_BY` shows `страна не определена`, with or without `ru.lproj`, so this change does not cause it. `ru-BY` works. On iOS Auto reads only the device locale, because `networkCountry` is not ported. Check on a real iPhone.
 - **Update check.** Hiding its rows was not enough. A value restored from Android would keep the check running with no way to turn it off, so the check itself is gated.
 
-- **Why the picker needs Open.** `pickFileSafely` passes `allowMultiple: false` to `FilePicker.pickFiles`, but file_picker 12.3.0 does not forward that deprecated parameter, and `file_picker_darwin` opens `pickFiles` with multiple selection on. Its `pickFile` opens with multiple selection off. Not changed, waits for a decision.
+- **Why the picker needs Open.** `pickFileSafely` passes `allowMultiple: false` to `FilePicker.pickFiles`, but file_picker 12.3.0 does not forward that deprecated parameter, and `file_picker_darwin` opens `pickFiles` with multiple selection on. Its `pickFile` opens with multiple selection off. `android_file_picker` has the same `pickFiles`. Left as is (D9). By code, not run: picking 2 files where the caller reads `files.single` throws, on both platforms.
 
 ## Docs to update
 
