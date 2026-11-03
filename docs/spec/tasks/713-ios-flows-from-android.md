@@ -95,6 +95,8 @@ Flags per field, because `TextField` has no theme for them, and a subclass would
 
 ## Differences from Android, for decision
 
+Decided on 2026-11-03, see [§714](714-ios-platform-differences.md).
+
 | # | Difference | Options |
 |---|---|---|
 | 1 | Android-only settings claim things that are not true on iOS: battery `Whitelisted`, Location `Granted`, Doze, `Installed from GitHub` | Leave, or hide per platform. Hiding needs a per-platform rule in `docs/spec/features/README.md` first |

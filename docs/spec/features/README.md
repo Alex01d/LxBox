@@ -138,6 +138,14 @@ Header: Feature, Promises (which `P` it holds), State. Sections:
    `../../tasks/NNN…`. A revision is the history of requirements, not of the
    implementation: a one-line summary, no files.
 
+## Platforms
+
+A feature describes behavior for the user on every platform. Where iOS differs,
+the function gets one line about it, in "What it does", with a Revisions row.
+Anything hidden on iOS is listed in
+[`docs/IOS_DISABLED_FEATURES.md`](../../IOS_DISABLED_FEATURES.md), with the reason.
+A task, not a feature, names the code that gates it.
+
 ## Conventions
 
 - **A feature folder is `NNN-NAME`**, UPPER_SNAKE, a running number from `001` — a
