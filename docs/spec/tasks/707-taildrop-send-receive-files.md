@@ -2,7 +2,7 @@
 
 | Field | Value |
 |-------|-------|
-| Status | Done (итерации 1–6; эмулятор 02–03.11.2026); итерация 7 (отправка с телефона: кнопка в уведомлении VPN, плитка, ссылка) — In progress |
+| Status | Done (итерации 1–7; эмулятор 02–03.11.2026) |
 | Start date | 2026-11-02 |
 | End date | 2026-11-02 |
 | Commits | `1d30e211` `feat(taildrop): отправка и приём файлов — «Поделиться», Send file…, входящие узла (§707)` |
@@ -930,10 +930,10 @@ VPN; она открывает окно поверх текущего прило
   (время, ✓ при `sent`, текст ошибки под сообщением при отказе); пришедшее
   от этого устройства и выполненное по разрешению (`clipboard`,
   `open_url`) — слева. Тап по сообщению копирует текст, «Copied».
-- **Хранение ленты:** последние 50 сообщений на устройство (ключ — тег
-  узла + stable ID), в файле приложения, не в бэкапе; `⋮ → Clear` чистит
-  ленту устройства. Узел удалён или тег сменился — его ленты снимаются
-  (как разрешения, `forgetTags`).
+- **Хранение ленты:** только в памяти, пока работает VPN (решение
+  владельца 03.11.2026): остановка VPN (и смерть процесса) ленты стирает,
+  файла нет. Последние 50 сообщений на устройство (ключ — тег узла +
+  stable ID); `⋮ → Clear` чистит ленту устройства.
 - **Отказы** (кнопки неактивны, причина строкой над полем, в этом порядке):
 
 | Условие | Текст |
@@ -953,6 +953,27 @@ VPN; она открывает окно поверх текущего прило
 открывает окно п. B с этим текстом в поле вместо буфера. Файлы — как
 сейчас.
 
+**C2. Пункт в меню выделения текста** (владелец 03.11.2026): Activity с
+intent-filter `android.intent.action.PROCESS_TEXT` (`text/plain`), подпись
+«Send to device» (en/ru/zh). Выделил текст в любом приложении → пункт в
+панели выделения (или под ⋮) → окно п. B с `EXTRA_PROCESS_TEXT` в поле
+вместо буфера. Текст в исходном приложении не меняется (результат не
+возвращается, `EXTRA_PROCESS_TEXT_READONLY` не важен).
+
+**C3. Пункты видны только когда отправлять есть через что** (владелец
+03.11.2026): «Send to device» (C2) и L×Box в системном «Поделиться»
+(`TaildropShareActivity`, и файлы, и текст) включены, только если VPN
+поднят И в работающем конфиге есть узел Tailscale с включённым Allow
+Taildrop (в собранном конфиге у endpoint'а `tailscale` нет
+`disable_taildrop: true`). Включаются при старте VPN с таким конфигом и при
+перезагрузке конфига, где такой узел появился; выключаются при остановке VPN
+и при перезагрузке конфига, где такого узла не осталось —
+`PackageManager.setComponentEnabledSetting(..., DONT_KILL_APP)`. При старте
+процесса (`BoxApplication.onCreate`) состояние сверяется с фактическим
+состоянием VPN: после падения процесса пункты не остаются видимыми.
+Компонент выключен, а интент уже пришёл (гонка) — окно показывает «Start
+VPN to send».
+
 **D. Служебный файл** собирается в Kotlin по контракту: имя
 `<name_prefix><UTC YYYYMMDDTHHMMSSZ>-<5 [a-z0-9]><name_suffix>`, тело
 `{"lx":1,"commands":[…]}`; константы — из `service_files.json`
@@ -969,11 +990,89 @@ file…». Сборщик Debug API (`POST /taildrop/send` с `commands`) пер
 ### Verification
 
 - Unit: сборщик имени и тела (формат, метка, лимит), «ссылка целиком»
-  (http/https, пробелы, другие схемы), лента (50 на устройство, снятие по
-  тегу).
+  (http/https, пробелы, другие схемы), лента (50 на устройство, очистка при
+  остановке VPN).
 - Эмулятор (ts-a → lxbox-emu-b, у ts-b разрешения от lxbox-emu-a): в
   буфере текст → кнопка уведомления → окно с текстом в поле → ➤ → на
   приёме `GET /taildrop/service-files` `executed.clipboard` +1, `last`
   совпал, в ленте справа ✓; ссылка → «Open on» → на приёме уведомление
   «Link from …»; приём от lxbox-emu-b в окне ts-b слева; Reconnect в
-  уведомлении нет; «Поделиться» текстом → окно с этим текстом.
+  уведомлении нет; «Поделиться» текстом → окно с этим текстом; выделение
+  текста → «Send to device» → окно с выделенным текстом; VPN выключен —
+  ни «Send to device», ни L×Box в «Поделиться» нет; включён, но у всех узлов
+  Tailscale Allow Taildrop выключен — тоже нет; включён и галка есть — есть.
+
+### Result (итерация 7)
+
+Коммит `0f0838f7` `feat(taildrop): окно «Send clipboard» … (§707 итер. 7)`.
+
+- **A.** `ServiceNotification.buildNotification`: `Stop` и `📋 Send clipboard`
+  (окно п. B, `PendingIntent.getActivity`); `Reconnect` и строка
+  `notification_action_reconnect` сняты, `ACTION_RECONNECT` остался. Кнопка
+  есть по условию C3 (указание оператора 03.11.2026: без узла с Allow
+  Taildrop её нет).
+- **B.** `vpn/TaildropClipActivity.kt` — нативная Activity без Flutter
+  (`ClipWindowTheme` = DeviceDefault Dialog, светлая/тёмная; низ экрана,
+  половина высоты; `singleTask`, своя `taskAffinity`, `excludeFromRecents`):
+  `To: … ▾` (запоминается в `lxbox_taildrop`: `clip.tag`/`clip.peer`/
+  `clip.name`), лента, причина над полем по таблице, поле с буфером (читается
+  в `onWindowFocusChanged`; клип с `EXTRA_IS_SENSITIVE` — как любой), ➤ и
+  «Open on <device>», ⋮ → Clear, тап по сообщению копирует. Получатели —
+  каждые 10 с и при фокусе (`tailscaleSnapshot`). После ➤ поле очищается
+  (как в чате). Отправка из окна — `Taildrop.send(…, quiet = true)`: без
+  уведомлений отправки, итог (✓ / текст ошибки) — в ленте.
+  `vpn/TaildropClip.kt`: ленты `ClipFeeds` (только в памяти, 50 на
+  устройство, ключ тег + stable ID; стираются в
+  `BoxVpnService.setCurrentStatus(Stopped)`), получатели по снимку,
+  отправка, видимость пунктов, состояние для Debug API.
+- **C / C2 / C3.** `TaildropShareActivity`: текст → окно с этим текстом,
+  файлы — как раньше. `activity-alias` `.vpn.TaildropProcessTextActivity`
+  (PROCESS_TEXT, `text/plain`, «Send to device») на то же окно. Оба
+  компонента в манифесте `enabled="false"`; `TaildropClip.onConfig`
+  включает их при `Started` и после reload, если в конфиге есть `tailscale`
+  без `disable_taildrop: true` (reload, поменявший видимость, перерисовывает
+  уведомление), `onVpnStopped` выключает, `BoxApplication.onCreate` —
+  выключает (VPN нового процесса ещё не поднят).
+- **D.** `TaildropServiceFiles.build` / `body` / `command` / `singleUrl`
+  (константы — реестр, `Spec` получил `timeFormat` и `labelLength`); приём
+  дописывает выполненные `clipboard` и `open_url` в ленту отправителя
+  (`senderID`, пустой — ID из разрешения по имени). Debug API `POST
+  /taildrop/send` с `commands` — через канал `taildropBuildServiceFile`,
+  Dart-сборщик `buildServiceFile` снят.
+- **E.** Строки en/ru/zh в `values*/strings.xml`; текст буфера и ссылок в
+  журнал не пишется. `GET /taildrop`: `clip_target` (`name` — с `reveal`),
+  `clip_feeds[]` (канал `taildropClipState`). `docs/api/debug-api-reference.md`
+  и USER_GUIDE (en/ru, кнопки уведомления) обновлены.
+- **Тесты.** JVM-тесты натива появились впервые: `app/android/app/src/test/
+  kotlin/com/leadaxe/lxbox/vpn/TaildropClipTest.kt` (junit 4 + org.json в
+  `testImplementation`) — сборщик (имя, метка, тело, `max_bytes`), «ссылка
+  целиком», ленты (50 на устройство, очистка при остановке VPN), узел с Allow
+  Taildrop в конфиге, получатели и порядок отказов — 8/8
+  (`./gradlew :app:testDebugUnitTest --tests …TaildropClipTest`). В CI этот
+  прогон не входит. `test/services/debug/taildrop_handler_test.dart` — 16/16.
+  `flutter build apk --debug` собирается; `kotlin_check` / `ui_check --strict`
+  — 0/0.
+- **Не проверено:** всё на устройстве и эмуляторе (окно, чтение буфера по
+  фокусу, PROCESS_TEXT, включение/выключение компонентов, кнопка в
+  уведомлении, лента у получателя). Спеки фичи 032 (`clipboard-sync`,
+  `share-text`) и 014 (кнопки уведомления) ещё описывают плитку / Reconnect —
+  не правились (вне раздела Result).
+
+### Проверка на эмуляторе (итерация 7, 03.11.2026)
+
+- Уведомление VPN: кнопки `Stop` и `📋 Send clipboard`, `Reconnect` нет.
+- Кнопка открывает окно поверх приложения; текст буфера
+  (`ssh root@10.0.0.5`, положен служебным файлом с ts-b) в поле.
+- Владелец сам отправил из окна: в ленте lxbox-emu-b слева пришедшее (1:19),
+  справа отправленное с ✓, поле после отправки пустое.
+- `PROCESS_TEXT` с `https://example.com/lxbox` → окно с текстом, «Open on
+  lxbox-emu-b» → на приёме `executed.open_url: 1`, уведомление «Link from
+  lxbox-emu-a»; в ленте 🔗 и ✓.
+- Пункты (`PROCESS_TEXT`, `SEND text/plain`): VPN выключен — 0, включён —
+  есть; после остановки VPN ленты пусты (`clip_feeds: []`); перезагрузка
+  при поднятом VPN → через 40 с после загрузки пунктов нет (процесс поднят
+  `BootReceiver`, сверка в `BoxApplication.onCreate`). Сразу после холодного
+  старта, до доставки `BOOT_COMPLETED`, пункты ещё видны — окно секунд.
+- Пункт «Send to device» в настоящем меню выделения текста глазами не
+  смотрели (интент проверен через `am start`, регистрация — через
+  `query-activities`).
