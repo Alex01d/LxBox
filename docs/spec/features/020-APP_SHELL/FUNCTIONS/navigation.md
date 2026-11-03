@@ -57,6 +57,9 @@ window closed.
 - The first press — a hint, no exit; the second within 2 s — exit; later than
   2 s — the first press again.
 - "Back" closes an open side menu without a hint.
+- On iOS (§715) a swipe from the left edge is this "back" on a screen that
+  guards back: it runs the same handler at the end of the drag. On home it
+  opens the side menu.
 - Exit closes the window; the tunnel keeps running.
 - The first press does not start the system close animation (predictive
   gesture).
@@ -88,3 +91,4 @@ window closed.
 | 6 | [429](../../../tasks/429-bottom-inset-system-navigation.md) | Done | Inset for the system navigation on all screens and sheets |
 | 7 | [583](../../../tasks/583-home-back-press-twice-to-exit.md) | Implemented | Exit from home by a double "back" |
 | 8 | [655](../../../tasks/655-dns-tab-in-routing.md) | Implemented | DNS Settings menu item removed: DNS is a tab of Routing |
+| 9 | [715](../../../tasks/715-ios-servers-section-check.md) | Simulator, no merge | iOS: swipe from the left edge on screens that guard back |

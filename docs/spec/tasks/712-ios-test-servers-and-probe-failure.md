@@ -147,7 +147,7 @@ Debug build on iPhone 17 Simulator with iOS 26.5, Flutter 3.47.9, core `v1.14.4-
 - **Start during a test marked untested nodes `err`.** The core closes the session, and each remaining `probeUrlTest` answered `probe session not running`, which the runner recorded as a failed node. "Disable unreachable" would then have disabled nodes nobody measured. Fixed by D3. The first run of check 6 showed this as `8 ok · 12 err`.
 - **Test sessions overwrite `tmp/configuration.json`.** Anything that copies that file gets the test config, with no inbound and only the tested nodes. A core start overwrites it back. `singbox_config.json` is not touched.
 - **User agent.** The Diagnostics reply shows `uag=LxBox-android/2.25.15.1` on iOS, so `resolveAppUserAgent` names the wrong platform. Not changed here.
-- **Subscription test bar.** At iPhone 17 width, the first character of `0 ok · 3 err` and `Testing…` sits under the bar's switch. The label starts at a fixed offset. Not compared with Android, not changed here.
+- **Subscription test bar.** At iPhone 17 width, the first character of `0 ok · 3 err` and `Testing…` sits under the bar's switch. The label starts at a fixed offset. The code is shared, so Android should do the same (§715), not run there. Not changed here.
 
 ## Unresolved / follow-up
 

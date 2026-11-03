@@ -24,6 +24,7 @@ import 'services/stderr_reader.dart';
 import 'services/subscription/subscription_identity.dart';
 import 'services/debug/bootstrap.dart' as debug_bootstrap;
 import 'services/nav/home_return_observer.dart';
+import 'widgets/ios_edge_back_gesture.dart';
 import 'services/settings_storage.dart';
 import 'services/template_loader.dart';
 import 'services/url_launcher.dart';
@@ -366,6 +367,12 @@ class LxBoxApp extends StatelessWidget {
           // §076: global observer срабатывает на возврат на home (root)
           // — auto-rebuild config'а если configDirty.
           navigatorObservers: [homeReturnObserver],
+          builder: PlatformFeatures.isIos
+              ? (context, child) => IosEdgeBackGesture(
+                    observer: homeReturnObserver,
+                    child: child!,
+                  )
+              : null,
           actions: {
             ...WidgetsApp.defaultActions,
             if (PlatformFeatures.isIos)

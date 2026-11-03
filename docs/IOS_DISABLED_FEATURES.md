@@ -29,8 +29,10 @@ A hidden setting keeps its stored value, so a backup taken on iOS still restores
 |---|---|---|
 | VPN mode | System-wide tunnel | Fails with a reason. Only Local proxy works until a paid Apple team exists (§711) |
 | App in the background | Service keeps running | The core stops when the app leaves the foreground (§711) |
-| Code editor | Native editor with highlighting, line numbers, search and wrap | Plain text field. The search and wrap buttons do nothing (§714 D4) |
+| Code editor | Native editor with highlighting, line numbers, search and wrap | Plain text field. The search and wrap buttons and Magnifier do nothing (§714 D4) |
 | Closing the keyboard | Back button | A tap outside the field (§714 D5) |
+| Back gesture on a screen that guards back | System back runs the screen's handler | A swipe from the left edge runs the same handler at the end of the drag. The screen does not follow the finger (§715 D1) |
+| Paste from clipboard | No prompt | iOS asks to allow paste, once per clipboard content from another app. Don't Allow shows "Clipboard is empty" (§715 D4) |
 | Quit & reopen, Restart now | Process ends, home screen shows | Same, through `exit(0)`, which can look like a crash (§714 D6) |
 | Usage region, Auto | Country of the mobile network, then device locale | Device locale only. The network lookup is not ported |
 | Identity sent to panels | `LxBox-android/<version>`, OS `android` | `LxBox-ios/<version>`, OS `ios` (§714 D7) |
