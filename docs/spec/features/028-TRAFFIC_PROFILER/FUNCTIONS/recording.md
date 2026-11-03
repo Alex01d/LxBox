@@ -98,3 +98,4 @@ tab."; the `Live` chip on the home screen.
 | 7 | [288](../../../tasks/288-remove-per-app-trace-tab.md) | complete | The App tab and per-app sessions removed |
 | 8 | [353](../../../tasks/353-profiler-kernel-timestamps.md) | ✅ Released v2.19.3 | Duration by the core's clock |
 | 9 | [605](../../../tasks/605-service-live-automation-workspaces-bugs.md) | Implemented | Recording gets its channel back after a tunnel restart |
+| 10 | [713](../../../tasks/713-ios-flows-from-android.md) | Simulator, no merge | iOS: recording works, connections and DNS |

@@ -95,3 +95,4 @@ this tab.»; чип `Live` на главном экране.
 | 7 | [288](../../../tasks/288-remove-per-app-trace-tab.md) | complete | Вкладка App и per-app-сессии удалены |
 | 8 | [353](../../../tasks/353-profiler-kernel-timestamps.md) | ✅ Released v2.19.3 | Длительность по часам ядра |
 | 9 | [605](../../../tasks/605-service-live-automation-workspaces-bugs.md) | Реализовано | Запись получает канал обратно после перезапуска туннеля |
+| 10 | [713](../../../tasks/713-ios-flows-from-android.md) | Simulator, без merge | iOS: запись работает, соединения и DNS |

@@ -2,7 +2,7 @@
 
 | Field | Value |
 |-------|-------|
-| Status | In progress |
+| Status | Implemented, passes on Simulator, not merged |
 | Start date | 2026-11-03 |
 | End date | |
 | Commits | |
@@ -83,7 +83,7 @@ Flags per field, because `TextField` has no theme for them, and a subclass would
 | `openUrl` on `/utils` | `MainActivity.openUrlOrFallback` | `UIApplication.open`, then `fallbackUrl`, then error `NO_ACTIVITY`, so Dart keeps its clipboard fallback. Error `INVALID_URL` with no URL |
 | `ccStartConnectionTest`, `ccStopConnectionTest`, `lxbox/cc/connection_test` | `BoxCommandClient`, §687 | Own client and session per test, generation check on callbacks, batches. Returns `false` when the core is down, as on Android |
 | `ccConnectProfiler`, `ccDisconnectProfiler`, `lxbox/cc/dns` | `BoxCommandClient`, §168, §261 | One client with `CommandConnections` and `CommandDNS`, answers included. Its own `LibboxConnections`, because two clients on one crash the core (§170). Same `lxbox/cc/connections` output. `ccResyncForReopen` also closes it |
-| `ccGetUrlViaOutbound`, `ccGetRules`, `ccGetDnsGroups`, `ccGetPool`, `ccSetEndpointEnabled`, `ccGetWireGuardStatus` | `BoxCommandClient` | Unary on the ping client, same keys. `null` when the client is down. Endpoint errors keep their codes |
+| `ccGetUrlViaOutbound`, `ccGetDnsGroups`, `ccGetPool`, `ccSetEndpointEnabled`, `ccGetWireGuardStatus` | `BoxCommandClient` | Unary on the ping client, same keys. `null` when the client is down. Endpoint errors keep their codes |
 | `quitApp` | `VpnPlugin`, §639 | Reply `true`, stop the core with a 3 s budget, then `exit(0)` no earlier than 250 ms after the call |
 | `getInstalledApps`, `getAppIcon`, `getAppInfo` | `VpnPlugin` | `[]`, `""` and `{"notFound": true}`. iOS gives an app no list of other apps, so this is the honest answer, and 011 already says the list depends on the OS |
 
@@ -105,6 +105,7 @@ Flags per field, because `TextField` has no theme for them, and a subclass would
 | 6 | `exit(0)` looks like a crash on iOS. Android's `killProcess` is the same call, but its launcher hides it | Accept, or remove the buttons |
 | 7 | Subscription `User-Agent` says `LxBox-android`, OS `android`, empty version and model. Backups say `platform: android` | Leave, or send iOS values |
 | 8 | Camera prompt text is English only. Android's prompt is the system's own | Leave, or add `InfoPlist.strings` for ru and zh |
+| 9 | iOS file picker asks for a tap and then Open, and shows Select All. "Recents" reads `Content Unavailable` on Simulator, Browse works. Android's picker returns on the tap | Leave, or check on a real iPhone first |
 
 ## Verification
 
@@ -132,9 +133,19 @@ Debug build on iPhone 17 Simulator with iOS 26.5, Flutter 3.47.9, core `v1.14.4-
 | 3 | Pass, last step not run | "User guide" opens `github.com` in Safari, "Google Play" opens `play.google.com`. The clipboard kept its earlier text. A link with no handler and no fallback was not reached from the UI |
 | 4 | Pass, stop mid-run not reached | Connected, `https://cp.cloudflare.com/`: `HTTP 204 · 239 ms` with stages and findings. `https://192.0.2.1/`: `Failed at target_tls 192.0.2.1: EOF`, with the failed stage and causes. Core stopped: Run is disabled with `Start VPN to run a check`, so Dart never reaches the native call. A test ended too fast to tap away during it. No new line in `applog.txt` |
 | 5 | Pass | Connected, START, then `curl` for 4 hosts through `mixed-in`: 17 events, DNS and TCP with rules, chains and `cached`. STOP ends it. No new line in `applog.txt`. The 2 TCP events from URL Check appear too |
-| 6 | Pass, two calls not reached with data | Node Diagnostics on an AWG node while Connected: `200 · 123ms`, `warp=on`. Same node's Overview lists its peer with endpoint, handshake and traffic. Turn off shows `off`, Turn on shows `up`. DNS tab shows live state per group member. `/pool` through the Debug API answers `count: 0`, because this config has no round-robin group, so a pool with slots is not checked. `ccGetRules` has no Dart caller today |
+| 6 | Pass, two calls not reached with data | Node Diagnostics on an AWG node while Connected: `200 · 123ms`, `warp=on`. Same node's Overview lists its peer with endpoint, handshake and traffic. Turn off shows `off`, Turn on shows `up`. DNS tab shows live state per group member. `/pool` through the Debug API answers `count: 0`, because this config has no round-robin group, so a pool with slots is not checked. |
 | 7 | Pass | Connected, Quit & reopen, Quit: process gone and port 2080 closed within 2 s. Relaunch shows `Disconnected`, crash log empty, no banner |
 | 8 | Pass | App picker from URL Check shows `0 selected · 0 shown`, no endless progress, no new line in `applog.txt` |
+| 9 | Pass, Share not run | Save to file writes the full backup, 25352 bytes. Pick file, Merge: `0 added, 50 already here`. Replace all: summary with Restart now, process ends, crash log empty. Settings file identical to a snapshot taken before the imports, core starts on relaunch. `lx-backup.json` saved and imported: `Imported 7 rule(s), 2 items not applied, replaced 7 rule(s)` |
+| 10 | Pass, full suite pending | Nothing under `app/android/` beyond the merge. `flutter analyze`: no issues, 120 tests pass in 22 related files. Swift has no comments. Full suite runs on CI, which a push to `ios-app` does not start |
+
+Not checked: a real iPhone, the camera prompt, Send to TV, a round-robin pool with slots, a link with no handler, Stop during a URL Check, the Tunnel apps tab with saved packages, Flutter pin 3.47.1. Text fields: the same flags went to 80 sites, and 2 of them were driven by hand.
+
+### Found during implementation
+
+- **`ccGetRules` is not ported.** Android has it, but no Dart code calls `getRules`, so it cannot be tested here.
+- **Restart now appears only when something is applied.** A merge that adds nothing shows no button. Android has the same Dart path.
+- **Core pin moved.** The merge took `app/android/libbox.version` to `v1.14.4-lx.30`. `scripts/build-libbox-ios.sh` rebuilt the framework, and §711's Start and traffic path still works.
 
 ## Docs to update
 

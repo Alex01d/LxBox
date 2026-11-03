@@ -63,7 +63,8 @@ system "back"; the tab replaces its list with it.
   regardless of filters is future work (owner, audit 591, 2026-10-13), not a
   promise.
 - Depends on OS capabilities: visibility of the full list of installed apps
-  (without it the picker shows an incomplete list).
+  (without it the picker shows an incomplete list). On iOS (§713) the OS gives
+  an app no such list, so the picker opens empty.
 
 ## Revisions
 
@@ -73,3 +74,4 @@ system "back"; the tab replaces its list with it.
 | 2 | [108](../../../tasks/108-app-picker-back-loses-selection.md) | DONE (v2.0.2) | The system "back" lost the selection |
 | 3 | [278](../../../tasks/278-folder-detail-orphan-pop.md) | Release v2.15.10 | Export to clipboard is no longer swallowed during loading |
 | 4 | [412](../../../tasks/412-app-picker-checkbox-only-tap.md) | Done | The selection is toggled only by the checkbox |
+| 5 | [713](../../../tasks/713-ios-flows-from-android.md) | Simulator, no merge | iOS: the picker opens empty |

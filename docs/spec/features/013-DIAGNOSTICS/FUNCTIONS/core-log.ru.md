@@ -19,7 +19,7 @@
 приложения — переключатель пересылки; строки трассировки — отдельный режим
 Verbose.
 
-На iOS (§711) пересылка работает так же. Настройка применяется после того, как приложение закрыли и открыли вручную.
+На iOS (§711, §713) пересылка работает так же, включая Quit & reopen.
 
 ## Параметры
 
@@ -78,3 +78,4 @@ Verbose.
 | 5 | [171](../../../tasks/171-ansi-strip-bare-esc-dns.md) | Реализовано (device-verified) | Голые управляющие байты вырезаются из строк |
 | 6 | [345](../../../tasks/345-core-logs-verbose-toggle.md) | ✅ Device-verified | Verbose: TRACE/DEBUG на лету |
 | 7 | [711](../../../tasks/711-ios-core-in-app-no-vpn.md) | Simulator, без merge | iOS: та же пересылка, повторное открытие вручную |
+| 8 | [713](../../../tasks/713-ios-flows-from-android.md) | Simulator, без merge | iOS: Quit & reopen завершает процесс |

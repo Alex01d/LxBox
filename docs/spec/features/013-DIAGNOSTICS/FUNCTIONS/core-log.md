@@ -17,7 +17,7 @@ inside the app — the Log → Core tab and `/logs/core` — without `adb`. How 
 the core writes is decided by the log level in the config; whether it reaches
 the app — by the forwarding toggle; trace lines — by a separate Verbose mode.
 
-On iOS (§711) forwarding works the same. The setting applies after the app is closed and opened again by hand.
+On iOS (§711, §713) forwarding works the same, Quit & reopen included.
 
 ## Parameters
 
@@ -79,3 +79,4 @@ does not read the core log.
 | 5 | [171](../../../tasks/171-ansi-strip-bare-esc-dns.md) | Implemented (device-verified) | Bare control bytes are stripped from lines |
 | 6 | [345](../../../tasks/345-core-logs-verbose-toggle.md) | ✅ Device-verified | Verbose: TRACE/DEBUG on the fly |
 | 7 | [711](../../../tasks/711-ios-core-in-app-no-vpn.md) | Simulator, no merge | iOS: same forwarding, manual reopen |
+| 8 | [713](../../../tasks/713-ios-flows-from-android.md) | Simulator, no merge | iOS: Quit & reopen ends the process |

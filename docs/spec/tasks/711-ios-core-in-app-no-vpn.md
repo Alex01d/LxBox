@@ -158,7 +158,7 @@ Event channels, now emitting:
 | `lxbox/cc/groups`, `lxbox/cc/outbounds` | Same maps as the unary RPCs |
 | `lxbox/cc/connections` | Full snapshot from the delta accumulator, re-emitted on listen |
 
-Everything else stays `FlutterMethodNotImplemented`. Known result: Dart catches `ccGetDnsGroups`, the Tailscale, Taildrop and connection test families, `getAppInfo` and `getLogcatTail`. `ccGetUrlViaOutbound`, `getInstalledApps`, `getPool` and some Settings buttons surface an error, which is accepted for this task. `probe*` was on this list too, but it hung instead of surfacing an error, and [§712](712-ios-test-servers-and-probe-failure.md) fixes it.
+Everything else stays `FlutterMethodNotImplemented`. Known result: Dart catches `ccGetDnsGroups`, the Tailscale, Taildrop and connection test families, `getAppInfo` and `getLogcatTail`. `ccGetUrlViaOutbound`, `getInstalledApps`, `getPool` and some Settings buttons surface an error, which is accepted for this task. `probe*` was on this list too, but it hung instead of surfacing an error, and [§712](712-ios-test-servers-and-probe-failure.md) fixes it. [§713](713-ios-flows-from-android.md) adds the connection test, profiler, `ccGetUrlViaOutbound`, `ccGetDnsGroups`, `ccGetPool`, WireGuard calls, `getInstalledApps`, `getAppInfo` and `quitApp`.
 
 ### The core binary
 
@@ -288,7 +288,7 @@ The full suite has not run on this merge. A push to `ios-app` runs no CI, so sta
 - Rest of the real iPhone run: traffic through the node, OOM false alarm, command client over the socket, whether `reality verification failed` appears on a path without this Mac's tunnel, and the target device (iPhone 17, iOS 26.5 or newer).
 - Full suite on the merge with `develop`.
 - Conns tab after leaving the app while it is open: it keeps the last list, with one row shown as active, after the core has stopped. Not compared with Android.
-- Node Diagnostics (§392) on iOS: `ccGetUrlViaOutbound` while Connected. `probeGetUrl` is done in [§712](712-ios-test-servers-and-probe-failure.md).
+- Node Diagnostics (§392) on iOS: `ccGetUrlViaOutbound` while Connected. Done in [§713](713-ios-flows-from-android.md). `probeGetUrl` is done in [§712](712-ios-test-servers-and-probe-failure.md).
 - Tunnel: Network Extension, App Group, real memory limit. Needs the paid team, which the project owner provides later.
 - "Test servers" (`probe*`) is done in [§712](712-ios-test-servers-and-probe-failure.md). It must also work once the tunnel exists.
 - A shared error model, per §055 item 6.
@@ -296,7 +296,7 @@ The full suite has not run on this merge. A push to `ios-app` runs no CI, so sta
 - Hide settings with no meaning on iOS.
 - A per-platform convention in feature specs, since `docs/spec/features/README.md` does not define one.
 - Speed test path on iOS: the app's own HTTP client does not use `mixed-in`.
-- The typed VLESS link rejected in §710.
+- The typed VLESS link rejected in §710. Done in [§713](713-ios-flows-from-android.md).
 
 ## Docs to update
 
