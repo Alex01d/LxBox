@@ -16,6 +16,9 @@
   test ends even if the core does not answer, within 10 s. Starting the VPN
   during a test now leaves the nodes it did not reach untested instead of `err`,
   so "Disable unreachable" no longer turns them off.
+- **Keyboard no longer changes links, JSON and other values the app parses
+  ([task 713](docs/spec/tasks/713-ios-flows-from-android.md)).** Autocorrect
+  and smart punctuation are off in those fields.
 
 ## [2.25.19] — 2026-11-02
 

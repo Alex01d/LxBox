@@ -143,6 +143,9 @@ class _SrsSectionState extends State<SrsSection> {
         ),
         TextField(
           controller: widget.urlCtrl,
+          autocorrect: false,
+          smartDashesType: SmartDashesType.disabled,
+          smartQuotesType: SmartQuotesType.disabled,
           // ## 12 — по одному URL на строку.
           maxLines: null,
           keyboardType: TextInputType.multiline,

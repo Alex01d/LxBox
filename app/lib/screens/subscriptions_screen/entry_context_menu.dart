@@ -257,6 +257,8 @@ Future<void> showEditSourceDialog(
             if (!fileMode)
               TextField(
                 controller: urlCtl,
+                smartDashesType: SmartDashesType.disabled,
+                smartQuotesType: SmartQuotesType.disabled,
                 decoration: InputDecoration(
                   labelText: getLocalText.s("Subscription URL"),
                   // l10n-exempt: URL scheme hint, locale-invariant

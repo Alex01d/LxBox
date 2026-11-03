@@ -476,6 +476,9 @@ class _AddServerWizardScreenState extends State<AddServerWizardScreen>
             _label(getLocalText.s("Tag (optional)")),
             TextFormField(
               controller: _tsTag,
+              autocorrect: false,
+              smartDashesType: SmartDashesType.disabled,
+              smartQuotesType: SmartQuotesType.disabled,
               decoration: _input(_kDefaultTailscaleTag).copyWith(
                 suffixIcon: EmojiPickerButton(onPick: _insertTailscaleTagEmoji),
               ),
@@ -492,6 +495,8 @@ class _AddServerWizardScreenState extends State<AddServerWizardScreen>
             _label(getLocalText.s("Auth key")),
             TextFormField(
               controller: _tsAuthKey,
+              smartDashesType: SmartDashesType.disabled,
+              smartQuotesType: SmartQuotesType.disabled,
               obscureText: !_tsShowKey,
               autocorrect: false,
               enableSuggestions: false,
@@ -522,6 +527,8 @@ class _AddServerWizardScreenState extends State<AddServerWizardScreen>
             _label(getLocalText.s("Control URL (optional)")),
             TextFormField(
               controller: _tsControlUrl,
+              smartDashesType: SmartDashesType.disabled,
+              smartQuotesType: SmartQuotesType.disabled,
               decoration: _input('https://controlplane.tailscale.com'),
               keyboardType: TextInputType.url,
               autocorrect: false,
@@ -530,6 +537,8 @@ class _AddServerWizardScreenState extends State<AddServerWizardScreen>
             _label(getLocalText.s("Hostname (optional)")),
             TextFormField(
               controller: _tsHostname,
+              smartDashesType: SmartDashesType.disabled,
+              smartQuotesType: SmartQuotesType.disabled,
               decoration: _input(''),
               autocorrect: false,
             ),
@@ -567,6 +576,8 @@ class _AddServerWizardScreenState extends State<AddServerWizardScreen>
             _label(getLocalText.s("Exit node (optional)")),
             TextFormField(
               controller: _tsExitNode,
+              smartDashesType: SmartDashesType.disabled,
+              smartQuotesType: SmartQuotesType.disabled,
               decoration: _input(''),
               autocorrect: false,
             ),
@@ -615,6 +626,9 @@ class _AddServerWizardScreenState extends State<AddServerWizardScreen>
           _label(getLocalText.s("Tag (optional)")),
           TextFormField(
             controller: _ocTag,
+            autocorrect: false,
+            smartDashesType: SmartDashesType.disabled,
+            smartQuotesType: SmartQuotesType.disabled,
             decoration: _input(
               _kDefaultOcTag,
             ).copyWith(suffixIcon: EmojiPickerButton(onPick: _insertOcTagEmoji)),
@@ -667,6 +681,9 @@ class _AddServerWizardScreenState extends State<AddServerWizardScreen>
             _label(getLocalText.s("Tag (optional)")),
             TextFormField(
               controller: _socksTag,
+              autocorrect: false,
+              smartDashesType: SmartDashesType.disabled,
+              smartQuotesType: SmartQuotesType.disabled,
               decoration: _input(_kDefaultSocksTag).copyWith(
                 suffixIcon: EmojiPickerButton(onPick: _insertSocksTagEmoji),
               ),
@@ -685,6 +702,9 @@ class _AddServerWizardScreenState extends State<AddServerWizardScreen>
             _label(getLocalText.s("Host")),
             TextFormField(
               controller: _socksHost,
+              autocorrect: false,
+              smartDashesType: SmartDashesType.disabled,
+              smartQuotesType: SmartQuotesType.disabled,
               decoration: _input('127.0.0.1'),
               keyboardType: TextInputType.url,
               validator: (v) => (v == null || v.trim().isEmpty)
@@ -708,11 +728,20 @@ class _AddServerWizardScreenState extends State<AddServerWizardScreen>
             ),
             const SizedBox(height: 12),
             _label(getLocalText.s("Username (optional)")),
-            TextFormField(controller: _socksUser, decoration: _input('')),
+            TextFormField(
+              controller: _socksUser,
+              autocorrect: false,
+              smartDashesType: SmartDashesType.disabled,
+              smartQuotesType: SmartQuotesType.disabled,
+              decoration: _input(''),
+            ),
             const SizedBox(height: 12),
             _label(getLocalText.s("Password (optional)")),
             TextFormField(
               controller: _socksPass,
+              autocorrect: false,
+              smartDashesType: SmartDashesType.disabled,
+              smartQuotesType: SmartQuotesType.disabled,
               decoration: _input(''),
               obscureText: true,
             ),
@@ -752,6 +781,9 @@ class _AddServerWizardScreenState extends State<AddServerWizardScreen>
             _label(getLocalText.s("Tag (optional)")),
             TextFormField(
               controller: _httpTag,
+              autocorrect: false,
+              smartDashesType: SmartDashesType.disabled,
+              smartQuotesType: SmartQuotesType.disabled,
               decoration: _input(_kDefaultHttpTag).copyWith(
                 suffixIcon: EmojiPickerButton(onPick: _insertHttpTagEmoji),
               ),
@@ -770,6 +802,9 @@ class _AddServerWizardScreenState extends State<AddServerWizardScreen>
             _label(getLocalText.s("Host")),
             TextFormField(
               controller: _httpHost,
+              autocorrect: false,
+              smartDashesType: SmartDashesType.disabled,
+              smartQuotesType: SmartQuotesType.disabled,
               decoration: _input('127.0.0.1'),
               keyboardType: TextInputType.url,
               validator: (v) => (v == null || v.trim().isEmpty)
@@ -793,11 +828,20 @@ class _AddServerWizardScreenState extends State<AddServerWizardScreen>
             ),
             const SizedBox(height: 12),
             _label(getLocalText.s("Username (optional)")),
-            TextFormField(controller: _httpUser, decoration: _input('')),
+            TextFormField(
+              controller: _httpUser,
+              autocorrect: false,
+              smartDashesType: SmartDashesType.disabled,
+              smartQuotesType: SmartQuotesType.disabled,
+              decoration: _input(''),
+            ),
             const SizedBox(height: 12),
             _label(getLocalText.s("Password (optional)")),
             TextFormField(
               controller: _httpPass,
+              autocorrect: false,
+              smartDashesType: SmartDashesType.disabled,
+              smartQuotesType: SmartQuotesType.disabled,
               decoration: _input(''),
               obscureText: true,
             ),

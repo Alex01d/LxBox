@@ -190,6 +190,9 @@ class _DnsResolveSectionState extends State<DnsResolveSection> {
                 Expanded(
                   child: TextField(
                     controller: c.fixedIpCtrl,
+                    autocorrect: false,
+                    smartDashesType: SmartDashesType.disabled,
+                    smartQuotesType: SmartQuotesType.disabled,
                     focusNode: _fixedFocus,
                     // maxLines > 1 и в однострочном виде: у maxLines == 1
                     // Flutter срезает переводы строк при вставке, а
@@ -395,6 +398,9 @@ class _DnsResolveSectionState extends State<DnsResolveSection> {
         const SizedBox(height: 12),
         TextField(
           controller: c.resolveTimeoutCtrl,
+          autocorrect: false,
+          smartDashesType: SmartDashesType.disabled,
+          smartQuotesType: SmartQuotesType.disabled,
           enabled: on,
           decoration: InputDecoration(
             border: const OutlineInputBorder(),
@@ -407,6 +413,9 @@ class _DnsResolveSectionState extends State<DnsResolveSection> {
         const SizedBox(height: 12),
         TextField(
           controller: c.resolveSubnetCtrl,
+          autocorrect: false,
+          smartDashesType: SmartDashesType.disabled,
+          smartQuotesType: SmartQuotesType.disabled,
           enabled: on,
           decoration: InputDecoration(
             border: const OutlineInputBorder(),

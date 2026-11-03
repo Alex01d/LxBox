@@ -711,6 +711,9 @@ class _RuleEditorScreenState extends State<_RuleEditorScreen> {
           const SizedBox(height: 16),
           TextField(
             controller: _targetPath,
+            autocorrect: false,
+            smartDashesType: SmartDashesType.disabled,
+            smartQuotesType: SmartQuotesType.disabled,
             style: const TextStyle(fontFamily: 'monospace'),
             decoration: InputDecoration(
               labelText: getLocalText.s("Target path"),
@@ -743,6 +746,9 @@ class _RuleEditorScreenState extends State<_RuleEditorScreen> {
             const SizedBox(height: 12),
             TextField(
               controller: _substitute,
+              autocorrect: false,
+              smartDashesType: SmartDashesType.disabled,
+              smartQuotesType: SmartQuotesType.disabled,
               style: const TextStyle(fontFamily: 'monospace'),
               decoration: InputDecoration(
                 labelText: getLocalText.s("Find inside the value"),
@@ -756,6 +762,9 @@ class _RuleEditorScreenState extends State<_RuleEditorScreen> {
           const SizedBox(height: 12),
           TextField(
             controller: _replacement,
+            autocorrect: false,
+            smartDashesType: SmartDashesType.disabled,
+            smartQuotesType: SmartQuotesType.disabled,
             style: const TextStyle(fontFamily: 'monospace'),
             decoration: InputDecoration(
               labelText: getLocalText.s("New value"),
@@ -803,6 +812,9 @@ class _RuleEditorScreenState extends State<_RuleEditorScreen> {
                 Expanded(
                   child: TextField(
                     controller: c.path,
+                    autocorrect: false,
+                    smartDashesType: SmartDashesType.disabled,
+                    smartQuotesType: SmartQuotesType.disabled,
                     style: const TextStyle(fontFamily: 'monospace'),
                     decoration: InputDecoration(
                       labelText: getLocalText.s("Path"),
@@ -860,6 +872,9 @@ class _RuleEditorScreenState extends State<_RuleEditorScreen> {
                   flex: 6,
                   child: TextField(
                     controller: c.pattern,
+                    autocorrect: false,
+                    smartDashesType: SmartDashesType.disabled,
+                    smartQuotesType: SmartQuotesType.disabled,
                     style: const TextStyle(fontFamily: 'monospace'),
                     decoration: InputDecoration(
                       labelText: getLocalText.s("Value"),

@@ -43,6 +43,9 @@ class DnsServerParamsTab extends StatelessWidget {
         if (c.kind == ServerKind.inline) ...[
           TextField(
             controller: c.tagCtrl,
+            autocorrect: false,
+            smartDashesType: SmartDashesType.disabled,
+            smartQuotesType: SmartQuotesType.disabled,
             decoration: InputDecoration(
               labelText: getLocalText.s("Tag"),
               border: const OutlineInputBorder(),
@@ -62,6 +65,9 @@ class DnsServerParamsTab extends StatelessWidget {
         if (c.kind != ServerKind.inline && !c.isNew) ...[
           TextField(
             controller: c.tagCtrl,
+            autocorrect: false,
+            smartDashesType: SmartDashesType.disabled,
+            smartQuotesType: SmartQuotesType.disabled,
             decoration: InputDecoration(
               labelText: getLocalText.s("Tag"),
               border: const OutlineInputBorder(),

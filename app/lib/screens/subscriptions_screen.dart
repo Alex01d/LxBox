@@ -1017,6 +1017,9 @@ class _SubscriptionsScreenState extends State<SubscriptionsScreen> {
           Expanded(
             child: TextField(
               controller: _inputController,
+              autocorrect: false,
+              smartDashesType: SmartDashesType.disabled,
+              smartQuotesType: SmartQuotesType.disabled,
               onChanged: (_) => _onInputForHighlightDismiss(),
               decoration: InputDecoration(
                 hintText: getLocalText.s("Subscription URL or proxy link"),

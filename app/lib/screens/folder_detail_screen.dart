@@ -413,6 +413,8 @@ class _FolderDetailScreenState extends State<FolderDetailScreen>
           children: [
             TextField(
               controller: urlCtl,
+              smartDashesType: SmartDashesType.disabled,
+              smartQuotesType: SmartQuotesType.disabled,
               keyboardType: TextInputType.url,
               autocorrect: false,
               decoration: InputDecoration(
@@ -844,6 +846,8 @@ class _FolderDetailScreenState extends State<FolderDetailScreen>
           children: [
             TextField(
               controller: ctl,
+              smartDashesType: SmartDashesType.disabled,
+              smartQuotesType: SmartQuotesType.disabled,
               autofocus: true,
               decoration: InputDecoration(
                 labelText: getLocalText.s("URL"),

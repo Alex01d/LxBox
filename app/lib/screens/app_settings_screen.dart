@@ -551,6 +551,9 @@ class _AppSettingsScreenState extends State<AppSettingsScreen> with WidgetsBindi
         title: Text(title),
         content: TextField(
           controller: ctl,
+          autocorrect: false,
+          smartDashesType: SmartDashesType.disabled,
+          smartQuotesType: SmartQuotesType.disabled,
           autofocus: true,
           maxLines: null,
           style: monospace
@@ -799,6 +802,9 @@ class _AppSettingsScreenState extends State<AppSettingsScreen> with WidgetsBindi
           title: Text(getLocalText.s("Country code (2 letters)")),
           content: TextField(
             controller: ctl,
+            autocorrect: false,
+            smartDashesType: SmartDashesType.disabled,
+            smartQuotesType: SmartQuotesType.disabled,
             autofocus: true,
             maxLength: 2,
             textCapitalization: TextCapitalization.characters,

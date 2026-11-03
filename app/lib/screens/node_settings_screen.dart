@@ -842,6 +842,9 @@ class _NodeSettingsScreenState extends State<NodeSettingsScreen>
           padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
           child: TextField(
             controller: _tagCtrl,
+            autocorrect: false,
+            smartDashesType: SmartDashesType.disabled,
+            smartQuotesType: SmartQuotesType.disabled,
             onChanged: (_) => setState(() {}),
             decoration: InputDecoration(
               border: const OutlineInputBorder(),

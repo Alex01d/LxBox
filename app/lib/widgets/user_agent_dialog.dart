@@ -52,6 +52,9 @@ class _UserAgentDialogState extends State<_UserAgentDialog> {
       content: TextField(
         key: const ValueKey('user_agent_field'),
         controller: _ctl,
+        autocorrect: false,
+        smartDashesType: SmartDashesType.disabled,
+        smartQuotesType: SmartQuotesType.disabled,
         autofocus: true,
         maxLines: null,
         decoration: InputDecoration(

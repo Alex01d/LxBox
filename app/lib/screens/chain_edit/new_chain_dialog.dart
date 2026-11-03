@@ -91,6 +91,9 @@ class _NewChainDialogState extends State<_NewChainDialog> {
           const SizedBox(height: 12),
           TextField(
             controller: _tagCtrl,
+            autocorrect: false,
+            smartDashesType: SmartDashesType.disabled,
+            smartQuotesType: SmartQuotesType.disabled,
             autofocus: true,
             decoration: InputDecoration(
               labelText: getLocalText.s("Tag"),

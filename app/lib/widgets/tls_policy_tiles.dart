@@ -293,6 +293,9 @@ class _DelayDialogState extends State<_DelayDialog> {
         content: TextField(
           key: const ValueKey('tls-fallback_delay-field'),
           controller: _ctrl,
+          autocorrect: false,
+          smartDashesType: SmartDashesType.disabled,
+          smartQuotesType: SmartQuotesType.disabled,
           autofocus: true,
           decoration: InputDecoration(
             border: const OutlineInputBorder(),

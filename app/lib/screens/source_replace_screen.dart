@@ -312,7 +312,13 @@ class _SourceReplaceScreenState extends State<SourceReplaceScreen> {
     final idle = _orDefault(_idleCtrl, '30m');
     return [
       const SizedBox(height: 16),
-      TextField(controller: _urlCtrl, decoration: deco(getLocalText.s("Test URL"))),
+      TextField(
+        controller: _urlCtrl,
+        autocorrect: false,
+        smartDashesType: SmartDashesType.disabled,
+        smartQuotesType: SmartQuotesType.disabled,
+        decoration: deco(getLocalText.s("Test URL")),
+      ),
       const SizedBox(height: 8),
       Row(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -320,6 +326,9 @@ class _SourceReplaceScreenState extends State<SourceReplaceScreen> {
           Expanded(
             child: TextField(
               controller: _intervalCtrl,
+              autocorrect: false,
+              smartDashesType: SmartDashesType.disabled,
+              smartQuotesType: SmartQuotesType.disabled,
               // l10n-exempt: duration literal, locale-independent
               decoration: deco(getLocalText.s("Interval"),
                   hint: '15m',
@@ -344,6 +353,9 @@ class _SourceReplaceScreenState extends State<SourceReplaceScreen> {
       const SizedBox(height: 8),
       TextField(
         controller: _idleCtrl,
+        autocorrect: false,
+        smartDashesType: SmartDashesType.disabled,
+        smartQuotesType: SmartQuotesType.disabled,
         // l10n-exempt: duration literal, locale-independent
         decoration: deco(getLocalText.s("Idle timeout"), hint: '30m'),
       ),

@@ -94,6 +94,9 @@ class RegexFilterField extends StatelessWidget {
         Expanded(
           child: TextField(
             controller: controller,
+            autocorrect: false,
+            smartDashesType: SmartDashesType.disabled,
+            smartQuotesType: SmartQuotesType.disabled,
             onChanged: onChanged,
             decoration: InputDecoration(
               isDense: true,

@@ -127,6 +127,9 @@ class _WarpExperimentScreenState extends State<WarpExperimentScreen> {
                       const SizedBox(height: 8),
                       TextField(
                         controller: _jsonCtl,
+                        autocorrect: false,
+                        smartDashesType: SmartDashesType.disabled,
+                        smartQuotesType: SmartQuotesType.disabled,
                         maxLines: null,
                         minLines: 18,
                         keyboardType: TextInputType.multiline,

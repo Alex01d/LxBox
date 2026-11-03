@@ -123,7 +123,11 @@ Debug build, iPhone 17 Simulator with iOS 26.5, core `v1.14.4-lx.30`, each chang
 
 ### Results
 
-Filled in as each change lands.
+Debug build on iPhone 17 Simulator with iOS 26.5, Flutter 3.47.9, core `v1.14.4-lx.30`.
+
+| # | Result | Evidence |
+|---|---|---|
+| 1 | Pass | Servers field keeps `vless://a--b"c@192.0.2.1:443#teh`. Code field keeps `"teh--x"`. `flutter analyze`: no issues. 120 tests pass in 22 related files |
 
 ## Docs to update
 

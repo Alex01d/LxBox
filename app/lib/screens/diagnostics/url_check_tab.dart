@@ -182,6 +182,8 @@ class _UrlCheckTabState extends State<UrlCheckTab>
       children: [
         TextField(
           controller: _urlCtrl,
+          smartDashesType: SmartDashesType.disabled,
+          smartQuotesType: SmartQuotesType.disabled,
           keyboardType: TextInputType.url,
           autocorrect: false,
           textInputAction: TextInputAction.go,

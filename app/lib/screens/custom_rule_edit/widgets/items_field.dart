@@ -190,6 +190,9 @@ class _ItemsFieldState extends State<ItemsField> {
           const SizedBox(height: 4),
           TextField(
             controller: widget.controller,
+            autocorrect: false,
+            smartDashesType: SmartDashesType.disabled,
+            smartQuotesType: SmartQuotesType.disabled,
             minLines: widget.minLines,
             maxLines: widget.maxLines,
             style: const TextStyle(fontSize: 13, fontFamily: 'monospace'),

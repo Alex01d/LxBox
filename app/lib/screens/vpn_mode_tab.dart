@@ -486,6 +486,9 @@ class _VpnModeTabState extends State<VpnModeTab>
             // ─── USER (proxy_user → text field) ───
             TextField(
               controller: _userCtl,
+              autocorrect: false,
+              smartDashesType: SmartDashesType.disabled,
+              smartQuotesType: SmartQuotesType.disabled,
               decoration: InputDecoration(
                 labelText: _userNode.title,
                 isDense: true,
@@ -497,6 +500,9 @@ class _VpnModeTabState extends State<VpnModeTab>
             // ─── PASS (proxy_pass → masked + show/hide + regenerate) ───
             TextField(
               controller: _passCtl,
+              autocorrect: false,
+              smartDashesType: SmartDashesType.disabled,
+              smartQuotesType: SmartQuotesType.disabled,
               obscureText: !_showPassword,
               decoration: InputDecoration(
                 labelText: _passNode.title,

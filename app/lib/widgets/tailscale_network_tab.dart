@@ -1603,6 +1603,8 @@ class _ReplaceKeyDialogState extends State<_ReplaceKeyDialog> {
           TextField(
             key: const ValueKey('tailscale-replace-key-field'),
             controller: _ctrl,
+            smartDashesType: SmartDashesType.disabled,
+            smartQuotesType: SmartQuotesType.disabled,
             autofocus: true,
             obscureText: !_show,
             autocorrect: false,

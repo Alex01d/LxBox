@@ -29,6 +29,9 @@ Future<WifiEntry?> showWifiManualAddDialog(BuildContext context) async {
           children: [
             TextField(
               controller: ssidCtrl,
+              autocorrect: false,
+              smartDashesType: SmartDashesType.disabled,
+              smartQuotesType: SmartQuotesType.disabled,
               autofocus: true,
               decoration: InputDecoration(
                 labelText: getLocalText.s("SSID"),
@@ -42,6 +45,9 @@ Future<WifiEntry?> showWifiManualAddDialog(BuildContext context) async {
             const SizedBox(height: 12),
             TextField(
               controller: bssidCtrl,
+              autocorrect: false,
+              smartDashesType: SmartDashesType.disabled,
+              smartQuotesType: SmartQuotesType.disabled,
               decoration: InputDecoration(
                 labelText: getLocalText.s("BSSID (optional)"),
                 // l10n-exempt: пример MAC-адреса, не переводится

@@ -1091,6 +1091,9 @@ class LxCodeEditorState extends State<LxCodeEditor>
     // Высоту задаёт обёртка (родитель, фиксированная или по строкам).
     return TextField(
       controller: _formattedView != null ? _stubView : w.controller,
+      autocorrect: false,
+      smartDashesType: SmartDashesType.disabled,
+      smartQuotesType: SmartQuotesType.disabled,
       readOnly: w.readOnly,
       autofocus: w.autofocus,
       expands: true,
@@ -1348,6 +1351,9 @@ class _LxFindPanel extends StatelessWidget {
           Expanded(
             child: TextField(
               controller: controller,
+              autocorrect: false,
+              smartDashesType: SmartDashesType.disabled,
+              smartQuotesType: SmartQuotesType.disabled,
               focusNode: focusNode,
               style: const TextStyle(fontSize: 13),
               textInputAction: TextInputAction.search,

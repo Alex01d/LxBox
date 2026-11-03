@@ -393,6 +393,9 @@ class _ChainEditScreenState extends State<ChainEditScreen> with SnackHelper {
           children: [
             TextField(
               controller: _tagCtrl,
+              autocorrect: false,
+              smartDashesType: SmartDashesType.disabled,
+              smartQuotesType: SmartQuotesType.disabled,
               decoration: InputDecoration(
                 border: const OutlineInputBorder(),
                 labelText: getLocalText.s("Tag"),
@@ -589,6 +592,9 @@ class _ChainEditScreenState extends State<ChainEditScreen> with SnackHelper {
         children: [
           TextField(
             controller: _idleCtrl,
+            autocorrect: false,
+            smartDashesType: SmartDashesType.disabled,
+            smartQuotesType: SmartQuotesType.disabled,
             decoration: InputDecoration(
               labelText: getLocalText.s("Idle timeout"),
               hintText: getLocalText.s("empty = core default (5m); 0s = keep until stop"),

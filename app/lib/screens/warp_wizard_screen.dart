@@ -806,6 +806,9 @@ class _WarpWizardScreenState extends State<WarpWizardScreen> with SnackHelper {
                         _label('WARP+ license key'),
                         TextField(
                           controller: _license,
+                          autocorrect: false,
+                          smartDashesType: SmartDashesType.disabled,
+                          smartQuotesType: SmartQuotesType.disabled,
                           enabled: !_busy,
                           decoration: _input('Leave empty for free WARP'),
                         ),

@@ -702,6 +702,9 @@ class _VarTextFieldState extends State<VarTextField> {
   Widget build(BuildContext context) {
     final field = TextField(
       controller: _ctrl,
+      autocorrect: false,
+      smartDashesType: SmartDashesType.disabled,
+      smartQuotesType: SmartQuotesType.disabled,
       obscureText: _obscured,
       maxLines: widget.obscure ? 1 : widget.maxLines,
       minLines: 1,

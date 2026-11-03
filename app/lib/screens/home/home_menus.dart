@@ -183,6 +183,9 @@ Future<void> showPingSettings(
               ],
               TextField(
                 controller: urlCtrl,
+                autocorrect: false,
+                smartDashesType: SmartDashesType.disabled,
+                smartQuotesType: SmartQuotesType.disabled,
                 decoration: InputDecoration(
                   labelText: getLocalText.s("Test URL"),
                   border: const OutlineInputBorder(),

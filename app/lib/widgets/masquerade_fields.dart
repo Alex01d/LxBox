@@ -91,6 +91,8 @@ class MasqueradeDomainField extends StatelessWidget {
     final hasPool = pool.isNotEmpty;
     return TextField(
       controller: controller,
+      smartDashesType: SmartDashesType.disabled,
+      smartQuotesType: SmartQuotesType.disabled,
       enabled: enabled,
       keyboardType: TextInputType.url,
       autocorrect: false,

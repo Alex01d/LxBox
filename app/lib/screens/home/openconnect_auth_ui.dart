@@ -414,6 +414,8 @@ class _OpenConnectChallengeDialogState
       padding: const EdgeInsets.only(bottom: 8),
       child: TextField(
         controller: _text[f.key],
+        smartDashesType: SmartDashesType.disabled,
+        smartQuotesType: SmartQuotesType.disabled,
         enabled: !_busy,
         obscureText: password && !shown,
         autocorrect: false,

@@ -1014,6 +1014,9 @@ class _SubscriptionDetailScreenState extends State<SubscriptionDetailScreen>
         title: Text(title),
         content: TextField(
           controller: ctl,
+          autocorrect: false,
+          smartDashesType: SmartDashesType.disabled,
+          smartQuotesType: SmartQuotesType.disabled,
           autofocus: true,
           maxLines: null,
           style: monospace

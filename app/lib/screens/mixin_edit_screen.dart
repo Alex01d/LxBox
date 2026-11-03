@@ -351,6 +351,8 @@ class _MixinEditScreenState extends State<MixinEditScreen> {
             TextField(
               key: const ValueKey('mixin-target'),
               controller: _target,
+              smartDashesType: SmartDashesType.disabled,
+              smartQuotesType: SmartQuotesType.disabled,
               focusNode: _targetFocus,
               onChanged: (_) => _markEdited(),
               autocorrect: false,
@@ -432,6 +434,8 @@ class _MixinEditScreenState extends State<MixinEditScreen> {
                 const SizedBox(height: 12),
                 TextField(
                   controller: _keys,
+                  smartDashesType: SmartDashesType.disabled,
+                  smartQuotesType: SmartQuotesType.disabled,
                   onChanged: (_) => _markEdited(),
                   autocorrect: false,
                   style: const TextStyle(fontSize: 13, fontFamily: 'monospace'),

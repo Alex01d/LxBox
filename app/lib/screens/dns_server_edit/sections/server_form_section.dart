@@ -177,6 +177,9 @@ class ServerFormSection extends StatelessWidget {
                 flex: 3,
                 child: TextField(
                   controller: c.addressCtrl,
+                  autocorrect: false,
+                  smartDashesType: SmartDashesType.disabled,
+                  smartQuotesType: SmartQuotesType.disabled,
                   keyboardType: TextInputType.url,
                   decoration: InputDecoration(
                     labelText: getLocalText.s("Server address"),
@@ -213,6 +216,9 @@ class ServerFormSection extends StatelessWidget {
             const SizedBox(height: 12),
             TextField(
               controller: c.pathCtrl,
+              autocorrect: false,
+              smartDashesType: SmartDashesType.disabled,
+              smartQuotesType: SmartQuotesType.disabled,
               decoration: InputDecoration(
                 labelText: getLocalText.s("Path"),
                 // l10n-exempt: URL path example
@@ -227,6 +233,9 @@ class ServerFormSection extends StatelessWidget {
             const SizedBox(height: 12),
             TextField(
               controller: c.sniCtrl,
+              autocorrect: false,
+              smartDashesType: SmartDashesType.disabled,
+              smartQuotesType: SmartQuotesType.disabled,
               decoration: InputDecoration(
                 labelText: getLocalText.s("TLS server name (SNI) — optional"),
                 hintText: getLocalText.s(
@@ -361,6 +370,9 @@ class _GroupSection extends StatelessWidget {
             Expanded(
               child: TextField(
                 controller: c.errorTtlCtrl,
+                autocorrect: false,
+                smartDashesType: SmartDashesType.disabled,
+                smartQuotesType: SmartQuotesType.disabled,
                 decoration: InputDecoration(
                   labelText: getLocalText.s("Error TTL"),
                   // l10n-exempt: duration example
@@ -379,6 +391,9 @@ class _GroupSection extends StatelessWidget {
               Expanded(
                 child: TextField(
                   controller: c.winTtlCtrl,
+                  autocorrect: false,
+                  smartDashesType: SmartDashesType.disabled,
+                  smartQuotesType: SmartQuotesType.disabled,
                   decoration: InputDecoration(
                     labelText: getLocalText.s("Win TTL"),
                     // l10n-exempt: duration example
@@ -620,6 +635,9 @@ class _HostsEntryDialogState extends State<_HostsEntryDialog> {
           children: [
             TextField(
               controller: _name,
+              autocorrect: false,
+              smartDashesType: SmartDashesType.disabled,
+              smartQuotesType: SmartQuotesType.disabled,
               autofocus: widget.entry == null,
               keyboardType: TextInputType.url,
               style: const TextStyle(fontSize: 13, fontFamily: 'monospace'),
@@ -638,6 +656,9 @@ class _HostsEntryDialogState extends State<_HostsEntryDialog> {
             const SizedBox(height: 12),
             TextField(
               controller: _addresses,
+              autocorrect: false,
+              smartDashesType: SmartDashesType.disabled,
+              smartQuotesType: SmartQuotesType.disabled,
               minLines: 2,
               maxLines: 6,
               keyboardType: TextInputType.multiline,

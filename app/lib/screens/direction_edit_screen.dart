@@ -598,6 +598,9 @@ class _DirectionEditScreenState extends State<DirectionEditScreen> {
                 Expanded(
                   child: TextField(
                     controller: _nodeFilterCtrl,
+                    autocorrect: false,
+                    smartDashesType: SmartDashesType.disabled,
+                    smartQuotesType: SmartQuotesType.disabled,
                     decoration: InputDecoration(
                       hintText: getLocalText.s("e.g. 🇩🇪|🇳🇱 — empty = all nodes"),
                       border: const OutlineInputBorder(),
@@ -643,6 +646,9 @@ class _DirectionEditScreenState extends State<DirectionEditScreen> {
             const SizedBox(height: 4),
             TextField(
               controller: _defaultFilterCtrl,
+              autocorrect: false,
+              smartDashesType: SmartDashesType.disabled,
+              smartQuotesType: SmartQuotesType.disabled,
               decoration: InputDecoration(
                 hintText: getLocalText.s("first matching node becomes default"),
                 border: const OutlineInputBorder(),
@@ -679,6 +685,9 @@ class _DirectionEditScreenState extends State<DirectionEditScreen> {
               const SizedBox(height: 8),
               TextField(
                 controller: _autoUrlCtrl,
+                autocorrect: false,
+                smartDashesType: SmartDashesType.disabled,
+                smartQuotesType: SmartQuotesType.disabled,
                 decoration: InputDecoration(
                   labelText: getLocalText.s("Test URL"),
                   border: const OutlineInputBorder(),
@@ -696,6 +705,9 @@ class _DirectionEditScreenState extends State<DirectionEditScreen> {
                   Expanded(
                     child: TextField(
                       controller: _autoIntervalCtrl,
+                      autocorrect: false,
+                      smartDashesType: SmartDashesType.disabled,
+                      smartQuotesType: SmartQuotesType.disabled,
                       decoration: InputDecoration(
                         labelText: getLocalText.s("Interval"),
                         // l10n-exempt: duration literal, locale-independent
@@ -738,6 +750,9 @@ class _DirectionEditScreenState extends State<DirectionEditScreen> {
               const SizedBox(height: 8),
               TextField(
                 controller: _autoIdleCtrl,
+                autocorrect: false,
+                smartDashesType: SmartDashesType.disabled,
+                smartQuotesType: SmartQuotesType.disabled,
                 decoration: InputDecoration(
                   labelText: getLocalText.s("Idle timeout"),
                   // l10n-exempt: duration literal, locale-independent

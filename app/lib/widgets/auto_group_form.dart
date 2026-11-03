@@ -373,6 +373,9 @@ class AutoGroupFormState extends State<AutoGroupForm> {
         if (_mode == _MembershipMode.rule) ...[
           TextField(
             controller: _includeCtrl,
+            autocorrect: false,
+            smartDashesType: SmartDashesType.disabled,
+            smartQuotesType: SmartQuotesType.disabled,
             decoration: InputDecoration(
               labelText: getLocalText.s("Include (regex)"),
               hintText: getLocalText.s("empty = all servers"),
@@ -386,6 +389,9 @@ class AutoGroupFormState extends State<AutoGroupForm> {
           const SizedBox(height: 8),
           TextField(
             controller: _excludeCtrl,
+            autocorrect: false,
+            smartDashesType: SmartDashesType.disabled,
+            smartQuotesType: SmartQuotesType.disabled,
             decoration: InputDecoration(
               labelText: getLocalText.s("Exclude (regex)"),
               hintText: getLocalText.s("applied after include"),
@@ -742,6 +748,9 @@ class AutoGroupFormState extends State<AutoGroupForm> {
         const SizedBox(height: 10),
         TextField(
           controller: _badgeCtrl,
+          autocorrect: false,
+          smartDashesType: SmartDashesType.disabled,
+          smartQuotesType: SmartQuotesType.disabled,
           decoration: InputDecoration(
             labelText: getLocalText.s("Badge in list (regex)"),
             border: const OutlineInputBorder(),
@@ -777,6 +786,9 @@ class AutoGroupFormState extends State<AutoGroupForm> {
         const SizedBox(height: 8),
         TextField(
           controller: _urlCtrl,
+          autocorrect: false,
+          smartDashesType: SmartDashesType.disabled,
+          smartQuotesType: SmartQuotesType.disabled,
           decoration: InputDecoration(
             labelText: getLocalText.s("Test URL"),
             border: const OutlineInputBorder(),
@@ -790,6 +802,9 @@ class AutoGroupFormState extends State<AutoGroupForm> {
             Expanded(
               child: TextField(
                 controller: _intervalCtrl,
+                autocorrect: false,
+                smartDashesType: SmartDashesType.disabled,
+                smartQuotesType: SmartQuotesType.disabled,
                 decoration: InputDecoration(
                   labelText: getLocalText.s("Interval"),
                   border: const OutlineInputBorder(),
@@ -804,6 +819,9 @@ class AutoGroupFormState extends State<AutoGroupForm> {
             Expanded(
               child: TextField(
                 controller: _idleCtrl,
+                autocorrect: false,
+                smartDashesType: SmartDashesType.disabled,
+                smartQuotesType: SmartQuotesType.disabled,
                 decoration: InputDecoration(
                   labelText: getLocalText.s("Idle timeout"),
                   border: const OutlineInputBorder(),

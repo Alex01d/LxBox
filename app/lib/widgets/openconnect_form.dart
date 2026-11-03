@@ -396,6 +396,8 @@ class _OpenConnectFormState extends State<OpenConnectForm> {
       final obscure = f.secret && !_showPassword;
       input = TextFormField(
         controller: _ctrl(f.path),
+        smartDashesType: SmartDashesType.disabled,
+        smartQuotesType: SmartQuotesType.disabled,
         obscureText: obscure,
         autocorrect: false,
         enableSuggestions: !f.secret,
@@ -466,6 +468,8 @@ class _OpenConnectFormState extends State<OpenConnectForm> {
           padding: const EdgeInsets.only(left: 16, bottom: 8),
           child: TextFormField(
             controller: _ctrl(p),
+            smartDashesType: SmartDashesType.disabled,
+            smartQuotesType: SmartQuotesType.disabled,
             autocorrect: false,
             enableSuggestions: false,
             decoration: _input('sha256:…'),
