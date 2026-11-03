@@ -18,6 +18,10 @@ is connected to one of the listed Wi-Fi networks (by SSID name and,
 optionally, by access point BSSID). For example, "at home — direct, on other
 networks — via VPN".
 
+On iOS (§716) the list of networks is hidden, because the app and the core
+cannot read the network name there. Choosing the network type still works, and
+networks that came with a rule from a backup stay stored.
+
 ## Parameters
 
 | Field | Format | Core key |
@@ -66,3 +70,4 @@ Wi-Fi.
 | 2 | [030F/new_fields](../../../tasks/030F-custom-routing-rules/new_fields.md) | — | With core 1.14 the Wi-Fi condition of an inline rule is in the headless rule_set |
 | 3 | [567](../../../tasks/567-wifi-ssid-read-preflight-and-diagnostics.md) | Done | Checking precise location and whether it is enabled, an honest failure reason |
 | 4 | [569](../../../tasks/569-wifi-ssid-transport-info-api31.md) | Done | Reading SSID on newer OSes via network transport info |
+| 5 | [716](../../../tasks/716-ios-routing-section-check.md) | Simulator, no merge | iOS: the list of networks is hidden |

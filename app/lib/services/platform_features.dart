@@ -16,6 +16,8 @@ class PlatformFeatures {
 
   static bool get hasPerAppRouting => !isIos;
 
+  static bool get canReadWifiName => !isIos;
+
   static bool isPresetDisabled(String presetId) =>
       isIos && presetId == _unknownTrafficPreset;
 }

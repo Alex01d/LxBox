@@ -39,6 +39,7 @@ void main() {
       PlatformFeatures.isIosForTesting = false;
       expect(PlatformFeatures.hasAndroidSystemSettings, isTrue);
       expect(PlatformFeatures.hasPerAppRouting, isTrue);
+      expect(PlatformFeatures.canReadWifiName, isTrue);
       expect(PlatformFeatures.isPresetDisabled('unknown-traffic'), isFalse);
     });
 
@@ -46,6 +47,7 @@ void main() {
       PlatformFeatures.isIosForTesting = true;
       expect(PlatformFeatures.hasAndroidSystemSettings, isFalse);
       expect(PlatformFeatures.hasPerAppRouting, isFalse);
+      expect(PlatformFeatures.canReadWifiName, isFalse);
       expect(PlatformFeatures.isPresetDisabled('unknown-traffic'), isTrue);
       expect(PlatformFeatures.isPresetDisabled('bittorrent'), isFalse);
       expect(PlatformFeatures.isPresetDisabled(''), isFalse);

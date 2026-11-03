@@ -53,26 +53,11 @@ Home is the first route, so the widget leaves it alone and the swipe opens the s
 
 Android: the widget is not in the tree.
 
-## Known bugs, recorded by D2
+## Found, not fixed
 
-**Order after Move out and Keep servers.** Spec [server-folders](../features/007-NODE_LIST/FUNCTIONS/server-folders.md): a member moved out becomes a server right after the folder. `ungroupMemberAt` and `deleteFolderAt` insert at the right place in `_entries`, but `_persist` goes through `saveServerLists`, and `_replaceKind` puts entries with new keys at the end of `sources[]`. The next save writes the right order, since old keys keep their slots.
+Moved to [`docs/IOS_FINDINGS.md`](../../IOS_FINDINGS.md) by §716 D4: F6, F7 (D2), F8, F19 and F20 (D3), F22, F24, F25, S1, S2.
 
-Reproduced: folder `Order`, then `zz-after`. Move out `zz-folder-paste`, read the file: `Order, zz-after, zz-folder-paste`. Kill and relaunch: the list stays in that order. After Keep servers the list showed the servers at the end, and they moved to the folder's place after the next add.
-
-The code is shared, so Android should do the same. Not run there.
-
-## Deferred, by D3
-
-- **Long error in a subscription row.** `Server returned a web page…` gives `BOTTOM OVERFLOWED BY 17 PIXELS` and cuts the `(1 fails)` line. The row is a `ListTile` in `IntrinsicHeight`, and `ListTile.computeMinIntrinsicHeight` measures the subtitle at the full width, wider than the real one. Shared code.
-- **Mode buttons in the Auto form.** `Fastes/t`, `Manua/l`, `Load balan/ce`, and `Hold until failure` is clipped. Four segments with icons in about 92 points each. `direction_edit_screen.dart` and `source_replace_screen.dart` have the same labels and were not looked at. Android uses another font, not compared.
-
-## Found, no decision yet
-
-- **`oom-killer` resets the network.** Core log 30 s after Start on the debug Simulator build: `memory threshold reached, usage: 321 MB, available: 0 B, resetting network`. The killer counts the app's own memory, because the core runs in the app (§711). Debug inflates that number and Flutter has no release mode on Simulators, so this needs the phone. Not a Servers matter, it belongs to VPN Settings.
-- **Share .conf leaves the file in temp.** `_shareIni` writes `<tag>.conf` with the private key to the temporary folder and never removes it. Android does the same by code.
-- **Empty subscription.** `1 dropped` opens a sheet saying "The core rejected this server. Its technical message: empty body", though no server was involved. Shared code.
-- **`1 servers`.** Folder and picker counts have no singular. Shared code.
-- **Specs behind the code.** [add-server-wizard](../features/008-NODE_EDITOR/FUNCTIONS/add-server-wizard.md) says five tabs, the code has six with OpenConnect (§654). [add-source](../features/001-SUBSCRIPTIONS/FUNCTIONS/add-source.md) lists "Get Public Test Servers", but `CommunityServersLoader.enabled` is `false` on all platforms. Left for Pavel, not edited here.
+The steps that reproduce F7: folder `Order`, then `zz-after`. Move out `zz-folder-paste`, read the file: `Order, zz-after, zz-folder-paste`. Kill and relaunch: the list stays in that order. After Keep servers the list showed the servers at the end, and they moved to the folder's place after the next add. `ungroupMemberAt` and `deleteFolderAt` insert at the right place in `_entries`, but `_persist` goes through `saveServerLists`.
 
 ## Verification
 
@@ -95,7 +80,7 @@ Debug build on iPhone 17 Simulator with iOS 26.5, Flutter 3.47.9, core `v1.14.4-
 | Node editor | Tag, palette, detour, invalid Source, Unsaved changes, INI Copy and Share, Edit INI, JSON Copy and Edit, Masquerade, incoming switch, Diagnostics with core stopped | Pass. Share .conf name comes from the tag, emoji dropped |
 | Folder | Rename, Add by URL snapshot, Paste, Import from files, auto node with rule and invalid regex, Move in and out, filters, Test, Disable unreachable, member Delete, prefix, detour with policy, Keep servers, Delete with servers | Pass, except order (D2) |
 | Saved config | Return to Home rebuilds: `Config rebuilt: 38 nodes`, edited address present, disabled node absent. Relaunch keeps everything | Pass |
-| Core | Start with that config: `Connected`, 40 nodes with real pings, masquerade keys in the WireGuard endpoint, Stop | Pass, see `oom-killer` |
+| Core | Start with that config: `Connected`, 40 nodes with real pings, masquerade keys in the WireGuard endpoint, Stop | Pass, see F25 |
 | Back swipe | Edge swipe on node screen does nothing. Same swipe on App Settings pops, so the tool is fine | Fail, fixed below (D1) |
 
 Not checked: Android; a valid add through Paste URI in the wizard, Tailscale and OpenConnect; Disable slower and Sort by ping with reachable nodes; TLS and Replace with a group on a folder; Scan QR on Simulator, see §714 for the phone.

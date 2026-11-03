@@ -18,6 +18,7 @@ A hidden setting keeps its stored value, so a backup taken on iOS still restores
 | Installed from, Where to get L×Box | Shows the install channel and links | Hidden | Android channels only |
 | Battery, Notifications, Location, Nearby Wi-Fi, App info rows | Show real permission state, open system settings | Hidden | Android system services. On iOS they would always read as granted |
 | Auto-record visited Wi-Fi networks | Remembers networks for Wi-Fi rules | Hidden | Needs native Wi-Fi reading that iOS does not have here |
+| Wi-Fi network list in the rule editor | A rule matches named networks. Add current, Pick saved, Manual | Hidden. Network type and Metered stay (§716 D2) | iOS gives neither the app nor the core the network name without a paid Apple team. A rule from an Android backup keeps its networks and never matches here |
 | Automation tab | Tasker and other apps control L×Box through intents | Hidden | Android intents |
 | Tunnel sleep mode | Pauses the tunnel in Doze or with the screen off | Hidden | Android Doze and screen events |
 | Keep VPN on exit | VPN outlives the app | Hidden | The core stops with the app until the tunnel exists |
@@ -38,13 +39,14 @@ A hidden setting keeps its stored value, so a backup taken on iOS still restores
 | Identity sent to panels | `LxBox-android/<version>`, OS `android` | `LxBox-ios/<version>`, OS `ios` (§714 D7) |
 | Camera prompt language | System's own text | Our text in English, Russian or Chinese, by system language (§714 D8) |
 | File picker | A tap returns the file | A tap, then Open. Left as is (§714 D9) |
+| Sticky session by, Load balance | `process` and domain | `process` has no owner here, so the core hashes the domain alone (§716) |
+| System DNS | Uses `LocalResolver` | The core's own lookup, `localDNSTransport` is nil. Not checked on a phone (§716) |
 
 ## Still visible, not working, no decision yet
 
 | Feature | State on iOS |
 |---|---|
-| Wi-Fi conditions in rules | iOS gives the core no Wi-Fi name, so these rules never match. Needs an entitlement and location permission |
 | Google push (FCM) preset | Off by default. Its package condition never matches |
 | Tailscale, Taildrop, OpenConnect screens | Native calls not ported |
 | Send to TV | Depends on the camera, not tested |
-| Text in settings that stayed | Debug API mentions `adb forward`. Memory limit says Auto sets no threshold, on iOS it means 50 MB. System HTTP proxy mentions Android 10. The Rules tab says rules can match by app |
+| Text in settings that stayed | Debug API mentions `adb forward`. Memory limit says Auto sets no threshold, on iOS it means 50 MB. System HTTP proxy mentions Android 10. The Rules tab says rules can match by app. Metered says "in Android settings", though the condition works on iOS as cellular or personal hotspot. Ru internet segment says "Russian apps (by package name)", with a "Russian apps by package" option, and FCM says "Play region" (§716 D3) |

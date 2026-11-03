@@ -28,6 +28,7 @@ hand”. Both describe the same operations from opposite sides.
 |---|---|
 | [ARCHITECTURE.md](ARCHITECTURE.md) | Tech stack, supported Android versions, source tree, the Parser v2 pipeline, data flows, the native side (Kotlin) |
 | [IOS_DISABLED_FEATURES.md](IOS_DISABLED_FEATURES.md) | What Android has and iOS does not, and why. |
+| [IOS_FINDINGS.md](IOS_FINDINGS.md) | Bugs and gaps found while checking iOS, not fixed yet. |
 | [STORAGE.md](STORAGE.md) | The full `lxbox_settings.json` schema, per-key semantics, migration history |
 | [TEMPLATE.md](TEMPLATE.md) | The `wizard_template.json` schema (presets/vars/sections) plus the var substitution syntax |
 | [PROTOCOLS.md](PROTOCOLS.md) | VPN protocol details (vless/vmess/trojan/…): URI formats, parameters, sing-box mapping |
