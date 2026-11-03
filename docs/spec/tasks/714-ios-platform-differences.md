@@ -2,7 +2,7 @@
 
 | Field | Value |
 |-------|-------|
-| Status | In progress |
+| Status | Implemented, passes on Simulator, not merged |
 | Start date | 2026-11-03 |
 | End date | |
 | Commits | |
@@ -122,6 +122,15 @@ Debug build on iPhone 17 Simulator with iOS 26.5, Flutter 3.47.9, core `v1.14.4-
 | 4 | Pass | Routing has Directions, Presets, Rules and DNS. Add rule opens with no Apps section, and leaving adds no rule. URL Check has no App row, `HTTP 204 · 217 ms`, no new line in `applog.txt` |
 | 5 | Pass | Unknown traffic is not in Presets or Rules. The saved config had `unknown-apps` before the change and not after. The stored rule stays. `platform_features_test.dart`: 4 pass, the preset stays in the Android build and drops in the iOS one |
 | 6 | Pass | Local server on a temporary subscription logged `user-agent: LxBox-ios/2.25.15.1`, `x-device-os: ios`, `x-ver-os: 26.5`, `x-device-model: iPhone 17`, and `x-hwid`. A new LX backup says `platform: ios`. Subscription and backup file removed after. 22 tests pass in `user_agent_test` and `subscription_identity_test`. Not tried against a real panel |
+| 7 | Pass, prompt not shown | The built app has `ru.lproj` and `zh-Hans.lproj` with the camera string, and `Info.plist` keeps the English one. Launched with `-AppleLanguages (ru-BY)`: Russian UI, region `BY`. Without arguments: English UI, region `BY`. Simulator has no camera, so the prompt itself needs a real iPhone |
+| 8 | Pass, full suite pending | Nothing under `app/android/` beyond the merge. `flutter analyze`: no issues. 423 tests pass in 37 related files. Screen gates have no widget tests, they were checked by hand above. Full suite runs on CI, which a push to `ios-app` does not start |
+
+Not checked: a real iPhone, the camera prompt, a real panel with `LxBox-ios`, the app on an Android device.
+
+### Found during implementation
+
+- **Region with a bare `ru`.** `-AppleLanguages (ru) -AppleLocale ru_BY` shows `страна не определена`, with or without `ru.lproj`, so this change does not cause it. `ru-BY` works. On iOS Auto reads only the device locale, because `networkCountry` is not ported. Check on a real iPhone.
+- **Update check.** Hiding its rows was not enough. A value restored from Android would keep the check running with no way to turn it off, so the check itself is gated.
 
 ## Docs to update
 
@@ -133,6 +142,7 @@ With implementation:
 - `docs/l10n.md`: the iOS native strings row.
 - `docs/spec/tasks/713-ios-flows-from-android.md`: the differences point here.
 - `docs/spec/tasks/710-ios-clean-startup.md`, `711-ios-core-in-app-no-vpn.md`: the follow-ups on hiding settings point here.
-- One-line iOS note plus a Revisions row, EN and RU: `001` fetch-identity, `010` autostart-and-exit and tunnel-sleep, `011` mode-and-list, `017` desktop-transfer, `020` app-settings and update-check, `024` preset-bundles, `029` native-and-core-strings.
+- `docs/ARCHITECTURE.md`: the gate in the iOS paragraph.
+- One-line iOS note plus a Revisions row, EN and RU: `001` fetch-identity, `010` autostart-and-exit and tunnel-sleep, `011` mode-and-list, `014` quick-toggle, `017` desktop-transfer, `020` app-settings and update-check, `024` preset-bundles, `029` native-and-core-strings.
 
 Stated as none: `CHANGELOG.md` and release notes (nothing changes on Android, nothing ships on iOS), `docs/api/debug-api-reference.md` (no route change), template and registry files.

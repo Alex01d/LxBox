@@ -293,7 +293,7 @@ The full suite has not run on this merge. A push to `ios-app` runs no CI, so sta
 - "Test servers" (`probe*`) is done in [§712](712-ios-test-servers-and-probe-failure.md). It must also work once the tunnel exists.
 - A shared error model, per §055 item 6.
 - An iOS artifact and hash in fork releases, before real distribution.
-- Hide settings with no meaning on iOS.
+- Hide settings with no meaning on iOS. Done in [§714](714-ios-platform-differences.md).
 - A per-platform convention in feature specs, since `docs/spec/features/README.md` does not define one.
 - Speed test path on iOS: the app's own HTTP client does not use `mixed-in`.
 - The typed VLESS link rejected in §710. Done in [§713](713-ios-flows-from-android.md).

@@ -21,6 +21,8 @@ LxBox обменивается подписками, серверами, пра�
 side has no place for is dropped, and the app tells you exactly what did not
 make it.»). Полной копии эта карточка не заменяет.
 
+На iOS (§714) в файле указано `platform: ios`.
+
 ## Параметры
 
 | Что | Значение |
@@ -112,3 +114,4 @@ rules, directions or settings.».
 | 8 | [441](../../../tasks/441-template-preset-vars-in-record.md) | Released v2.24.0 | Переменные шаблонных DNS-серверов и пресетов в записи |
 | 9 | [489](../../../tasks/489-core-reject-verdict-not-backup.md) | Released v2.25.0 | Вердикт страховки не едет в бэкап |
 | 10 | [511](../../../tasks/511-ui-review-findings-after-v2251.md) | Released v2.25.2 | Порядок заведённых записей в `sources[]` как в файле |
+| 11 | [714](../../../tasks/714-ios-platform-differences.md) | Simulator, без merge | iOS: платформа в файле |

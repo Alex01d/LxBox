@@ -17,6 +17,8 @@
 ядра, и сохраняет каждую в момент изменения. Экран — дом; содержание
 большинства разделов принадлежит соседним фичам.
 
+На iOS (§714) строки про системные службы Android скрыты. Полный список — в [`IOS_DISABLED_FEATURES.md`](../../../../IOS_DISABLED_FEATURES.md).
+
 ## Параметры
 
 Вкладки (по центру, прокручиваются при узком экране):
@@ -68,3 +70,4 @@
 | 3 | [158](../../../tasks/158-settings-tabs-center-alignment.md) | Done | Вкладки по центру, затухание по краям |
 | 4 | [541](../../../tasks/541-appearance-tab-two-columns-toggle.md) | Done | Отдельная вкладка Appearance |
 | 5 | [425](../../../tasks/425-warp-pool-region-loc.md) | Implemented | Раздел Region на вкладке General |
+| 6 | [714](../../../tasks/714-ios-platform-differences.md) | Simulator, без merge | iOS: строки только для Android скрыты |

@@ -22,6 +22,8 @@ vars, `route.final`, WARP registrations. The format is LX Backup of contract
 ("Anything the other side has no place for is dropped, and the app tells you
 exactly what did not make it."). This card does not replace the full backup.
 
+On iOS (§714) the file says `platform: ios`.
+
 ## Parameters
 
 | What | Value |
@@ -114,3 +116,4 @@ rules, directions or settings."
 | 8 | [441](../../../tasks/441-template-preset-vars-in-record.md) | Released v2.24.0 | Vars of template DNS servers and presets in the record |
 | 9 | [489](../../../tasks/489-core-reject-verdict-not-backup.md) | Released v2.25.0 | The safeguard verdict does not travel in the backup |
 | 10 | [511](../../../tasks/511-ui-review-findings-after-v2251.md) | Released v2.25.2 | Order of created records in `sources[]` as in the file |
+| 11 | [714](../../../tasks/714-ios-platform-differences.md) | Simulator, no merge | iOS: platform in the file |

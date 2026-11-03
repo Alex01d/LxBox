@@ -24,6 +24,8 @@ around it.
 | Allow-list | Only selected apps go through VPN. Others bypass via cellular/wifi | only the selected ones |
 | Deny-list | Selected apps bypass VPN. Others go through | all except the selected ones |
 
+On iOS (§714) the Tunnel apps tab is hidden, because the system gives an app no list of other apps and does not say which app opened a connection.
+
 ## Parameters
 
 | Setting | Values | Default |
@@ -88,3 +90,4 @@ needed" flag; `GET /settings/tun_apps` returns the current pair.
 | 7 | [324](../../../tasks/324-saved-vs-running-canonical-diff.md) | ✅ Implemented (DEVICE-PENDING) | "Config is stale" is compared with the running core taking the list into account |
 | 8 | [539](../../../tasks/539-perapp-debug-log.md) | Done | A summary of applied and uninstalled packages in the verbose log |
 | 9 | [606](../../../tasks/606-audit-591-export-list-tun-warp-dpi-bugs.md) | Done | Debug API `count` after deduplication |
+| 10 | [714](../../../tasks/714-ios-platform-differences.md) | Simulator, no merge | iOS: tab hidden |

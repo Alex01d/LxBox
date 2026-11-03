@@ -20,6 +20,8 @@ interface is not running, renames them on a language change, hands the core
 its message language, and keeps a fixed English render for logs, the Debug
 API and automation payloads.
 
+On iOS (§714) the camera prompt follows the system language, not the app's: English, Russian or Chinese.
+
 ## Parameters
 
 No settings of its own: it follows the language from
@@ -100,3 +102,4 @@ English render of stored errors and warnings for machine surfaces.
 | 5 | [591](../../../tasks/591-spec-kit-revision-audit.md) | Open | Audit: core locale follows the device until the first language change |
 | 6 | [607](../../../tasks/607-l10n-backup-shell-bugs-from-591.md) | Done; device check pending | The core locale at process start comes from the saved app language |
 | 7 | [707](../../../tasks/707-taildrop-send-receive-files.md) iteration 7 | Implemented | 2026-11-03: the notification's Reconnect string removed, "📋 Send clipboard" and the Send clipboard window strings added (en/ru/zh) |
+| 8 | [714](../../../tasks/714-ios-platform-differences.md) | Simulator, no merge | iOS: camera prompt languages |

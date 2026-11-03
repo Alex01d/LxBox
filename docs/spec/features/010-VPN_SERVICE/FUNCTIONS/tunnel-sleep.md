@@ -17,6 +17,8 @@ Lets the user trade the reliability of background connections for battery:
 pause the whole tunnel when the device sleeps or the screen goes off, and wake
 it back up. By default the tunnel never sleeps.
 
+On iOS (§714) tunnel sleep is hidden.
+
 ## Parameters
 
 | Setting | Values | Default |
@@ -68,3 +70,4 @@ up marks "restart needed".
 | 1 | [124F](../../../tasks/124F-background-mode-tunnel-sleep/spec.md) | Implemented (default `never` since v1.5.0) | Three sleep modes, default `never`, pause without a leak |
 | 2 | [086](../../../tasks/086-stale-connections-network-change-doze.md) | Research | The core pause closes connections — the root of drops in `always` |
 | 3 | [215](../../../tasks/215-libbox-rc18-idle-suspend.md) | IMPLEMENTED + DEVICE-VERIFIED | Wake on screen-on only in the `always` mode |
+| 4 | [714](../../../tasks/714-ios-platform-differences.md) | Simulator, no merge | iOS: setting hidden |

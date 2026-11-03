@@ -18,6 +18,8 @@ Once a day (with consent) asks GitHub for the latest release number and, on the
 next launch, unobtrusively announces a new version with a link to where the app
 was installed from. There is no in-app installation.
 
+On iOS (§714) the check does not run and its rows are hidden, because releases hold Android files only.
+
 ## Parameters
 
 | Setting | Where | Values | Default |
@@ -91,3 +93,4 @@ in <store>" button); the result line under "Check now"; the
 | 3 | [390](../../../tasks/390-install-source-aware-update-notice.md) | Done | The link leads to the install channel; Later without remembering, Ignore per version; shown only from the cache at launch |
 | 4 | [395](../../../tasks/395-update-check-consent.md) | — | Auto-check off until explicit consent |
 | 5 | [426](../../../tasks/426-install-sources-always-in-about.md) | Done | Install channels always visible in About |
+| 6 | [714](../../../tasks/714-ios-platform-differences.md) | Simulator, no merge | iOS: check off |

@@ -183,7 +183,7 @@ Not checked: the pinned Flutter 3.47.1, a real iPhone.
 - A VLESS link typed into the Servers field was rejected as "Input is not a subscription URL…", while the same link pasted from the clipboard was recognized. Cause not checked. Typing was driven by the Simulator tool, so a changed first letter is one possibility. Cause found and fixed in [§713](713-ios-flows-from-android.md): iOS autocorrect and smart punctuation.
 - Connect UI to core without a tunnel: link `Libbox.xcframework`, `CommandClient` in Swift, normalized error for `startVPN`.
 - Tunnel: Network Extension, App Group, real limit on iPhone. Needs the paid team.
-- Hide Android-only settings and first-run steps properly, including a platform line in 020-APP_SHELL.
+- Hide Android-only settings and first-run steps properly, including a platform line in 020-APP_SHELL. Settings done in [§714](714-ios-platform-differences.md).
 - `NSCameraUsageDescription` before QR scanning. Done in [§713](713-ios-flows-from-android.md).
 - Split the single `try` in `main.dart` so one platform failure cannot skip unrelated steps. Needs its own task and the startup order test.
 - CI job for iOS, and a support tier in 023-BUILD_CI_RELEASE.

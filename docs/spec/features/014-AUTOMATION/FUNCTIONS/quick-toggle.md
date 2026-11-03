@@ -17,6 +17,8 @@ system Quick Settings shade and menu items that appear on a long press of the
 app icon on the home screen. The tile and the menu show the current tunnel
 state; a long press on the tile opens the app.
 
+On iOS (§714) the tile, the shortcut and the Automation tab are hidden.
+
 ## Parameters
 
 | Parameter | Values / behaviour |
@@ -98,3 +100,4 @@ permission denied. Open L×Box to retry.".
 | 11 | [279F](../../../tasks/279F-localization/spec.md) | phases 0–7 done | Tile and menu labels in the app language, renaming on language change |
 | 12 | [510](../../../tasks/510-review-findings-after-v2251.md) | Released v2.25.2 | A stop from the tile shuts down the node safeguard cycle |
 | 13 | [707](../../../tasks/707-taildrop-send-receive-files.md), iteration 7 | Implemented, not verified on a device | 2026-11-03: no "Send clipboard" tile, the button lives in the notification; Reconnect removed from the notification |
+| 14 | [714](../../../tasks/714-ios-platform-differences.md) | Simulator, no merge | iOS: controls hidden |

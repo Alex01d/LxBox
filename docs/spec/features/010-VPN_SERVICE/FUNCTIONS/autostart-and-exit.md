@@ -17,6 +17,8 @@ Decides whether the tunnel lives independently of the open app: whether it
 comes up by itself after the device boots and whether it survives closing the
 app.
 
+On iOS (§714) auto-start on boot and Keep VPN on exit are hidden.
+
 ## Parameters
 
 | Setting | Where | Values | Default |
@@ -73,3 +75,4 @@ Both settings are part of the backup and are restored with it.
 | 3 | [188](../../../tasks/188-tun-toggles-to-mode-tab.md) | ✅ DEVICE-VERIFIED | Keep VPN on exit is on by default, lives on the mode screen |
 | 4 | [638](../../../tasks/638-audit-591-four-defects.md) | Done | "Quit & reopen app" clears the "tunnel wanted" flag and the watchdog alarm — the watchdog no longer resurrects the tunnel |
 | 5 | [639](../../../tasks/639-quit-clears-vpn-notification.md) | Done | "Quit & reopen app" stops the tunnel the regular way before ending the process — the tunnel notification no longer lingers |
+| 6 | [714](../../../tasks/714-ios-platform-differences.md) | Simulator, no merge | iOS: both settings hidden |

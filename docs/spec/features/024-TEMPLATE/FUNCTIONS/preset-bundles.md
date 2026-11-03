@@ -21,6 +21,8 @@ is a reference to the template plus the values of its variables: when the app
 is updated, the preset behaviour changes for everyone. A preset can carry rule
 sets, several route rules, DNS servers and DNS rules at once.
 
+On iOS (§714) the Unknown traffic preset is not offered and never reaches the config, because the system names no owner for any connection. A stored rule stays, so a backup still restores on Android.
+
 ## Parameters
 
 **Declaration of a preset** (keys of one `selectable_rules[]` entry):
@@ -152,3 +154,4 @@ namespaced tags `<preset_id>:<tag>`.
 | 17 | [578](../../../tasks/578-tailscale-preset-template-for-each.md) | Released v2.25.8, loop superseded by 643 | The Tailscale preset: a rule per node, late seeding |
 | 18 | [643](../../../tasks/643-contract-1-1-119-node-loops.md) | Released v2.25.14 | `for_each_node` / `for_each_node_do` replace `for_each`; the Tailscale preset filters by `@node.body.type` |
 | 19 | [656](../../../tasks/656-contract-1130-tunnel-ingress.md) | in progress | The Tunnel ingress preset (late default), the node fields `allow_*`, `skip_presets` → `skip_tailscale_presets` |
+| 20 | [714](../../../tasks/714-ios-platform-differences.md) | Simulator, no merge | iOS: Unknown traffic off |

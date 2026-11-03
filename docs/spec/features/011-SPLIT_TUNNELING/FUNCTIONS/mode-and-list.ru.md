@@ -23,6 +23,8 @@
 | Allow-list | Only selected apps go through VPN. Others bypass via cellular/wifi | только выбранные |
 | Deny-list | Selected apps bypass VPN. Others go through | все, кроме выбранных |
 
+На iOS (§714) вкладка Tunnel apps скрыта: система не даёт приложению список других приложений и не сообщает, какое приложение открыло соединение.
+
 ## Параметры
 
 | Настройка | Значения | Дефолт |
@@ -86,3 +88,4 @@
 | 7 | [324](../../../tasks/324-saved-vs-running-canonical-diff.md) | ✅ Реализовано (DEVICE-PENDING) | «Конфиг устарел» сравнивается с работающим ядром с учётом списка |
 | 8 | [539](../../../tasks/539-perapp-debug-log.md) | Done | Сводка применённых и неустановленных пакетов в подробном журнале |
 | 9 | [606](../../../tasks/606-audit-591-export-list-tun-warp-dpi-bugs.md) | Done | `count` Debug API — после дедупа |
+| 10 | [714](../../../tasks/714-ios-platform-differences.md) | Simulator, без merge | iOS: вкладка скрыта |

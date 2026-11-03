@@ -18,6 +18,8 @@ Defines **who the app introduces itself as** in the subscription HTTP request. P
 devices against the limit by the HWID headers. The settings affect only the
 subscription request — not the core config, and they do not mark it as changed.
 
+On iOS (§714) the branded User-Agent is `LxBox-ios/<version>`, and the device headers carry `ios` with the real system version and model.
+
 ## Parameters
 
 Global (Settings → Subscriptions → Fetch identity):
@@ -84,3 +86,4 @@ already filled in); disabling discards the snapshot.
 | 3 | [289](../../../tasks/289-per-subscription-fetch-identity.md) | — | Default / Custom identity on the subscription, snapshot from the global values |
 | 4 | [346](../../../tasks/346-subs-full-crud-debug-api.md) | — | The subscription identity is also configurable via the Debug API |
 | 5 | [610](../../../tasks/610-user-agent-presets.md) | — | Popular-client presets in the Custom User-Agent field, new hint under the field |
+| 6 | [714](../../../tasks/714-ios-platform-differences.md) | Simulator, no merge | iOS: own identity for panels |

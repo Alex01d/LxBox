@@ -17,6 +17,8 @@ Gathers settings unrelated to the core config on one App Settings screen and
 saves each one at the moment of change. The screen only hosts them: the contents
 of most sections belong to neighboring features.
 
+On iOS (§714) rows about Android system services are hidden. [`IOS_DISABLED_FEATURES.md`](../../../../IOS_DISABLED_FEATURES.md) has the full list.
+
 ## Parameters
 
 Tabs (centered, scrollable on a narrow screen):
@@ -70,3 +72,4 @@ support feed link `lxbox://route:app-settings[/appearance|subscriptions|diagnost
 | 3 | [158](../../../tasks/158-settings-tabs-center-alignment.md) | Done | Centered tabs, fade at the edges |
 | 4 | [541](../../../tasks/541-appearance-tab-two-columns-toggle.md) | Done | A separate Appearance tab |
 | 5 | [425](../../../tasks/425-warp-pool-region-loc.md) | Implemented | Region section on the General tab |
+| 6 | [714](../../../tasks/714-ios-platform-differences.md) | Simulator, no merge | iOS: Android-only rows hidden |

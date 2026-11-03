@@ -21,6 +21,8 @@
 всех. Пресет может нести сразу rule set'ы, несколько правил маршрута,
 DNS-серверы и DNS-правила.
 
+На iOS (§714) пресет Unknown traffic не предлагается и не попадает в конфиг: система не называет владельца ни одного соединения. Сохранённое правило остаётся, поэтому бэкап восстановится на Android.
+
 ## Параметры
 
 **Объявление пресета** (ключи одной записи `selectable_rules[]`):
@@ -153,3 +155,4 @@ DNS-часть — в [005-DNS](../../005-DNS/FEATURE.ru.md); теги в про
 | 17 | [578](../../../tasks/578-tailscale-preset-template-for-each.md) | Выпущено в v2.25.8, обход заменён 643 | Пресет Tailscale: правило на каждый узел, поздний засев |
 | 18 | [643](../../../tasks/643-contract-1-1-119-node-loops.md) | Выпущено в v2.25.14 | `for_each_node` / `for_each_node_do` вместо `for_each`; пресет Tailscale фильтрует по `@node.body.type` |
 | 19 | [656](../../../tasks/656-contract-1130-tunnel-ingress.md) | в работе | Пресет Tunnel ingress (поздний дефолт), поля узла `allow_*`, `skip_presets` → `skip_tailscale_presets` |
+| 20 | [714](../../../tasks/714-ios-platform-differences.md) | Simulator, без merge | iOS: Unknown traffic выключен |
