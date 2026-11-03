@@ -41,6 +41,7 @@ import 'package:lxbox/services/lx_backup_slice.dart'
     show overrideBackupFieldsForTesting;
 import 'package:lxbox/services/parser/engine/section_loader.dart';
 import 'package:lxbox/services/platform_channels.dart';
+import 'package:lxbox/services/platform_features.dart';
 import 'package:lxbox/services/rule_set_downloader.dart';
 import 'package:lxbox/services/selector_info.dart';
 import 'package:lxbox/services/settings_storage.dart';
@@ -102,6 +103,7 @@ void resetTestGlobals({bool binding = true}) {
   captureTestGlobals();
 
   // Платформа: path_provider, HTTP, моки каналов.
+  PlatformFeatures.isIosForTesting = null;
   PathProviderPlatform.instance = _pathProvider;
   HttpOverrides.global = binding ? _bindingHttpOverrides : null;
   // Кэш ассетов: загрузка, начатая в fake-async зоне прошлого теста, может

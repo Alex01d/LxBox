@@ -19,6 +19,7 @@ import 'services/parser/mappers/draft_sections.dart';
 import 'services/crash_banner_state.dart';
 import 'services/install_source.dart';
 import 'services/oom_reports.dart';
+import 'services/platform_features.dart';
 import 'services/stderr_reader.dart';
 import 'services/subscription/subscription_identity.dart';
 import 'services/debug/bootstrap.dart' as debug_bootstrap;
@@ -365,6 +366,17 @@ class LxBoxApp extends StatelessWidget {
           // §076: global observer срабатывает на возврат на home (root)
           // — auto-rebuild config'а если configDirty.
           navigatorObservers: [homeReturnObserver],
+          actions: {
+            ...WidgetsApp.defaultActions,
+            if (PlatformFeatures.isIos)
+              EditableTextTapOutsideIntent:
+                  CallbackAction<EditableTextTapOutsideIntent>(
+                onInvoke: (intent) {
+                  intent.focusNode.unfocus();
+                  return null;
+                },
+              ),
+          },
           // §417 — смена generation после загрузки workspace пересоздаёт
           // HomeScreen со всеми контроллерами, которыми он владеет: это и
           // есть «перечитать всё» без перезапуска процесса.
