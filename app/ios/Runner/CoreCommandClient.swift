@@ -5,6 +5,12 @@ final class CoreCommandClient {
   private static let statusIntervalNormal: Int64 = 500_000_000
   private static let statusIntervalFast: Int64 = 100_000_000
   private static let reconnectDelay = 0.5
+  private static let endpointErrorCodes = [
+    "NotFound": "not_found",
+    "InvalidArgument": "invalid_argument",
+    "FailedPrecondition": "failed_precondition",
+    "Unavailable": "unavailable",
+  ]
 
   let statusEmitter = SnapshotEmitter()
   let outboundsEmitter = SnapshotEmitter()
@@ -440,6 +446,137 @@ final class CoreCommandClient {
     guard let client = ensurePingClient(), let config = try? client.getRunningConfig() else { return nil }
     let content = config.content()
     return content.isEmpty ? nil : content
+  }
+
+  func getUrlViaOutbound(tag: String, link: String, timeoutMs: Int32, maxBytes: Int32, userAgent: String) -> [String: Any] {
+    guard let client = ensurePingClient() else {
+      return ["error": "command client not connected"]
+    }
+    return Self.getUrl(client, tag: tag, link: link, timeoutMs: timeoutMs, maxBytes: maxBytes, userAgent: userAgent)
+  }
+
+  static func getUrl(_ client: LibboxCommandClient, tag: String, link: String, timeoutMs: Int32, maxBytes: Int32, userAgent: String) -> [String: Any] {
+    let headers = userAgent.isEmpty ? nil : LibboxNewHTTPHeaders()
+    headers?.add("User-Agent", value: userAgent)
+    do {
+      let result = try client.getURLViaOutbound(tag, link: link, timeout: timeoutMs, maxBytes: maxBytes, headers: headers)
+      return [
+        "status": result.status(),
+        "content": result.content(),
+        "truncated": result.truncated(),
+        "contentType": result.contentType(),
+        "remoteAddr": result.remoteAddr(),
+        "elapsedMs": result.elapsedMs(),
+        "error": "",
+      ]
+    } catch {
+      return ["error": error.localizedDescription]
+    }
+  }
+
+  func getRules() -> [[String: Any]]? {
+    guard let client = ensurePingClient(), let iterator = try? client.getRules() else { return nil }
+    var rules: [[String: Any]] = []
+    while iterator.hasNext() {
+      if let rule = iterator.next() {
+        rules.append(["type": rule.type, "payload": rule.payload, "action": rule.action, "isDNS": rule.isDNS])
+      }
+    }
+    return rules
+  }
+
+  func getDnsGroups() -> [[String: Any]]? {
+    guard let client = ensurePingClient(), let iterator = try? client.getDNSGroups() else { return nil }
+    var groups: [[String: Any]] = []
+    while iterator.hasNext() {
+      if let group = iterator.next() {
+        groups.append(["tag": group.tag, "mode": group.mode, "current": group.current, "members": Self.members(group.members())])
+      }
+    }
+    return groups
+  }
+
+  private static func members(_ iterator: LibboxDnsGroupMemberIteratorProtocol?) -> [[String: Any]] {
+    guard let iterator else { return [] }
+    var members: [[String: Any]] = []
+    while iterator.hasNext() {
+      guard let member = iterator.next() else { continue }
+      members.append([
+        "tag": member.tag,
+        "serverType": member.serverType,
+        "clean": member.clean,
+        "liveErrors": member.liveErrors,
+        "lastErrorAgeMs": member.lastErrorAgeMs,
+        "liveWins": member.liveWins,
+        "current": member.current,
+        "lastRttMs": member.lastRTTMs,
+      ])
+    }
+    return members
+  }
+
+  func getPool(tag: String) -> [[String: Any]]? {
+    guard let client = ensurePingClient(), let iterator = try? client.getPool(tag) else { return nil }
+    var slots: [[String: Any]] = []
+    while iterator.hasNext() {
+      if let slot = iterator.next() {
+        slots.append(["slot": slot.slot, "tag": slot.tag, "delay": slot.delay])
+      }
+    }
+    return slots
+  }
+
+  func setEndpointEnabled(tag: String, enabled: Bool) -> [String: String] {
+    guard let client = ensurePingClient() else {
+      return ["error": "error", "message": "no command client"]
+    }
+    do {
+      return ["state": try client.setEndpointEnabled(tag, enabled: enabled).state]
+    } catch {
+      let message = error.localizedDescription
+      return ["error": Self.endpointErrorCode(message), "message": message]
+    }
+  }
+
+  func getWireGuardStatus(tag: String) -> [String: Any] {
+    guard let client = ensurePingClient() else {
+      return ["error": "error", "message": "no command client"]
+    }
+    do {
+      let status = try client.getWireGuardStatus(tag)
+      return [
+        "endpoint_state": status.endpointState,
+        "idle_since_seconds": status.idleSinceSeconds,
+        "peers": Self.peers(status.peers()),
+      ]
+    } catch {
+      let message = error.localizedDescription
+      let code = message.contains("code = Unimplemented") ? "unimplemented" : Self.endpointErrorCode(message)
+      return ["error": code, "message": message]
+    }
+  }
+
+  private static func peers(_ iterator: LibboxPeerStatusIteratorProtocol?) -> [[String: Any]] {
+    guard let iterator else { return [] }
+    var peers: [[String: Any]] = []
+    while iterator.hasNext() {
+      guard let peer = iterator.next() else { continue }
+      peers.append([
+        "public_key": peer.publicKey,
+        "endpoint": peer.endpoint,
+        "last_handshake_unix": peer.lastHandshakeUnix,
+        "rx_bytes": peer.rxBytes,
+        "tx_bytes": peer.txBytes,
+        "session_rx_bytes": peer.sessionRxBytes,
+        "session_tx_bytes": peer.sessionTxBytes,
+      ])
+    }
+    return peers
+  }
+
+  private static func endpointErrorCode(_ message: String) -> String {
+    guard let range = message.range(of: #"code = \w+"#, options: .regularExpression) else { return "error" }
+    return endpointErrorCodes[String(message[range].dropFirst("code = ".count))] ?? "error"
   }
 
   private func emitStatus(_ message: LibboxStatusMessage, _ generation: Int) {

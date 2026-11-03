@@ -117,22 +117,7 @@ final class CoreProbeSession {
   func getUrl(runId: Int, tag: String, link: String, timeoutMs: Int32, maxBytes: Int32, userAgent: String) -> [String: Any] {
     let (session, refusal) = liveSession(runId)
     guard let session else { return ["error": refusal] }
-    let headers = userAgent.isEmpty ? nil : LibboxNewHTTPHeaders()
-    headers?.add("User-Agent", value: userAgent)
-    do {
-      let result = try session.client.getURLViaOutbound(tag, link: link, timeout: timeoutMs, maxBytes: maxBytes, headers: headers)
-      return [
-        "status": result.status(),
-        "content": result.content(),
-        "truncated": result.truncated(),
-        "contentType": result.contentType(),
-        "remoteAddr": result.remoteAddr(),
-        "elapsedMs": result.elapsedMs(),
-        "error": "",
-      ]
-    } catch {
-      return ["error": error.localizedDescription]
-    }
+    return CoreCommandClient.getUrl(session.client, tag: tag, link: link, timeoutMs: timeoutMs, maxBytes: maxBytes, userAgent: userAgent)
   }
 
   func cancel(runId: Int) {

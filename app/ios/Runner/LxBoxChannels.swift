@@ -187,6 +187,37 @@ final class LxBoxChannels {
     case "ccUrlTestGroup":
       let tag = arguments?["tag"] as? String ?? ""
       respondOffMain(result) { [client] in client.urlTestGroup(tag: tag) }
+    case "ccGetUrlViaOutbound":
+      let tag = arguments?["tag"] as? String ?? ""
+      let link = arguments?["link"] as? String ?? ""
+      let timeoutMs = Int32(arguments?["timeoutMs"] as? Int ?? 0)
+      let maxBytes = Int32(arguments?["maxBytes"] as? Int ?? 0)
+      let userAgent = arguments?["userAgent"] as? String ?? ""
+      respondOffMain(result) { [client] in
+        client.getUrlViaOutbound(tag: tag, link: link, timeoutMs: timeoutMs, maxBytes: maxBytes, userAgent: userAgent)
+      }
+    case "ccGetRules":
+      respondOffMain(result) { [client] in client.getRules() }
+    case "ccGetDnsGroups":
+      respondOffMain(result) { [client] in client.getDnsGroups() }
+    case "ccGetPool":
+      let tag = arguments?["tag"] as? String ?? ""
+      respondOffMain(result) { [client] in client.getPool(tag: tag) }
+    case "ccSetEndpointEnabled":
+      let tag = arguments?["tag"] as? String ?? ""
+      let enabled = arguments?["enabled"] as? Bool ?? true
+      respondOffMain(result) { [client] in
+        let answer = client.setEndpointEnabled(tag: tag, enabled: enabled)
+        if let error = Self.endpointError(answer) { return error }
+        return answer["state"] ?? ""
+      }
+    case "ccGetWireGuardStatus":
+      let tag = arguments?["tag"] as? String ?? ""
+      respondOffMain(result) { [client] in
+        let answer = client.getWireGuardStatus(tag: tag)
+        if let error = Self.endpointError(answer) { return error }
+        return answer
+      }
     case "ccCloseConnection":
       let id = arguments?["id"] as? String ?? ""
       respondOffMain(result) { [client] in client.closeConnection(id: id) }
@@ -300,6 +331,11 @@ final class LxBoxChannels {
     } catch {
       return false
     }
+  }
+
+  private static func endpointError(_ answer: [String: Any]) -> FlutterError? {
+    guard let code = answer["error"] as? String else { return nil }
+    return FlutterError(code: code, message: answer["message"] as? String, details: nil)
   }
 
   private static func checkConfig(_ text: String) -> [String: Any] {
