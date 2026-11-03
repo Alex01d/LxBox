@@ -136,7 +136,8 @@ Release build of `f661d071` on iPhone 15 with iOS 26.3.1, core `v1.14.4-lx.30`, 
 | Scan QR code | Works |
 | Usage region | Works |
 | Tap outside closes the number pad | Works |
-| File picker, Recents and one tap (D9) | Not checked yet |
+| Backup export and import through the file picker | Works |
+| File picker, Recents and one tap (D9) | Not reported yet |
 
 ### Found during implementation
 
