@@ -144,6 +144,26 @@ void main() {
     expect(ProbeLifecycle.I.isProbing, isFalse);
   });
 
+  test('a session closed by core Start leaves untested nodes without a verdict',
+      () async {
+    final results = <int, ProbeResult>{};
+    final runner = ProbeRunner();
+    final done = runner.run(nodes,
+        url: '', timeoutMs: 0, onResult: (i, r) => results[i] = r);
+    await _until(() => fake.pendingCount == 6, what: '6 tests in flight');
+    fake.releaseOk();
+    await _until(() => fake.pendingCount == 2, what: 'last 2 tests in flight');
+
+    fake.closeForCoreStart();
+    final err = await done.timeout(const Duration(seconds: 2));
+
+    expect(err, isEmpty);
+    expect(results.length, 6);
+    expect(results.values.every((r) => r.status == ProbeStatus.ok), isTrue);
+    expect(fake.callsOf('probeStart'), 1);
+    expect(ProbeLifecycle.I.isProbing, isFalse);
+  });
+
   test('cancel() before a run does not abandon that run', () async {
     fake.holdUrlTests = false;
     final runner = ProbeRunner(stopDeadline: const Duration(milliseconds: 1));

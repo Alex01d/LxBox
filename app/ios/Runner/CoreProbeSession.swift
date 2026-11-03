@@ -97,11 +97,20 @@ final class CoreProbeSession {
   func urlTest(runId: Int, tag: String, link: String, timeoutMs: Int32) -> [String: Any] {
     let (session, refusal) = liveSession(runId)
     guard let session else { return ["delay": 0, "error": refusal] }
+    let measured = measure(session, tag: tag, link: link, timeoutMs: timeoutMs)
+    if measured.error.isEmpty {
+      return ["delay": measured.delay, "error": ""]
+    }
+    let closedReason = liveSession(runId).refusal
+    return ["delay": measured.delay, "error": closedReason.isEmpty ? measured.error : closedReason]
+  }
+
+  private func measure(_ session: Session, tag: String, link: String, timeoutMs: Int32) -> (delay: Int32, error: String) {
     do {
       let result = try session.client.urlTestOutbound(tag, link: link, timeout: timeoutMs)
-      return ["delay": result.delay, "error": result.error]
+      return (result.delay, result.error)
     } catch {
-      return ["delay": 0, "error": error.localizedDescription]
+      return (0, error.localizedDescription)
     }
   }
 

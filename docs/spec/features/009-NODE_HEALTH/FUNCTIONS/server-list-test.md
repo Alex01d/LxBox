@@ -85,8 +85,9 @@ Summary: `Test servers` → `Testing… N done` → `N ok · N err · N broken`.
 - The actions menu is available from the first finished verdict. If the
   subscription has a filter rule that enables nodes, bulk disabling warns:
   the next update will remove manual marks.
-- The test is cancelled by the button, by stopping the tunnel and by
-  backgrounding the app. Cancelling aborts the measurements already sent to
+- The test is cancelled by the button, by starting or stopping the tunnel and
+  by backgrounding the app. Nodes it did not reach stay `…`, not `err`.
+  Cancelling aborts the measurements already sent to
   the core, they do not wait for their timeout. Until the test session is
   closed the bar shows `Stopping…` and the button is inactive; then Start is
   available again. Results live while the screen is open.

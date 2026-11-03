@@ -31,6 +31,11 @@ class FakeProbeSession {
           if (c.method == method) (c.arguments as Map)['runId'] as int,
       ];
 
+  void closeForCoreStart() {
+    _release({'delay': 0, 'error': 'probe session not running'});
+    live = null;
+  }
+
   /// Отпустить висящие замеры успехом.
   void releaseOk({int delay = 50}) =>
       _release({'delay': delay, 'error': ''});

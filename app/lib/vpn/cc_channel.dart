@@ -2030,6 +2030,8 @@ class CcDelayResult {
 /// новым (`ProbeSession.STALE_RUN` на Kotlin-стороне, сверка дословная).
 const kProbeStaleRun = 'stale run';
 
+const kProbeSessionGone = 'probe session not running';
+
 /// §669 — результат `probeStart`: [error] '' при успехе, иначе текст ошибки;
 /// [runId] — владелец поднятой сессии (0 при ошибке). Его несут
 /// `probeUrlTest`/`probeGetUrl`/`probeCancel`/`probeStop`.

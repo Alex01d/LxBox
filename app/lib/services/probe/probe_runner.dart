@@ -246,7 +246,7 @@ class ProbeRunner {
         if (_cancelled) return;
         // §669 — сессию перехватил другой прогон (новый probeStart её
         // закрыл): этот прогон вытеснен, вердикт «stale run» узлу не пишем.
-        if (r.error == kProbeStaleRun) {
+        if (r.error == kProbeStaleRun || r.error == kProbeSessionGone) {
           _cancelled = true;
           return;
         }

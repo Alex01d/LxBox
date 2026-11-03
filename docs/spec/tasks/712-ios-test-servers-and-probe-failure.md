@@ -2,7 +2,7 @@
 
 | Field | Value |
 |-------|-------|
-| Status | In progress |
+| Status | Implemented, passes on Simulator, not merged |
 | Start date | 2026-11-03 |
 | End date | |
 | Commits | |
@@ -52,6 +52,7 @@ Other callers of `run` are safe once it stops throwing: the Debug API maps its t
 |---|---|---|
 | D1 | How does the test session coexist with the in-app core? | Exclusive, as on Android (§236). Pavel, 2026-11-03. See "Coexistence" |
 | D2 | Should Stop have a time limit, on all platforms? | 10 s, proposed to Pavel on 2026-11-03. He raised no objection but has not explicitly approved it, and he can still veto it. It adds to §669, which records the addition |
+| D3 | What do nodes show when a core Start ends a test early? | They stay not tested, so "Disable unreachable" cannot turn off a node nobody measured. The Dart part stays shared, with no native change on Android. Pavel, 2026-11-03 |
 
 ### Coexistence
 
@@ -75,7 +76,15 @@ In `app/lib/services/probe/probe_runner.dart`:
 3. A throw from `probeStop` in `finally` reaches the same `catch`.
 4. `cancel()` during a run starts a 10 s timer. If `_runBatches` has not finished by then, `run` fails with `TimeoutException`, which shows as `Error: timeout 10s`. The leftover `_runBatches` closes its session when the native call returns, and §669's run IDs stop it from touching a newer run. The normal path takes at most 3 s (the native close cap), so this timer only fires when a native call does not reply. A throw also goes through `cancel()`, so a throw plus a hung call still ends with an error.
 
+5. A reply of `probe session not running` means the session closed under the run, which happens when a core Start takes priority. The runner handles it like `stale run`: it stops, and the node gets no verdict. The run returns no error, because the user asked for the Start.
+
 The screens do not change.
+
+### Swift, D3
+
+`urlTest` in `CoreProbeSession.swift` checks the session again after a failed measurement. If the session closed meanwhile, it answers `probe session not running` in place of the transport error, so measurements cut off by the close also get no verdict. A delay that arrived before the close is kept.
+
+`ProbeSession.kt` stays as it is. Android still gets item 5 from the shared Dart, so nodes not yet reached stay not tested. Up to six measurements cut off by the close still read `err` there.
 
 ### Swift
 
@@ -115,7 +124,7 @@ Debug build, iPhone 17 Simulator with iOS 26.5 or newer, core at the pin. Reuse 
 8. Node Diagnostics with the core stopped gives a result through `probeGetUrl`.
 9. Android: nothing changes under `app/android/`. Dart analyzer has no new issues.
 
-Unit tests: `app/test/probe/probe_runner_failure_test.dart` covers a throw from `probeStart`, a missing plugin, a throw from `probeUrlTest` and from `probeStop`, and the Stop timer with a call that never replies. `app/test/screens/subscription_detail_probe_stop_test.dart` gets the same failure on screen. Also run the existing `probe_runner_cancel_test.dart`, `probe_test.dart`, `node_diagnostics_runner_test.dart`, `probe_lifecycle_test.dart` and `probe_controller_test.dart`.
+Unit tests: `app/test/probe/probe_runner_failure_test.dart` covers a throw from `probeStart`, a missing plugin, a throw from `probeUrlTest` and from `probeStop`, the Stop timer with a call that never replies, and a session closed by a core Start. `app/test/screens/subscription_detail_probe_stop_test.dart` gets the same failure on screen. Also run the existing `probe_runner_cancel_test.dart`, `probe_test.dart`, `node_diagnostics_runner_test.dart`, `probe_lifecycle_test.dart` and `probe_controller_test.dart`.
 
 ### Results, 2026-11-03
 
@@ -127,20 +136,21 @@ Debug build on iPhone 17 Simulator with iOS 26.5, Flutter 3.47.9, core `v1.14.4-
 | 2 | Pass | Stop at `Testing… 8 done`: port closed within about 1 s, then `8 ok · 0 err` and Start. Start again gave a full run in a new session |
 | 3 | Pass | `probeUrlTest` unrouted: `Error: MissingPluginException(No implementation found for method probeUrlTest…`, port closed, Start back. `probeStart` unrouted, the original bug: same error for `probeStart`, Start back. Port 54345 held by another process: `listen command server: … address already in use`, as text, Start back. Both temporary edits were reverted |
 | 4 | Pass | Temporary local subscription with 9 dummy WireGuard and 3 dummy VLESS nodes on 192.0.2.0/24: 3 batches in 9 s, `0 ok · 12 err`, per-node text `(context deadline exceeded \| missing IPv6 local address)`. No `cache.db` lock. Stop mid-run: port closed within 1 s, Start back. Subscription deleted afterwards |
-| 5 | Not run | Needs Start, and a memory measurement holds port 2080 on this Mac |
-| 6 | Not run | Same |
-| 7 | Partly | Leaving during a run: port closed within about 1 s, same process, return shows partial results and Start. Core Start afterwards not run, same reason |
+| 5 | Pass | Core Connected, Test: "VPN is running" popup. Stop VPN: port 2080 closed, test started by itself, `12 ok · 8 err`, session closed |
+| 6 | Pass | With the folder screen open and a test running, `POST /action/start-vpn` through the Debug API: port 2080 up within about 1 s, `tunnel: connected`. The test ended with `8 ok · 0 err`, and the other 12 nodes stayed `…`, with no `probe session not running`. The same check before D3 gave `8 ok · 12 err` |
+| 7 | Pass | Leaving during a run: port closed within about 1 s, same process, return shows partial results and Start. Core Start afterwards reached `Connected`. An earlier attempt failed with `listen tcp 127.0.0.1:2080: bind: address already in use`, because another app on this Mac held the port. It needed no cleanup and disabled no node |
 | 8 | Pass | Stopped core, AWG node, Cloudflare trace: `200 · 348ms`, `warp=on`, port closed after |
 | 9 | Pass | Nothing under `app/android/`. Dart analyzer has no issues |
 
 ### Found during implementation
 
+- **Start during a test marked untested nodes `err`.** The core closes the session, and each remaining `probeUrlTest` answered `probe session not running`, which the runner recorded as a failed node. "Disable unreachable" would then have disabled nodes nobody measured. Fixed by D3. The first run of check 6 showed this as `8 ok · 12 err`.
+- **Test sessions overwrite `tmp/configuration.json`.** Anything that copies that file gets the test config, with no inbound and only the tested nodes. A core start overwrites it back. `singbox_config.json` is not touched.
 - **User agent.** The Diagnostics reply shows `uag=LxBox-android/2.25.15.1` on iOS, so `resolveAppUserAgent` names the wrong platform. Not changed here.
 - **Subscription test bar.** At iPhone 17 width, the first character of `0 ok · 3 err` and `Testing…` sits under the bar's switch. The label starts at a fixed offset. Not compared with Android, not changed here.
 
 ## Unresolved / follow-up
 
-- Checks 5, 6 and the end of 7, once port 2080 is free.
 - Real iPhone run, with the rest of §711's list.
 - Android: this Dart change is not checked on a device. The Android path gains only the `catch` and the timer.
 
