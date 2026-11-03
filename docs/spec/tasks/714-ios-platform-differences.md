@@ -120,6 +120,7 @@ Debug build on iPhone 17 Simulator with iOS 26.5, Flutter 3.47.9, core `v1.14.4-
 | 2 | Pass | App Settings has General, Appearance, Subscriptions and Diagnostics. General has no Auto-start, Quick connect or Updates. Diagnostics has no System setup or Wi-Fi row. Settings file identical before and after |
 | 3 | Pass | VPN Settings, System has only Memory limit. Mode in VPN shows only System HTTP proxy. About has no install channel, update block or Where to get L×Box |
 | 4 | Pass | Routing has Directions, Presets, Rules and DNS. Add rule opens with no Apps section, and leaving adds no rule. URL Check has no App row, `HTTP 204 · 217 ms`, no new line in `applog.txt` |
+| 5 | Pass | Unknown traffic is not in Presets or Rules. The saved config had `unknown-apps` before the change and not after. The stored rule stays. `platform_features_test.dart`: 4 pass, the preset stays in the Android build and drops in the iOS one |
 
 ## Docs to update
 

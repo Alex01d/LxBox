@@ -432,6 +432,7 @@ class _RoutingScreenState extends State<RoutingScreen>
           RoutingPresetsTab(
             bottomPad: bottomPad,
             catalogTiles: template.selectableRules
+                .where((p) => !PlatformFeatures.isPresetDisabled(p.presetId))
                 .map(_buildPresetCatalogTile)
                 .toList(),
           ),
@@ -1158,6 +1159,9 @@ class _RoutingScreenState extends State<RoutingScreen>
 
   Widget _buildCustomRuleTile(int index) {
     final rule = _customRules[index];
+    if (PlatformFeatures.isPresetDisabled(rule.presetId)) {
+      return const SizedBox.shrink();
+    }
     final options = _outboundOptions();
     final preset = rule.kind == CustomRuleKind.preset
         ? _presetFor(rule.presetId)

@@ -19,6 +19,7 @@ import '../../models/validation.dart';
 import '../app_log.dart';
 import '../json_clone.dart';
 import '../node_hash.dart';
+import '../platform_features.dart';
 import '../safe_regex.dart';
 import '../rule_set_downloader.dart';
 import '../tailscale_state/state_keys.dart';
@@ -710,7 +711,10 @@ Future<BuildResult?> _buildConfig({
   // первым). Одноразово здесь → все нижеследующие проходы видят нормализованный
   // список.
   final customRules = normalizeRuleOrder(
-    [...settings.customRules],
+    [
+      for (final rule in settings.customRules)
+        if (!PlatformFeatures.isPresetDisabled(rule.presetId)) rule,
+    ],
     template.selectableRules,
     template,
   );
