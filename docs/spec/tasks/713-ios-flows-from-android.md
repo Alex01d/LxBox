@@ -133,6 +133,8 @@ Debug build on iPhone 17 Simulator with iOS 26.5, Flutter 3.47.9, core `v1.14.4-
 | 4 | Pass, stop mid-run not reached | Connected, `https://cp.cloudflare.com/`: `HTTP 204 · 239 ms` with stages and findings. `https://192.0.2.1/`: `Failed at target_tls 192.0.2.1: EOF`, with the failed stage and causes. Core stopped: Run is disabled with `Start VPN to run a check`, so Dart never reaches the native call. A test ended too fast to tap away during it. No new line in `applog.txt` |
 | 5 | Pass | Connected, START, then `curl` for 4 hosts through `mixed-in`: 17 events, DNS and TCP with rules, chains and `cached`. STOP ends it. No new line in `applog.txt`. The 2 TCP events from URL Check appear too |
 | 6 | Pass, two calls not reached with data | Node Diagnostics on an AWG node while Connected: `200 · 123ms`, `warp=on`. Same node's Overview lists its peer with endpoint, handshake and traffic. Turn off shows `off`, Turn on shows `up`. DNS tab shows live state per group member. `/pool` through the Debug API answers `count: 0`, because this config has no round-robin group, so a pool with slots is not checked. `ccGetRules` has no Dart caller today |
+| 7 | Pass | Connected, Quit & reopen, Quit: process gone and port 2080 closed within 2 s. Relaunch shows `Disconnected`, crash log empty, no banner |
+| 8 | Pass | App picker from URL Check shows `0 selected · 0 shown`, no endless progress, no new line in `applog.txt` |
 
 ## Docs to update
 

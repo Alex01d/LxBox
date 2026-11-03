@@ -21,6 +21,9 @@ final class LxBoxChannels {
     "setAutoRedirect": "auto_redirect",
   ]
 
+  private static let quitDelaySeconds = 0.25
+  private static let quitStopBudgetSeconds = 3.0
+
   private let client = CoreCommandClient()
   private let service: CoreService
   private let silentStream = ChannelSink()
@@ -253,6 +256,16 @@ final class LxBoxChannels {
     case "probeStop":
       service.stopProbe(runId: arguments?["runId"] as? Int ?? 0, result)
 
+    case "quitApp":
+      result(true)
+      quit()
+    case "getInstalledApps":
+      result([[String: Any]]())
+    case "getAppIcon":
+      result("")
+    case "getAppInfo":
+      result(["notFound": true])
+
     case "setHasTun", "setAppLanguage", "setAutomationEnabled", "setAutomationActiveState",
       "setNotificationTitle", "setNotificationText":
       result(true)
@@ -284,6 +297,14 @@ final class LxBoxChannels {
     default:
       result(FlutterMethodNotImplemented)
     }
+  }
+
+  private func quit() {
+    let exitProcess = DispatchWorkItem { exit(0) }
+    service.stop { _ in
+      DispatchQueue.main.asyncAfter(deadline: .now() + Self.quitDelaySeconds, execute: exitProcess)
+    }
+    DispatchQueue.main.asyncAfter(deadline: .now() + Self.quitStopBudgetSeconds, execute: exitProcess)
   }
 
   private func openUrl(_ arguments: [String: Any]?, _ result: @escaping FlutterResult) {
