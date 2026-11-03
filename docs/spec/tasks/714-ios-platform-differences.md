@@ -72,6 +72,8 @@ One gate, `app/lib/services/platform_features.dart`, so the list stays in one pl
 
 A hidden setting keeps its stored value, so a backup taken on iOS still restores on Android.
 
+Hiding the update rows also stops the update check on launch, because a value restored from Android could no longer be turned off.
+
 ### Unknown traffic
 
 The builder drops the rule, so no config carries it, whatever the stored state says. Stored rules are not rewritten. The Presets tab does not list it and the Rules tab does not draw it.
@@ -115,6 +117,8 @@ Debug build on iPhone 17 Simulator with iOS 26.5, Flutter 3.47.9, core `v1.14.4-
 | # | Result | Evidence |
 |---|---|---|
 | 1 | Pass | VPN Settings, Mode, Listen port: number pad shows with no Return key. A tap on empty space closes it, the value stays `2080` |
+| 2 | Pass | App Settings has General, Appearance, Subscriptions and Diagnostics. General has no Auto-start, Quick connect or Updates. Diagnostics has no System setup or Wi-Fi row. Settings file identical before and after |
+| 3 | Pass | VPN Settings, System has only Memory limit. Mode in VPN shows only System HTTP proxy. About has no install channel, update block or Where to get L×Box |
 
 ## Docs to update
 

@@ -9,6 +9,7 @@ import '../models/memory_limit_setting.dart';
 import '../models/parser_config.dart';
 import '../services/builder/if_engine.dart';
 import '../services/l10n/template_aware_state.dart';
+import '../services/platform_features.dart';
 import '../services/settings_storage.dart';
 import '../services/template_loader.dart';
 import '../widgets/template_var_list.dart';
@@ -338,51 +339,53 @@ class _SettingsScreenState extends State<SettingsScreen>
                 },
               ),
             ),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    getLocalText.s("Tunnel sleep mode"),
-                    style: Theme.of(context).textTheme.bodyLarge,
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    getLocalText.s("When to pause the tunnel to save battery. Takes effect on next VPN connect."),
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: Theme.of(context).colorScheme.onSurfaceVariant,
-                        ),
-                  ),
-                ],
+            if (PlatformFeatures.hasAndroidSystemSettings) ...[
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      getLocalText.s("Tunnel sleep mode"),
+                      style: Theme.of(context).textTheme.bodyLarge,
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      getLocalText.s("When to pause the tunnel to save battery. Takes effect on next VPN connect."),
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            color: Theme.of(context).colorScheme.onSurfaceVariant,
+                          ),
+                    ),
+                  ],
+                ),
               ),
-            ),
-            RadioGroup<BackgroundMode>(
-              groupValue: _backgroundMode,
-              onChanged: (BackgroundMode? m) {
-                if (!_vpnLoaded) return;
-                unawaited(_applyBackgroundMode(m));
-              },
-              child: Column(
-                children: [
-                  RadioListTile<BackgroundMode>(
-                    value: BackgroundMode.never,
-                    title: Text(getLocalText.s("Never sleep (recommended)")),
-                    subtitle: Text(getLocalText.s("Tunnel is always active. Best reliability — pushes and long-lived sockets survive. Higher battery use.")),
-                  ),
-                  RadioListTile<BackgroundMode>(
-                    value: BackgroundMode.lazy,
-                    title: Text(getLocalText.s("Lazy sleep")),
-                    subtitle: Text(getLocalText.s("Pause only in deep Doze (screen off for a long time + no motion). Balanced.")),
-                  ),
-                  RadioListTile<BackgroundMode>(
-                    value: BackgroundMode.always,
-                    title: Text(getLocalText.s("Aggressive battery saving")),
-                    subtitle: Text(getLocalText.s("Pause tunnel whenever screen turns off. Max battery savings, but pushes, incoming calls and background sync stop until the screen turns on again.")),
-                  ),
-                ],
+              RadioGroup<BackgroundMode>(
+                groupValue: _backgroundMode,
+                onChanged: (BackgroundMode? m) {
+                  if (!_vpnLoaded) return;
+                  unawaited(_applyBackgroundMode(m));
+                },
+                child: Column(
+                  children: [
+                    RadioListTile<BackgroundMode>(
+                      value: BackgroundMode.never,
+                      title: Text(getLocalText.s("Never sleep (recommended)")),
+                      subtitle: Text(getLocalText.s("Tunnel is always active. Best reliability — pushes and long-lived sockets survive. Higher battery use.")),
+                    ),
+                    RadioListTile<BackgroundMode>(
+                      value: BackgroundMode.lazy,
+                      title: Text(getLocalText.s("Lazy sleep")),
+                      subtitle: Text(getLocalText.s("Pause only in deep Doze (screen off for a long time + no motion). Balanced.")),
+                    ),
+                    RadioListTile<BackgroundMode>(
+                      value: BackgroundMode.always,
+                      title: Text(getLocalText.s("Aggressive battery saving")),
+                      subtitle: Text(getLocalText.s("Pause tunnel whenever screen turns off. Max battery savings, but pushes, incoming calls and background sync stop until the screen turns on again.")),
+                    ),
+                  ],
+                ),
               ),
-            ),
+            ],
           ],
         ),
       ],

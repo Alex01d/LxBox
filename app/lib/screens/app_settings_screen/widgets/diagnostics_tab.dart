@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../services/platform_features.dart';
 import '../../../services/settings_storage.dart';
 import '../../../services/l10n/locale_controller.dart';
 
@@ -90,89 +91,91 @@ class DiagnosticsTab extends StatelessWidget {
     return ListView(
       padding: padding,
       children: [
-        Text(getLocalText.s("System setup"),
-            style: Theme.of(context).textTheme.titleMedium),
-        const SizedBox(height: 8),
-        ListTile(
-          leading: Icon(
-            batteryWhitelisted ? Icons.battery_full : Icons.battery_alert,
-            color: batteryWhitelisted
-                ? Colors.green
-                : Theme.of(context).colorScheme.error,
+        if (PlatformFeatures.hasAndroidSystemSettings) ...[
+          Text(getLocalText.s("System setup"),
+              style: Theme.of(context).textTheme.titleMedium),
+          const SizedBox(height: 8),
+          ListTile(
+            leading: Icon(
+              batteryWhitelisted ? Icons.battery_full : Icons.battery_alert,
+              color: batteryWhitelisted
+                  ? Colors.green
+                  : Theme.of(context).colorScheme.error,
+            ),
+            title: Text(getLocalText.s("Battery optimization")),
+            subtitle: Text(batteryWhitelisted
+                ? getLocalText.s("Whitelisted — VPN can run in background")
+                : getLocalText.s("Restricted — Android may pause VPN in idle. Tap to grant.")),
+            trailing: const Icon(Icons.chevron_right, size: 18),
+            onTap: onBatteryTap,
           ),
-          title: Text(getLocalText.s("Battery optimization")),
-          subtitle: Text(batteryWhitelisted
-              ? getLocalText.s("Whitelisted — VPN can run in background")
-              : getLocalText.s("Restricted — Android may pause VPN in idle. Tap to grant.")),
-          trailing: const Icon(Icons.chevron_right, size: 18),
-          onTap: onBatteryTap,
-        ),
-        ListTile(
-          leading: Icon(
-            notificationsEnabled
-                ? Icons.notifications_active_outlined
-                : Icons.notifications_off_outlined,
-            color: notificationsEnabled
-                ? Colors.green
-                : Theme.of(context).colorScheme.error,
+          ListTile(
+            leading: Icon(
+              notificationsEnabled
+                  ? Icons.notifications_active_outlined
+                  : Icons.notifications_off_outlined,
+              color: notificationsEnabled
+                  ? Colors.green
+                  : Theme.of(context).colorScheme.error,
+            ),
+            title: Text(getLocalText.s("Notifications")),
+            subtitle: Text(notificationsEnabled
+                ? getLocalText.s("Allowed — foreground service shows VPN status")
+                : getLocalText.s("Blocked — Android may throttle the VPN service. Tap to allow.")),
+            trailing: const Icon(Icons.chevron_right, size: 18),
+            onTap: onNotificationsTap,
           ),
-          title: Text(getLocalText.s("Notifications")),
-          subtitle: Text(notificationsEnabled
-              ? getLocalText.s("Allowed — foreground service shows VPN status")
-              : getLocalText.s("Blocked — Android may throttle the VPN service. Tap to allow.")),
-          trailing: const Icon(Icons.chevron_right, size: 18),
-          onTap: onNotificationsTap,
-        ),
-        // §051 — Wi-Fi rules permissions: BACKGROUND_LOCATION (API 29+) и
-        // NEARBY_WIFI_DEVICES (API 33+). Без них sing-box `wifi_ssid` /
-        // `wifi_bssid` правила не сматчатся (`WifiInfo.ssid` возвращает
-        // `<unknown ssid>`). См. spec/050 findings + spec/051.
-        ListTile(
-          leading: Icon(
-            locationOk
-                ? Icons.location_on_outlined
-                : Icons.location_off_outlined,
-            color: locationOk
-                ? Colors.green
-                : Theme.of(context).colorScheme.error,
+          // §051 — Wi-Fi rules permissions: BACKGROUND_LOCATION (API 29+) и
+          // NEARBY_WIFI_DEVICES (API 33+). Без них sing-box `wifi_ssid` /
+          // `wifi_bssid` правила не сматчатся (`WifiInfo.ssid` возвращает
+          // `<unknown ssid>`). См. spec/050 findings + spec/051.
+          ListTile(
+            leading: Icon(
+              locationOk
+                  ? Icons.location_on_outlined
+                  : Icons.location_off_outlined,
+              color: locationOk
+                  ? Colors.green
+                  : Theme.of(context).colorScheme.error,
+            ),
+            title: Text(getLocalText.s("Location (background)")),
+            subtitle: Text(!backgroundLocationGranted
+                ? getLocalText.s("Required for Wi-Fi-based routing rules. Tap to grant.")
+                : switch (wifiLocationIssue) {
+                    'fine_location_missing' =>
+                      getLocalText.s("Precise location permission missing"),
+                    'location_disabled' =>
+                      getLocalText.s("Location is turned off"),
+                    _ => getLocalText.s("Granted — sing-box can read Wi-Fi state for routing rules"),
+                  }),
+            trailing: const Icon(Icons.chevron_right, size: 18),
+            onTap: onBackgroundLocationTap,
           ),
-          title: Text(getLocalText.s("Location (background)")),
-          subtitle: Text(!backgroundLocationGranted
-              ? getLocalText.s("Required for Wi-Fi-based routing rules. Tap to grant.")
-              : switch (wifiLocationIssue) {
-                  'fine_location_missing' =>
-                    getLocalText.s("Precise location permission missing"),
-                  'location_disabled' =>
-                    getLocalText.s("Location is turned off"),
-                  _ => getLocalText.s("Granted — sing-box can read Wi-Fi state for routing rules"),
-                }),
-          trailing: const Icon(Icons.chevron_right, size: 18),
-          onTap: onBackgroundLocationTap,
-        ),
-        ListTile(
-          leading: Icon(
-            nearbyWifiGranted
-                ? Icons.wifi_outlined
-                : Icons.wifi_off_outlined,
-            color: nearbyWifiGranted
-                ? Colors.green
-                : Theme.of(context).colorScheme.error,
+          ListTile(
+            leading: Icon(
+              nearbyWifiGranted
+                  ? Icons.wifi_outlined
+                  : Icons.wifi_off_outlined,
+              color: nearbyWifiGranted
+                  ? Colors.green
+                  : Theme.of(context).colorScheme.error,
+            ),
+            title: Text(getLocalText.s("Nearby Wi-Fi devices")),
+            subtitle: Text(nearbyWifiGranted
+                ? getLocalText.s("Granted — real SSID/BSSID accessible")
+                : getLocalText.s("Android 13+ requires this for SSID. Tap to grant.")),
+            trailing: const Icon(Icons.chevron_right, size: 18),
+            onTap: onNearbyWifiTap,
           ),
-          title: Text(getLocalText.s("Nearby Wi-Fi devices")),
-          subtitle: Text(nearbyWifiGranted
-              ? getLocalText.s("Granted — real SSID/BSSID accessible")
-              : getLocalText.s("Android 13+ requires this for SSID. Tap to grant.")),
-          trailing: const Icon(Icons.chevron_right, size: 18),
-          onTap: onNearbyWifiTap,
-        ),
-        ListTile(
-          leading: const Icon(Icons.settings_applications_outlined),
-          title: Text(getLocalText.s("App info (OEM power settings)")),
-          subtitle: Text(getLocalText.s("OEM-specific toggles to keep VPN alive in background.")),
-          trailing: const Icon(Icons.chevron_right, size: 18),
-          onTap: onAppInfoTap,
-        ),
-        const Divider(height: 32),
+          ListTile(
+            leading: const Icon(Icons.settings_applications_outlined),
+            title: Text(getLocalText.s("App info (OEM power settings)")),
+            subtitle: Text(getLocalText.s("OEM-specific toggles to keep VPN alive in background.")),
+            trailing: const Icon(Icons.chevron_right, size: 18),
+            onTap: onAppInfoTap,
+          ),
+          const Divider(height: 32),
+        ],
         Text(getLocalText.s("Developer"),
             style: Theme.of(context).textTheme.titleMedium),
         const SizedBox(height: 8),
@@ -317,28 +320,30 @@ class DiagnosticsTab extends StatelessWidget {
         // сетей — след приватности даже локально. Без неё «Pick saved»
         // наполняют только Add current / Manual. 5-минутный stickiness
         // отсекает drive-by сети (магазин/проход).
-        const Divider(height: 8),
-        SwitchListTile(
-          title: Text(getLocalText.s("Auto-record visited Wi-Fi networks")),
-          subtitle: Text(
-            autoRecordWifi
-                ? getLocalText.s("Networks where you stay ≥ 5 minutes appear in routing rule editor → Pick saved.")
-                : getLocalText.s("Off. Pick saved is populated only by Add current / Manual."),
+        if (PlatformFeatures.hasAndroidSystemSettings) ...[
+          const Divider(height: 8),
+          SwitchListTile(
+            title: Text(getLocalText.s("Auto-record visited Wi-Fi networks")),
+            subtitle: Text(
+              autoRecordWifi
+                  ? getLocalText.s("Networks where you stay ≥ 5 minutes appear in routing rule editor → Pick saved.")
+                  : getLocalText.s("Off. Pick saved is populated only by Add current / Manual."),
+            ),
+            secondary: const Icon(Icons.history),
+            value: autoRecordWifi,
+            onChanged: loaded ? onAutoRecordWifiChanged : null,
           ),
-          secondary: const Icon(Icons.history),
-          value: autoRecordWifi,
-          onChanged: loaded ? onAutoRecordWifiChanged : null,
-        ),
-        Padding(
-          padding: const EdgeInsets.fromLTRB(72, 0, 16, 12),
-          child: Text(
-            getLocalText.s("Stored locally only. Existing entries persist when you turn this off — remove them one by one in Pick saved with ✕ (Remove from history)."),
-            style: TextStyle(
-              fontSize: 12,
-              color: Theme.of(context).colorScheme.onSurfaceVariant,
+          Padding(
+            padding: const EdgeInsets.fromLTRB(72, 0, 16, 12),
+            child: Text(
+              getLocalText.s("Stored locally only. Existing entries persist when you turn this off — remove them one by one in Pick saved with ✕ (Remove from history)."),
+              style: TextStyle(
+                fontSize: 12,
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
             ),
           ),
-        ),
+        ],
       ],
     );
   }

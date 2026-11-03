@@ -51,6 +51,7 @@ import '../services/debug/bootstrap.dart';
 import '../services/debug/debug_registry.dart';
 import '../services/haptic_service.dart';
 import '../services/nav/home_return_observer.dart';
+import '../services/platform_features.dart';
 import '../services/settings_storage.dart';
 import '../services/rule_set_auto_updater.dart';
 import '../services/subscription/auto_updater.dart';
@@ -282,13 +283,15 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
     // результат ложится в `last_known_version` и всплывёт на следующем
     // запуске, где его подхватит hydrate(). Так уведомление никогда не
     // выскакивает поверх работающего приложения.
-    unawaited(_hydrateAndMaybeNotify());
-    _updateCheckTimer = Timer(const Duration(seconds: 5), () {
-      if (!mounted) return;
-      unawaited(
-        UpdateChecker.I.maybeCheck(localVersion: VersionInfo.I.version),
-      );
-    });
+    if (PlatformFeatures.hasAndroidSystemSettings) {
+      unawaited(_hydrateAndMaybeNotify());
+      _updateCheckTimer = Timer(const Duration(seconds: 5), () {
+        if (!mounted) return;
+        unawaited(
+          UpdateChecker.I.maybeCheck(localVersion: VersionInfo.I.version),
+        );
+      });
+    }
   }
 
   /// §390 — единственная точка показа update-снека: кеш `last_known_version`

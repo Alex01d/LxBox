@@ -27,6 +27,7 @@ import '../services/settings_storage.dart'
     show SettingsStorage, VpnModeConfig, NativePrefsKeys;
 import '../services/subscription/subscription_identity.dart'
     show generateProxyPassword;
+import '../services/platform_features.dart';
 import 'lazy_persist_mixin.dart';
 import '../services/l10n/locale_controller.dart';
 
@@ -387,26 +388,28 @@ class _VpnModeTabState extends State<VpnModeTab>
           const SizedBox(height: 16),
           Text(getLocalText.s("Tunnel options"), style: tt.titleMedium),
           const SizedBox(height: 4),
-          SwitchListTile(
-            contentPadding: EdgeInsets.zero,
-            title: Text(getLocalText.s("Keep VPN on exit")),
-            subtitle: Text(getLocalText.s("VPN stays active when app is closed")),
-            secondary: const Icon(Icons.exit_to_app),
-            value: _keepOnExit,
-            onChanged: _tunTogglesLoaded ? _toggleKeepOnExit : null,
-          ),
-          SwitchListTile(
-            contentPadding: EdgeInsets.zero,
-            title: Text(getLocalText.s("Allow VPN bypass")),
-            subtitle: Text(
-              _allowBypass
-                  ? getLocalText.s("Apps may use ConnectivityManager to bypass tun.")
-                  : getLocalText.s("Strict tunnel — all traffic goes through tun."),
+          if (PlatformFeatures.hasAndroidSystemSettings) ...[
+            SwitchListTile(
+              contentPadding: EdgeInsets.zero,
+              title: Text(getLocalText.s("Keep VPN on exit")),
+              subtitle: Text(getLocalText.s("VPN stays active when app is closed")),
+              secondary: const Icon(Icons.exit_to_app),
+              value: _keepOnExit,
+              onChanged: _tunTogglesLoaded ? _toggleKeepOnExit : null,
             ),
-            secondary: const Icon(Icons.alt_route),
-            value: _allowBypass,
-            onChanged: _tunTogglesLoaded ? _toggleAllowBypass : null,
-          ),
+            SwitchListTile(
+              contentPadding: EdgeInsets.zero,
+              title: Text(getLocalText.s("Allow VPN bypass")),
+              subtitle: Text(
+                _allowBypass
+                    ? getLocalText.s("Apps may use ConnectivityManager to bypass tun.")
+                    : getLocalText.s("Strict tunnel — all traffic goes through tun."),
+              ),
+              secondary: const Icon(Icons.alt_route),
+              value: _allowBypass,
+              onChanged: _tunTogglesLoaded ? _toggleAllowBypass : null,
+            ),
+          ],
           SwitchListTile(
             contentPadding: EdgeInsets.zero,
             title: Text(getLocalText.s("System HTTP proxy")),

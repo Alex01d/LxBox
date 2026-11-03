@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../services/l10n/locale_controller.dart';
+import '../../../services/platform_features.dart';
 import 'update_status_row.dart';
 
 /// General tab для App Settings.
@@ -86,13 +87,15 @@ class GeneralTab extends StatelessWidget {
         Text(getLocalText.s("Behavior"),
             style: Theme.of(context).textTheme.titleMedium),
         const SizedBox(height: 8),
-        SwitchListTile(
-          title: Text(getLocalText.s("Auto-start on boot")),
-          subtitle: Text(getLocalText.s("Start VPN when device turns on")),
-          secondary: const Icon(Icons.power_settings_new),
-          value: autoStart,
-          onChanged: loaded ? onAutoStartChanged : null,
-        ),
+        if (PlatformFeatures.hasAndroidSystemSettings) ...[
+          SwitchListTile(
+            title: Text(getLocalText.s("Auto-start on boot")),
+            subtitle: Text(getLocalText.s("Start VPN when device turns on")),
+            secondary: const Icon(Icons.power_settings_new),
+            value: autoStart,
+            onChanged: loaded ? onAutoStartChanged : null,
+          ),
+        ],
         // §338 — автоприменение изменений конфига к живому туннелю. Настройка
         // не про подписки: источник изменения любой (узел, detour, DNS,
         // routing, per-app), поэтому живёт в Behavior, а не в Subscriptions.
@@ -113,36 +116,38 @@ class GeneralTab extends StatelessWidget {
             ),
           ),
         ),
-        const Divider(height: 32),
-        Text(getLocalText.s("Quick connect"),
-            style: Theme.of(context).textTheme.titleMedium),
-        const SizedBox(height: 8),
-        ListTile(
-          leading: const Icon(Icons.dashboard_customize_outlined),
-          title: Text(getLocalText.s("Quick Settings tile")),
-          subtitle: Text(getLocalText.s("Add to status-bar shade for one-tap toggle. Android 13+ shows a system prompt; on older versions edit the shade manually.")),
-          trailing: TextButton(
-            onPressed: onAddQuickSettingsTile,
-            child: Text(getLocalText.s("Add")),
+        if (PlatformFeatures.hasAndroidSystemSettings) ...[
+          const Divider(height: 32),
+          Text(getLocalText.s("Quick connect"),
+              style: Theme.of(context).textTheme.titleMedium),
+          const SizedBox(height: 8),
+          ListTile(
+            leading: const Icon(Icons.dashboard_customize_outlined),
+            title: Text(getLocalText.s("Quick Settings tile")),
+            subtitle: Text(getLocalText.s("Add to status-bar shade for one-tap toggle. Android 13+ shows a system prompt; on older versions edit the shade manually.")),
+            trailing: TextButton(
+              onPressed: onAddQuickSettingsTile,
+              child: Text(getLocalText.s("Add")),
+            ),
           ),
-        ),
-        ListTile(
-          leading: const Icon(Icons.touch_app_outlined),
-          title: Text(getLocalText.s("Home-screen shortcut")),
-          subtitle: Text(getLocalText.s("Long-press the L×Box icon on your home screen → \"Connect\" when the VPN is off, \"Disconnect\" when it is on. Android 11 and newer.")),
-        ),
-        const Divider(height: 32),
-        Text(getLocalText.s("Updates"),
-            style: Theme.of(context).textTheme.titleMedium),
-        const SizedBox(height: 8),
-        SwitchListTile(
-          title: Text(getLocalText.s("Check for updates on launch")),
-          subtitle: Text(getLocalText.s("Pings github.com once a day for new releases. Tap the message to open the update page — the GitHub release or the app's store page. Later hides it until the next launch, Ignore skips this version.")),
-          secondary: const Icon(Icons.system_update_alt),
-          value: autoCheckUpdates,
-          onChanged: loaded ? onAutoCheckUpdatesChanged : null,
-        ),
-        const UpdateStatusRow(),
+          ListTile(
+            leading: const Icon(Icons.touch_app_outlined),
+            title: Text(getLocalText.s("Home-screen shortcut")),
+            subtitle: Text(getLocalText.s("Long-press the L×Box icon on your home screen → \"Connect\" when the VPN is off, \"Disconnect\" when it is on. Android 11 and newer.")),
+          ),
+          const Divider(height: 32),
+          Text(getLocalText.s("Updates"),
+              style: Theme.of(context).textTheme.titleMedium),
+          const SizedBox(height: 8),
+          SwitchListTile(
+            title: Text(getLocalText.s("Check for updates on launch")),
+            subtitle: Text(getLocalText.s("Pings github.com once a day for new releases. Tap the message to open the update page — the GitHub release or the app's store page. Later hides it until the next launch, Ignore skips this version.")),
+            secondary: const Icon(Icons.system_update_alt),
+            value: autoCheckUpdates,
+            onChanged: loaded ? onAutoCheckUpdatesChanged : null,
+          ),
+          const UpdateStatusRow(),
+        ],
         const Divider(height: 32),
         Text(getLocalText.s("Feedback"),
             style: Theme.of(context).textTheme.titleMedium),

@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 
 import '../services/donate_methods.dart';
 import '../services/install_source.dart';
+import '../services/platform_features.dart';
 import '../services/project_links.dart';
 import '../services/relative_time.dart';
 import '../services/update_checker.dart';
@@ -90,24 +91,28 @@ class AboutScreen extends StatelessWidget {
                         color: cs.onSurfaceVariant,
                       ),
                 ),
-                const SizedBox(height: 2),
-                // §390 — канал установки. Полезен в багрепортах: от него
-                // зависят и подпись APK, и адрес обновления.
-                Text(
-                  getLocalText.s(
-                      "Installed from %s", InstallSourceResolver.current.label),
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: cs.onSurfaceVariant,
-                      ),
-                ),
+                if (PlatformFeatures.hasAndroidSystemSettings) ...[
+                  const SizedBox(height: 2),
+                  // §390 — канал установки. Полезен в багрепортах: от него
+                  // зависят и подпись APK, и адрес обновления.
+                  Text(
+                    getLocalText.s(
+                        "Installed from %s", InstallSourceResolver.current.label),
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: cs.onSurfaceVariant,
+                        ),
+                  ),
+                ],
               ],
             ),
           ),
           const SizedBox(height: 16),
-          const _UpdateBlock(),
-          const SizedBox(height: 8),
-          const _SourcesCard(),
-          const SizedBox(height: 8),
+          if (PlatformFeatures.hasAndroidSystemSettings) ...[
+            const _UpdateBlock(),
+            const SizedBox(height: 8),
+            const _SourcesCard(),
+            const SizedBox(height: 8),
+          ],
           Card(
             child: Column(
               children: [

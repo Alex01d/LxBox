@@ -8,6 +8,7 @@ import '../services/debug/bootstrap.dart';
 import '../services/debug/transport/server.dart';
 import '../services/haptic_service.dart';
 import '../services/l10n/locale_controller.dart';
+import '../services/platform_features.dart';
 import '../services/settings_storage.dart';
 import '../services/subscription/subscription_identity.dart';
 import '../services/subscription/user_agent.dart';
@@ -502,9 +503,10 @@ class _AppSettingsScreenState extends State<AppSettingsScreen> with WidgetsBindi
       // и не перерисовывала строки самого экрана настроек.
       animation: Listenable.merge([themeNotifier, LocaleController.I]),
       builder: (context, _) {
+        final tabCount = PlatformFeatures.hasAndroidSystemSettings ? 5 : 4;
         return DefaultTabController(
-          length: 5,
-          initialIndex: widget.initialTab.clamp(0, 4),
+          length: tabCount,
+          initialIndex: widget.initialTab.clamp(0, tabCount - 1),
           child: Scaffold(
             appBar: AppBar(
               title: Text(getLocalText.s("App Settings")),
@@ -514,7 +516,8 @@ class _AppSettingsScreenState extends State<AppSettingsScreen> with WidgetsBindi
                   Tab(text: getLocalText.s("Appearance")),
                   Tab(text: getLocalText.s("Subscriptions")),
                   Tab(text: getLocalText.s("Diagnostics")),
-                  Tab(text: getLocalText.s("Automation")),
+                  if (PlatformFeatures.hasAndroidSystemSettings)
+                    Tab(text: getLocalText.s("Automation")),
                 ],
               ),
             ),
@@ -524,7 +527,8 @@ class _AppSettingsScreenState extends State<AppSettingsScreen> with WidgetsBindi
                 _buildAppearanceTab(context),
                 _buildSubscriptionsTab(context),
                 _buildDiagnosticsTab(context),
-                AutomationTab(padding: _tabPadding(context)),
+                if (PlatformFeatures.hasAndroidSystemSettings)
+                  AutomationTab(padding: _tabPadding(context)),
               ],
             ),
           ),
