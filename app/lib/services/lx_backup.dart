@@ -34,6 +34,7 @@ import 'node_hash.dart' show deepSortKeys;
 import 'parser/body_decoder.dart';
 import 'parser/parse_all.dart';
 import 'parser/uri_utils.dart' show newUuidV4;
+import 'platform_features.dart';
 import 'record_vars.dart';
 import 'storage_migration/legacy_autogroup.dart';
 import 'tag_resolver.dart';
@@ -930,7 +931,7 @@ Future<LxBackupExport> buildLxBackup({
     'exported_by': {
       'app': kLxAppLxBox,
       'version': appVersion,
-      'platform': 'android',
+      'platform': PlatformFeatures.isIos ? 'ios' : 'android',
     },
     'exported_at': DateTime.now().toUtc().toIso8601String(),
     if (sources.isNotEmpty) 'sources': sources,

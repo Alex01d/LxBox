@@ -121,6 +121,7 @@ Debug build on iPhone 17 Simulator with iOS 26.5, Flutter 3.47.9, core `v1.14.4-
 | 3 | Pass | VPN Settings, System has only Memory limit. Mode in VPN shows only System HTTP proxy. About has no install channel, update block or Where to get L×Box |
 | 4 | Pass | Routing has Directions, Presets, Rules and DNS. Add rule opens with no Apps section, and leaving adds no rule. URL Check has no App row, `HTTP 204 · 217 ms`, no new line in `applog.txt` |
 | 5 | Pass | Unknown traffic is not in Presets or Rules. The saved config had `unknown-apps` before the change and not after. The stored rule stays. `platform_features_test.dart`: 4 pass, the preset stays in the Android build and drops in the iOS one |
+| 6 | Pass | Local server on a temporary subscription logged `user-agent: LxBox-ios/2.25.15.1`, `x-device-os: ios`, `x-ver-os: 26.5`, `x-device-model: iPhone 17`, and `x-hwid`. A new LX backup says `platform: ios`. Subscription and backup file removed after. 22 tests pass in `user_agent_test` and `subscription_identity_test`. Not tried against a real panel |
 
 ## Docs to update
 

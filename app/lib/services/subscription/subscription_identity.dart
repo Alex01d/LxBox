@@ -3,6 +3,7 @@ import 'dart:math';
 import 'package:device_info_plus/device_info_plus.dart';
 
 import '../../models/server_list.dart';
+import '../platform_features.dart';
 import '../settings_storage.dart';
 
 /// §118 — глобальная идентичность HTTP-фетча подписок: кастомный User-Agent +
@@ -40,7 +41,8 @@ class SubscriptionIdentity {
   static String deviceModelOverride = '';
 
   /// device-дефолты (кэшируются на init, в рантайме не меняются).
-  static const deviceOsDefault = 'android';
+  static String get deviceOsDefault =>
+      PlatformFeatures.isIos ? 'ios' : 'android';
   static String osVersion = ''; // Build.VERSION.RELEASE
   static String deviceModel = ''; // Build.MODEL
 
@@ -74,9 +76,15 @@ class SubscriptionIdentity {
     deviceModelOverride =
         (await SettingsStorage.getVar(varDeviceModel, '')).trim();
     try {
-      final info = await DeviceInfoPlugin().androidInfo;
-      osVersion = info.version.release;
-      deviceModel = info.model;
+      if (PlatformFeatures.isIos) {
+        final info = await DeviceInfoPlugin().iosInfo;
+        osVersion = info.systemVersion;
+        deviceModel = info.modelName;
+      } else {
+        final info = await DeviceInfoPlugin().androidInfo;
+        osVersion = info.version.release;
+        deviceModel = info.model;
+      }
     } catch (_) {
       // Не-Android (общая lib) / сбой плагина — device-дефолты пустые,
       // effective* отдадут override либо пусто (заголовок не положится).

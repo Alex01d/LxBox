@@ -1,3 +1,4 @@
+import '../platform_features.dart';
 import '../version_info.dart';
 
 /// User-Agent, отправляемый на каждый HTTP-fetch подписки.
@@ -34,7 +35,8 @@ import '../version_info.dart';
 ///
 /// например `LxBox-android/2.0.4`.
 
-const _kProductToken = 'LxBox-android';
+String get _productToken =>
+    PlatformFeatures.isIos ? 'LxBox-ios' : 'LxBox-android';
 
 // §219 — module-level: раньше компилился на каждый вызов _sanitizeToken
 // (в т.ч. при инициализации приложения).
@@ -44,7 +46,7 @@ final _uaSanitizeRe = RegExp(r'[()\s;]+');
 /// независимо от мусора на входе. Вынесена отдельно ради regression-теста.
 String buildSubscriptionUserAgent({required String appVersion}) {
   final ver = _sanitizeToken(appVersion, fallback: 'unknown');
-  return '$_kProductToken/$ver';
+  return '$_productToken/$ver';
 }
 
 /// Срезает ведущий `v` и символы, которые сломали бы структуру UA (скобки /

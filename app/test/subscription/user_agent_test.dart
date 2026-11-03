@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:lxbox/services/platform_features.dart';
 import 'package:lxbox/services/subscription/user_agent.dart';
 
 // Гард фикса «панель отдаёт JSON-конфиг вместо списка подписки». Инварианты:
@@ -9,6 +10,15 @@ import 'package:lxbox/services/subscription/user_agent.dart';
 //     и платформенного комментария тоже нет (см. таск 114).
 void main() {
   group('buildSubscriptionUserAgent — panel-routing invariants', () {
+    test('iOS sends its own product token', () {
+      addTearDown(() => PlatformFeatures.isIosForTesting = null);
+      PlatformFeatures.isIosForTesting = true;
+      expect(
+        buildSubscriptionUserAgent(appVersion: '2.0.4'),
+        'LxBox-ios/2.0.4',
+      );
+    });
+
     test('версия даёт ожидаемую строку', () {
       expect(
         buildSubscriptionUserAgent(appVersion: '2.0.4'),

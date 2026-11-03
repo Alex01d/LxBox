@@ -1,6 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lxbox/models/codec/source_record.dart';
 import 'package:lxbox/models/server_list.dart';
+import 'package:lxbox/services/platform_features.dart';
 import 'package:lxbox/services/subscription/subscription_identity.dart';
 
 void main() {
@@ -121,6 +122,12 @@ void main() {
       SubscriptionIdentity.deviceOsOverride = '';
       SubscriptionIdentity.verOsOverride = '';
       SubscriptionIdentity.deviceModelOverride = '';
+    });
+
+    test('iOS reports its own OS by default', () {
+      addTearDown(() => PlatformFeatures.isIosForTesting = null);
+      PlatformFeatures.isIosForTesting = true;
+      expect(SubscriptionIdentity.effectiveDeviceOs, 'ios');
     });
 
     test('копирует текущие глобальные значения (effective meta)', () {
