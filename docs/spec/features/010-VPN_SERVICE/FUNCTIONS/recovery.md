@@ -21,6 +21,8 @@ the core has stopped responding and does not show "Connected" over a dead
 tunnel. There is no active watchdog with probes and automatic network reset — it
 was rejected for the sake of the battery.
 
+On iOS (§718) nothing restarts the tunnel after iOS ends it, for now. The app shows the reason when it next opens, and traffic goes direct until then.
+
 ## Parameters
 
 No settings of its own. Fixed values:
@@ -88,3 +90,4 @@ responding".
 | 7 | [428](../../../tasks/428-vpn-service-start-sticky.md) | Done, DEVICE-VERIFIED | Coming up after process death + a storm guard |
 | 8 | [430](../../../tasks/430-stale-fgs-notification-cleanup.md) | Done, DEVICE-VERIFIED | Removing a dead service's notification |
 | 9 | [128](../../../tasks/128-jni-callback-crash-android10.md) | In Progress | Callbacks from the core must not crash the process |
+| 10 | [718](../../../tasks/718-ios-packet-tunnel.md) | iPhone 15, no merge | iOS: no automatic restart yet |

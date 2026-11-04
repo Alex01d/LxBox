@@ -17,6 +17,8 @@ There is one system VPN slot on the device. The function keeps L×Box from
 silently displacing another VPN on start and reports when another VPN
 has displaced L×Box.
 
+On iOS (§718) the question comes from the network interfaces the system lists, so it can appear when no other VPN is really running. A VPN that takes the slot arrives as the tunnel's stop reason.
+
 ## Parameters
 
 No settings of its own. Behaviour depends on the operating mode: the question
@@ -76,3 +78,4 @@ the system VPN slot (e.g. an always-on VPN). Start again to reconnect."
 | 6 | [276](../../../tasks/276-revoked-status-contract.md) | Done — device-verified | Takeover is a flag on top of Stopped, survives the background |
 | 7 | [427](../../../tasks/427-foreign-vpn-active-network-api30.md) | Done, DEVICE-VERIFIED | A foreign VPN — by the active network; our own orphan is not foreign |
 | 8 | [528](../../../tasks/528-foreign-vpn-dialog-proxy-mode.md) | Done | The dialog is not shown in Proxy mode |
+| 9 | [718](../../../tasks/718-ios-packet-tunnel.md) | iPhone 15, no merge | iOS: real check before replacing another VPN |

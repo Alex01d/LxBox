@@ -248,15 +248,18 @@ class _SettingsScreenState extends State<SettingsScreen>
         .where((v) => v.isEditable)
         .toList();
 
+    final showsSystemTab = PlatformFeatures.hasAndroidSystemSettings;
+    final tabCount = showsSystemTab ? 3 : 2;
+    final firstTab = showsSystemTab ? widget.initialTab : widget.initialTab - 1;
     return DefaultTabController(
-      length: 3,
-      initialIndex: widget.initialTab.clamp(0, 2),
+      length: tabCount,
+      initialIndex: firstTab.clamp(0, tabCount - 1),
       child: Scaffold(
         appBar: AppBar(
           title: Text(getLocalText.s("VPN Settings")),
           bottom: TabBar(
             tabs: [
-              Tab(text: getLocalText.s("System")),
+              if (showsSystemTab) Tab(text: getLocalText.s("System")),
               Tab(text: getLocalText.s("Core")),
               Tab(text: getLocalText.s("Mode")),
             ],
@@ -264,7 +267,7 @@ class _SettingsScreenState extends State<SettingsScreen>
         ),
         body: TabBarView(
           children: [
-            _buildSystemTab(context),
+            if (showsSystemTab) _buildSystemTab(context),
             _buildCoreTab(context, template, editableVars),
             VpnModeTab(
               homeController: widget.homeController,

@@ -6,6 +6,12 @@ What Android has and iOS hides is in [IOS_DISABLED_FEATURES.md](IOS_DISABLED_FEA
 
 "Shared" means shared Dart code, so Android should do the same. Android was not run. Tasks: [§715 Servers](spec/tasks/715-ios-servers-section-check.md), [§716 Routing](spec/tasks/716-ios-routing-section-check.md).
 
+## Tunnel
+
+| # | What happens | Cause | Found |
+|---|---|---|---|
+| T1 | A `URLSession` download inside the spike app failed with `The network connection was lost` about 1 s after the tap, every time, through a VLESS node. Safari reached the same host through the same tunnel and downloaded 100 MB. Other apps on the phone could hit this too. Details in `ios-spike/logs/measure-device.md` | Not found. Pavel chose to go on to L×Box first | [§718](spec/tasks/718-ios-packet-tunnel.md) |
+
 ## Start fails, or a rule silently does nothing
 
 | # | What happens | Cause | Found |

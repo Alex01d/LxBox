@@ -16,7 +16,7 @@ server, connect the VPN or pick another Direction.
 When there is nothing to show, the list's place is taken not by emptiness
 but by the next step: add a server, connect, or choose another Direction.
 
-On iOS without the tunnel (§711), once the core stops in the background the list is empty again and "Tap to connect" returns.
+On iOS without the tunnel (§711), once the core stops in the background the list is empty again and "Tap to connect" returns. With the tunnel (§718) in VPN mode the list stays, because the core keeps running.
 
 ## Parameters
 
@@ -74,3 +74,4 @@ selected Direction.
 | 4 | [328](../../../tasks/328-no-servers-hint-on-home.md) | Implemented | Hint by zero servers, not by an empty config |
 | 5 | [579](../../../tasks/579-networks-pseudo-direction.md) | Implemented | Without Directions, NETWORKS is shown |
 | 6 | [711](../../../tasks/711-ios-core-in-app-no-vpn.md) | Simulator, no merge | iOS: state after the core stops in the background |
+| 7 | [718](../../../tasks/718-ios-packet-tunnel.md) | iPhone 15, no merge | iOS: list stays while the tunnel runs |

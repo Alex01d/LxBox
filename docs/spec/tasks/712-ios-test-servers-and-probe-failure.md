@@ -63,7 +63,7 @@ Other callers of `run` are safe once it stops throwing: the Debug API maps its t
 
 Rejected: testing through the live core while Connected. §236 removed that on purpose, because it measures through the active detour and leaves out disabled nodes.
 
-When the tunnel arrives, the core moves to the extension process and the test session stays in the app. Then the endpoints no longer collide, but `getVpnStatus` still gates the test, per P9 in 009.
+When the tunnel arrives, the core moves to the extension process and the test session stays in the app. Both use one `command.sock` path, so `getVpnStatus` and the native `VPN is running` answer are what keep them apart, per P9 in 009 ([§718](718-ios-packet-tunnel.md)).
 
 ## Solution
 

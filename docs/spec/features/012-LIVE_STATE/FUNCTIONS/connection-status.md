@@ -18,7 +18,7 @@ home screen: the bar under the status carries the transferred volume, the
 number of connections, the profiler recording indicator and the connection
 time. A tap on the bar opens Statistics.
 
-On iOS without the tunnel (§711), nothing outlives the foreground: returning to the app shows Disconnected, and a cold launch always starts Stopped.
+On iOS without the tunnel (§711), nothing outlives the foreground: returning to the app shows Disconnected, and a cold launch always starts Stopped. With the tunnel (§718) in VPN mode, status survives leaving the app and reopening it.
 
 ## Parameters
 
@@ -90,3 +90,4 @@ gives the hint "App connections" / "Outbound connections to servers".
 | 6 | [276](../../../tasks/276-revoked-status-contract.md) | Done, device-verified | VPN slot takeover is distinguishable from a stop |
 | 7 | [361](../../../tasks/361-late-started-status-after-service-destroy.md) | ✅ Fixed | A late "Started" after the service died does not hang the status |
 | 8 | [711](../../../tasks/711-ios-core-in-app-no-vpn.md) | Simulator, no merge | iOS: status after leaving the app without a tunnel |
+| 9 | [718](../../../tasks/718-ios-packet-tunnel.md) | iPhone 15, no merge | iOS: status comes from the system's VPN connection |

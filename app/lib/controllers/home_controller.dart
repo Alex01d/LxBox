@@ -14,6 +14,7 @@ import '../services/automation/event_emitter.dart';
 import '../services/config_staleness.dart';
 import '../services/error_format.dart';
 import '../services/file_import.dart';
+import '../services/platform_features.dart';
 import '../services/probe/probe_lifecycle.dart';
 import '../services/rule_name_resolver.dart';
 import '../services/selector_info.dart';
@@ -505,6 +506,19 @@ class HomeController extends ChangeNotifier
         delayByDirection: delayByDirection,
       ));
 
+  void _showStopReasonFromLastSession(TunnelStatusEvent event) {
+    final reason = StopReason.fromEvent(
+        revoked: event.status == TunnelStatus.revoked,
+        errorReason: event.errorReason);
+    if (reason == null) return;
+    _emit(_state.copyWith(
+      lastError: StopReasonMsg(reason),
+      stopReason: reason,
+      lastStartError: reason.renderEn(),
+      lastStartErrorAt: DateTime.now(),
+    ));
+  }
+
   void _handleStatusEvent(TunnelStatusEvent event) {
     final tunnel = event.status;
     final prevTunnel = _state.tunnel;
@@ -592,6 +606,7 @@ class HomeController extends ChangeNotifier
         if (rawError != null && rawError.isNotEmpty) {
           _settleStartOutcome(rawError);
         }
+        if (PlatformFeatures.isIos) _showStopReasonFromLastSession(event);
         return;
       }
       _stopHeartbeat();

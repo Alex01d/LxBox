@@ -17,7 +17,7 @@ Lets the user trade the reliability of background connections for battery:
 pause the whole tunnel when the device sleeps or the screen goes off, and wake
 it back up. By default the tunnel never sleeps.
 
-On iOS (§714) tunnel sleep is hidden.
+On iOS (§714) tunnel sleep is hidden. With the tunnel (§718) iOS reports device sleep itself, and the core pauses until wake, with no setting.
 
 ## Parameters
 
@@ -71,3 +71,4 @@ up marks "restart needed".
 | 2 | [086](../../../tasks/086-stale-connections-network-change-doze.md) | Research | The core pause closes connections — the root of drops in `always` |
 | 3 | [215](../../../tasks/215-libbox-rc18-idle-suspend.md) | IMPLEMENTED + DEVICE-VERIFIED | Wake on screen-on only in the `always` mode |
 | 4 | [714](../../../tasks/714-ios-platform-differences.md) | Simulator, no merge | iOS: setting hidden |
+| 5 | [718](../../../tasks/718-ios-packet-tunnel.md) | iPhone 15, no merge | iOS: core pauses when the system says the device sleeps |

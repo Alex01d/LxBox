@@ -19,6 +19,8 @@ screen-on it asks the core to rebind stale WireGuard sessions, on a node change
 the core itself breaks the connections of the switched Direction (the Direction
 option `interrupt_exist_connections`); the application closes nothing.
 
+On iOS (§718) the tunnel extension does the same reset when the default interface changes.
+
 ## Parameters
 
 No user settings. Fixed value: quiet before a reset on network change — 1.5 s.
@@ -81,3 +83,4 @@ current interface or its absence.
 | 7 | [143-interrupt](../../../tasks/143-interrupt-connections-on-node-switch.md) | Removed 2026-11-01 (§9) | Optional breaking of the group's connections on node change |
 | 8 | [290](../../../tasks/290-automation-node-switch-gaps.md) | — | Choosing the already active node — no break and no reselection |
 | 9 | [340](../../../tasks/340-user-present-rebind-stale-endpoints.md) | v2 (SCREEN_ON) shipped | Screen on → rebind stale WG/AWG |
+| 10 | [718](../../../tasks/718-ios-packet-tunnel.md) | iPhone 15, no merge | iOS: reset on interface change in the tunnel |

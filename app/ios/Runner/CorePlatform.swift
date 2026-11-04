@@ -2,28 +2,31 @@ import Foundation
 import Libbox
 import Network
 
-final class CorePlatform: NSObject, LibboxPlatformInterfaceProtocol, LibboxCommandServerHandlerProtocol {
+class CorePlatform: NSObject, LibboxPlatformInterfaceProtocol, LibboxCommandServerHandlerProtocol {
   var onDebugMessage: ((String) -> Void)?
   var onServiceStop: (() -> Void)?
   var onServiceReload: (() -> Void)?
+  var onInterfaceSwitch: (() -> Void)?
 
   private let lock = NSLock()
   private var monitor: NWPathMonitor?
+  private var lastInterfaceName: String?
 
   func reset() {
     lock.lock()
     let current = monitor
     monitor = nil
+    lastInterfaceName = nil
     lock.unlock()
     current?.cancel()
   }
 
-  private static func failure(_ message: String) -> NSError {
+  static func failure(_ message: String) -> NSError {
     NSError(domain: "LxBox", code: 0, userInfo: [NSLocalizedDescriptionKey: message])
   }
 
   func openTun(_: LibboxTunOptionsProtocol?, ret0_: UnsafeMutablePointer<Int32>?) throws {
-    throw Self.failure("VPN mode needs the iOS tunnel, which is not built yet. Select Local proxy in VPN Settings.")
+    throw Self.failure("VPN mode does not run in Simulator. Select Local proxy in VPN Settings.")
   }
 
   func underNetworkExtension() -> Bool { false }
@@ -53,12 +56,23 @@ final class CorePlatform: NSObject, LibboxPlatformInterfaceProtocol, LibboxComma
       listener.updateDefaultInterface("", interfaceIndex: -1, isExpensive: false, isConstrained: false)
       return
     }
+    noteDefaultInterface(interface.name)
     listener.updateDefaultInterface(
       interface.name,
       interfaceIndex: Int32(interface.index),
       isExpensive: path.isExpensive,
       isConstrained: path.isConstrained
     )
+  }
+
+  private func noteDefaultInterface(_ name: String) {
+    lock.lock()
+    let previous = lastInterfaceName
+    lastInterfaceName = name
+    lock.unlock()
+    if let previous, previous != name {
+      onInterfaceSwitch?()
+    }
   }
 
   func closeDefaultInterfaceMonitor(_: LibboxInterfaceUpdateListenerProtocol?) throws {

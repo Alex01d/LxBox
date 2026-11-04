@@ -289,7 +289,7 @@ The full suite has not run on this merge. A push to `ios-app` runs no CI, so sta
 - Full suite on the merge with `develop`.
 - Conns tab after leaving the app while it is open: it keeps the last list, with one row shown as active, after the core has stopped. Not compared with Android.
 - Node Diagnostics (§392) on iOS: `ccGetUrlViaOutbound` while Connected. Done in [§713](713-ios-flows-from-android.md). `probeGetUrl` is done in [§712](712-ios-test-servers-and-probe-failure.md).
-- Tunnel: Network Extension, App Group, real memory limit. Needs the paid team, which the project owner provides later.
+- Tunnel: Network Extension, App Group, real memory limit. Done in [§718](718-ios-packet-tunnel.md).
 - "Test servers" (`probe*`) is done in [§712](712-ios-test-servers-and-probe-failure.md). It must also work once the tunnel exists.
 - A shared error model, per §055 item 6.
 - An iOS artifact and hash in fork releases, before real distribution.

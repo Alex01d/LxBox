@@ -18,18 +18,22 @@ A hidden setting keeps its stored value, so a backup taken on iOS still restores
 | Installed from, Where to get L×Box | Shows the install channel and links | Hidden | Android channels only |
 | Battery, Notifications, Location, Nearby Wi-Fi, App info rows | Show real permission state, open system settings | Hidden | Android system services. On iOS they would always read as granted |
 | Auto-record visited Wi-Fi networks | Remembers networks for Wi-Fi rules | Hidden | Needs native Wi-Fi reading that iOS does not have here |
-| Wi-Fi network list in the rule editor | A rule matches named networks. Add current, Pick saved, Manual | Hidden. Network type and Metered stay (§716 D2) | iOS gives neither the app nor the core the network name without a paid Apple team. A rule from an Android backup keeps its networks and never matches here |
+| Wi-Fi network list in the rule editor | A rule matches named networks. Add current, Pick saved, Manual | Hidden. Network type and Metered stay (§716 D2) | Needs the Wi-Fi information entitlement and a location prompt, left for its own task (§718 D6). A rule from an Android backup keeps its networks and never matches here |
 | Automation tab | Tasker and other apps control L×Box through intents | Hidden | Android intents |
 | Tunnel sleep mode | Pauses the tunnel in Doze or with the screen off | Hidden | Android Doze and screen events |
-| Keep VPN on exit | VPN outlives the app | Hidden | The core stops with the app until the tunnel exists |
+| Keep VPN on exit | VPN outlives the app, or stops on swipe when off | Hidden, always on in VPN mode | iOS does not reliably tell an app it was swiped away (§718) |
+| Memory limit | Auto, 200, 384, 512, 768 MB | Hidden, along with the empty System tab in VPN Settings | The tunnel runs under the iOS limit of 50 MB, which the core detects (§718 D5) |
+| Service notification and its buttons | Status, Stop, Restart, Send | None. Control Center and Settings → VPN show the connection | iOS has no such notification for a VPN (§718) |
 | Allow VPN bypass | Apps may opt out of the tunnel | Hidden | Android `ConnectivityManager` |
 
 ## Different, not turned off
 
 | Feature | On Android | On iOS |
 |---|---|---|
-| VPN mode | System-wide tunnel | Fails with a reason. Only Local proxy works until a paid Apple team exists (§711) |
-| App in the background | Service keeps running | The core stops when the app leaves the foreground (§711) |
+| VPN mode | System-wide tunnel | Same on a real iPhone, through a tunnel extension (§718). Simulator fails with a reason and needs Proxy mode |
+| Tunnel killed by the system | Restarts by itself, up to 3 times in 5 minutes | Stays down, traffic goes direct, and the app shows the reason at next open. Decided for now in §718 D3 |
+| Local proxy | Runs in the VPN service | Runs inside the app (§711, §718 D2) |
+| App in the background | Service keeps running | VPN mode keeps running. Proxy mode stops when the app leaves the foreground (§711) |
 | Code editor | Native editor with highlighting, line numbers, search and wrap | Plain text field. The search and wrap buttons and Magnifier do nothing (§714 D4) |
 | Closing the keyboard | Back button | A tap outside the field (§714 D5) |
 | Back gesture on a screen that guards back | System back runs the screen's handler | A swipe from the left edge runs the same handler at the end of the drag. The screen does not follow the finger (§715 D1) |
@@ -40,7 +44,9 @@ A hidden setting keeps its stored value, so a backup taken on iOS still restores
 | Camera prompt language | System's own text | Our text in English, Russian or Chinese, by system language (§714 D8) |
 | File picker | A tap returns the file | A tap, then Open. Left as is (§714 D9) |
 | Sticky session by, Load balance | `process` and domain | `process` has no owner here, so the core hashes the domain alone (§716) |
-| System DNS | Uses `LocalResolver` | The core's own lookup, `localDNSTransport` is nil. Not checked on a phone (§716) |
+| System DNS | Uses `LocalResolver` | The core's own lookup, `localDNSTransport` is nil (§716). A real node resolved through it on a phone (§718) |
+| Device sleep | Pauses only with Tunnel sleep mode set | The core pauses when iOS reports sleep, with no setting (§718 D7) |
+| Another VPN check | From the network's VPN transport | From interfaces the system lists, so it can ask needlessly (§718 D4) |
 
 ## Still visible, not working, no decision yet
 
@@ -49,4 +55,4 @@ A hidden setting keeps its stored value, so a backup taken on iOS still restores
 | Google push (FCM) preset | Off by default. Its package condition never matches |
 | Tailscale, Taildrop, OpenConnect screens | Native calls not ported |
 | Send to TV | Depends on the camera, not tested |
-| Text in settings that stayed | Debug API mentions `adb forward`. Memory limit says Auto sets no threshold, on iOS it means 50 MB. System HTTP proxy mentions Android 10. The Rules tab says rules can match by app. Metered says "in Android settings", though the condition works on iOS as cellular or personal hotspot. Ru internet segment says "Russian apps (by package name)", with a "Russian apps by package" option, and FCM says "Play region" (§716 D3) |
+| Text in settings that stayed | Debug API mentions `adb forward`. System HTTP proxy mentions Android 10. The Rules tab says rules can match by app. Metered says "in Android settings", though the condition works on iOS as cellular or personal hotspot. Ru internet segment says "Russian apps (by package name)", with a "Russian apps by package" option, and FCM says "Play region" (§716 D3) |

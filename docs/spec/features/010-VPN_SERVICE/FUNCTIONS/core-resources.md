@@ -18,6 +18,8 @@ suspends idle tunnels (they wake up by themselves on first use), builds a
 tunnel only on first use and limits how many are built at once. Separately — sets
 the core's memory ceiling.
 
+On iOS (§718) the memory limit setting is hidden. The tunnel runs under the iOS limit of 50 MB, which the core detects by itself.
+
 ## Parameters
 
 | Setting (VPN settings → System) | Values | Default | Core key |
@@ -85,3 +87,4 @@ core parameters.
 | 7 | [535](../../../tasks/535-kernel-1-14-2-lx1-pin-lx-wg-keys-endpoint-state.md) | Implemented | Sleep keys moved from `route` to `lx.wg` |
 | 8 | [536](../../../tasks/536-lx-wg-lazy-build-build-max.md) | Implemented | Lazy build and a budget of 5 next to the sleep threshold |
 | 9 | [542](../../../tasks/542-build-max-setting.md) | Implemented | Lazy build and the budget are user settings |
+| 10 | [718](../../../tasks/718-ios-packet-tunnel.md) | iPhone 15, no merge | iOS: memory limit hidden, the system limit applies |

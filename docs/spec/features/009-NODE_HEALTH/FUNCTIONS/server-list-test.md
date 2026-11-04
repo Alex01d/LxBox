@@ -21,7 +21,7 @@ badge, a summary appears on top; the "Test actions" menu applies decisions to
 the results.
 
 On iOS without the tunnel (§712), the test runs while the core is stopped and
-ends when the app leaves the foreground.
+ends when the app leaves the foreground. With the tunnel (§718) the test stays in the app and needs the VPN stopped.
 
 ## Parameters
 
@@ -126,3 +126,4 @@ Summary: `Test servers` → `Testing… N done` → `N ok · N err · N broken`.
 | 12 | [604](../../../tasks/604-dns-build-health-directions-bugs.md) | Done | No global URL — the template's ping URL, not the core default |
 | 13 | [669](../../../tasks/669-probe-session-cancel-stop-timeout-race.md) | In progress | Stop aborts started measurements, `Stopping…` state, session close capped, an old run does not close a new one |
 | 14 | [712](../../../tasks/712-ios-test-servers-and-probe-failure.md) | Simulator, no merge | iOS test session; a failed call ends the test with an error; Stop has a 10 s limit |
+| 15 | [718](../../../tasks/718-ios-packet-tunnel.md) | iPhone 15, no merge | iOS: test stays in the app, gated by the tunnel's status |

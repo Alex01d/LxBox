@@ -18,7 +18,7 @@ item in the node menu, all visible nodes — via the ping button on the home
 screen, automatically — 5 s after connecting. The result is shown on the right
 of the node row as `NNMS` or `ERR`, colored by the scale.
 
-On iOS without the tunnel (§711), a ping in progress ends when the app leaves the foreground, because the core stops.
+On iOS without the tunnel (§711), a ping in progress ends when the app leaves the foreground, because the core stops. With the tunnel (§718) the core keeps running in VPN mode, but a ping still needs the app on screen.
 
 ## Parameters
 
@@ -117,3 +117,4 @@ recalculation of the "root causes" for detour.
 | 13 | [677](../../../tasks/677-autoping-tail-skips-round-robin-groups.md) | Done | The end of a run forces a group test only for Fastest (`least_test`) |
 | 14 | [715](../../../tasks/715-auto-twin-pool-label-core-delays.md) | Done | Core URL test results shown as a foreign `~` measurement |
 | 15 | [711](../../../tasks/711-ios-core-in-app-no-vpn.md) | Simulator, no merge | iOS: ping ends with the foreground |
+| 16 | [718](../../../tasks/718-ios-packet-tunnel.md) | iPhone 15, no merge | iOS: ping goes through the tunnel extension |

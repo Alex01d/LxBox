@@ -21,7 +21,7 @@ through this node to the chosen service and shows the reply as is — without
 switching the active node and without touching live connections.
 
 On iOS without the tunnel (§712, §713), the check works with the core stopped
-and while it runs.
+and while it runs. With the tunnel (§718) in VPN mode, the check runs inside the extension.
 
 ## Parameters
 
@@ -104,3 +104,4 @@ address, exchange time or error text.
 | 4 | [546](../../../tasks/546-emitters-drop-registry-rule-copies.md) | — | Registry check in the session — by the core version of the live build |
 | 5 | [712](../../../tasks/712-ios-test-servers-and-probe-failure.md) | Simulator, no merge | iOS: the check works while the core is stopped |
 | 6 | [713](../../../tasks/713-ios-flows-from-android.md) | Simulator, no merge | iOS: the check works while the core runs |
+| 7 | [718](../../../tasks/718-ios-packet-tunnel.md) | iPhone 15, no merge | iOS: the check runs through the tunnel extension |

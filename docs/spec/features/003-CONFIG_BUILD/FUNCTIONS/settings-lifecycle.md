@@ -20,7 +20,7 @@ The state lives in three layers: settings in memory → the settings file → th
 config file; the fourth — the running tunnel — is handled by
 [applying to the tunnel](apply-to-running-tunnel.md).
 
-On iOS (§711) the saved config is dropped when a reinstall or update moves the app's storage, because it holds absolute paths. It is rebuilt on launch.
+On iOS (§711) the saved config is dropped when a reinstall or update moves the app's storage, because it holds absolute paths. It is rebuilt on launch. With the tunnel (§718) the app's data lives in the App Group, so the check follows that folder.
 
 ## Parameters
 
@@ -106,3 +106,4 @@ the snackbar "Config rebuilt: N nodes" on a build triggered by a user action.
 | 11 | [515](../../../tasks/515-workspace-switch-stale-controller-persist.md) | — | Switching the set does not drag in a write of the old set |
 | 12 | [604](../../../tasks/604-dns-build-health-directions-bugs.md) | Done | Every template variable raises the flag, not only 16 |
 | 13 | [711](../../../tasks/711-ios-core-in-app-no-vpn.md) | Simulator, no merge | iOS: config rebuilt after the app's storage moves |
+| 14 | [718](../../../tasks/718-ios-packet-tunnel.md) | iPhone 15, no merge | iOS: config and rule sets live in the App Group |

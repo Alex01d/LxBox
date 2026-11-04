@@ -8,6 +8,8 @@ L×Box is distributed under the **GNU General Public License, version 3** as pub
 
 L×Box links against [`libbox`](https://github.com/SagerNet/sing-box) (part of the [sing-box](https://github.com/SagerNet/sing-box) project), which is itself licensed under **GPLv3-or-later**. Any compiled L×Box binary (the APK) is therefore a combined GPLv3 work and must remain under GPLv3 when redistributed.
 
+The iOS tunnel code in `app/ios/PacketTunnel/` follows [sing-box-for-apple](https://github.com/SagerNet/sing-box-for-apple), also under GPLv3.
+
 ## Commercial licensing — scope and limits
 
 A commercial license from Leadaxe, when granted, covers **only the original L×Box code authored by Leadaxe** (the Kotlin / Dart sources in this repository, excluding `libbox` and other third-party components). It may be useful for scenarios that cannot be satisfied under GPLv3 *with respect to Leadaxe's own copyright*.

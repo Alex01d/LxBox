@@ -19,7 +19,7 @@ restart also from the service notification. Keeps an honest status: every transi
 a deadline, after which a hung core is forcibly shut down and the user gets
 the reason.
 
-On iOS without the tunnel (§711), Start runs the core inside the app, in Proxy mode only. VPN mode stops with a reason. Leaving the app stops the core, and the user taps Start on return.
+On iOS without the tunnel (§711), Start runs the core inside the app, in Proxy mode only. VPN mode stops with a reason. Leaving the app stops the core, and the user taps Start on return. On a real iPhone in VPN mode (§718), the core runs in a tunnel extension and keeps running after the app leaves the foreground or is swiped away. Simulator has no tunnel, so VPN mode stops with a reason there.
 
 ## Parameters
 
@@ -108,3 +108,4 @@ Tailscale node with Allow Taildrop
 | 20 | [707](../../../tasks/707-taildrop-send-receive-files.md), iteration 7 | Implemented, not verified on a device | 2026-11-03: notification buttons Stop / 📋 Send; Reconnect removed from the notification |
 | 21 | [707](../../../tasks/707-taildrop-send-receive-files.md), iteration 8 | Implemented, not verified on a device | 2026-11-04: Restart back in the notification; button list in App Settings |
 | 22 | [711](../../../tasks/711-ios-core-in-app-no-vpn.md) | Simulator, no merge | iOS: core inside the app, Proxy mode only, stops when the app leaves the foreground |
+| 23 | [718](../../../tasks/718-ios-packet-tunnel.md) | iPhone 15, no merge | iOS: tunnel extension in VPN mode, Proxy mode stays in the app |

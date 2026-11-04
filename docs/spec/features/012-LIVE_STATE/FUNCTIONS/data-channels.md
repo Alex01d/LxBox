@@ -17,6 +17,8 @@ control channel (without an open network port) and keeps its battery cost
 minimal: data flows only where and only at the rate that the user currently
 sees.
 
+With the tunnel (§718) the channels read from the extension over the command socket. They pause while the app is suspended and reconnect on return.
+
 ## Parameters
 
 No user settings. Fixed modes:
@@ -92,3 +94,4 @@ profiler recording; core events.
 | 9 | [209](../../../tasks/209-unary-cc-via-pingclient.md) | Implemented | One-off calls through the non-sleeping channel |
 | 10 | [261](../../../tasks/261-dns-stream-to-command-multiplex.md) | Open (in the header) | The DNS stream — a command in the profiler channel |
 | 11 | [605](../../../tasks/605-service-live-automation-workspaces-bugs.md) | Implemented | The profiler channel is brought up again on each tunnel start |
+| 12 | [718](../../../tasks/718-ios-packet-tunnel.md) | iPhone 15, no merge | iOS: channels cross into the tunnel extension |

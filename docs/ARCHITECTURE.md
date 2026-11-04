@@ -16,7 +16,7 @@ The current parser and builder version is **v2** (spec 026, phase 5 completed in
 | JVM | Java 17 |
 | NDK | `flutter.ndkVersion` — the NDK the pinned Flutter asks for; not hardcoded in `build.gradle.kts` |
 
-iOS is not a supported platform. It runs on iPhone 17 Simulator with iOS 26.5 or newer for development, target iOS 15.0, core in the app with no tunnel (§711).
+iOS is not a supported platform. It runs on iPhone 17 Simulator with iOS 26.5 or newer for development, target iOS 15.0, with Local proxy inside the app (§711). VPN mode runs in a packet tunnel extension and only on a real iPhone (§718).
 
 ### Support tiers
 
@@ -1677,7 +1677,7 @@ On Android these channels live in `VpnPlugin.kt`, except `/utils` and `/wifi_his
 | `com.leadaxe.lxbox/wifi_history` | MethodChannel | Bidirectional (§051) |
 | `lxbox/cc/*` | EventChannel | Native → Dart (CommandClient data, ephemeral, see the two-channel invariant above) |
 
-**iOS (§710, §711, §712, §713, §714, §715).** `app/ios/Runner/LxBoxChannels.swift` routes the channels. `app/lib/services/platform_features.dart` is the one Dart gate for what iOS hides. `app/lib/widgets/ios_edge_back_gesture.dart` runs back from a left-edge swipe where `PopScope(canPop: false)` turns Flutter's swipe off. `CoreRuntime`, `CorePlatform`, `CoreService` and `CoreCommandClient` replace `BoxApplication`, `PlatformInterfaceWrapper`, `BoxService` and `BoxCommandClient` for the Home, Stats, Profiler, URL Check, Diagnostics, ping and log path. `CoreProbeSession` replaces `ProbeSession` for Test servers and Diagnostics with the core stopped. The test session and the core exclude each other, because `LibboxSetup` fixes one command endpoint per process. The core runs inside the app process with no tunnel, so only Proxy mode starts; `openTun` fails with a reason. Every other method returns `FlutterMethodNotImplemented`, which reaches Dart as `MissingPluginException` and stays visible in AppLog. Exact tables: [§710](spec/tasks/710-ios-clean-startup.md), [§711](spec/tasks/711-ios-core-in-app-no-vpn.md), [§712](spec/tasks/712-ios-test-servers-and-probe-failure.md), [§713](spec/tasks/713-ios-flows-from-android.md).
+**iOS (§710, §711, §712, §713, §714, §715, §718).** `app/ios/Runner/LxBoxChannels.swift` routes the channels. `app/lib/services/platform_features.dart` is the one Dart gate for what iOS hides. `app/lib/widgets/ios_edge_back_gesture.dart` runs back from a left-edge swipe where `PopScope(canPop: false)` turns Flutter's swipe off. `CoreRuntime`, `CorePlatform`, `CoreService` and `CoreCommandClient` replace `BoxApplication`, `PlatformInterfaceWrapper`, `BoxService` and `BoxCommandClient` for the Home, Stats, Profiler, URL Check, Diagnostics, ping and log path. `CoreProbeSession` replaces `ProbeSession` for Test servers and Diagnostics with the core stopped. The test session and the core exclude each other, because `LibboxSetup` fixes one command endpoint per process, and the app and the extension share one `command.sock` path. In VPN mode on a device the core runs in `app/ios/PacketTunnel/`, `TunnelController` starts and stops it through `NETunnelProviderManager`, status comes from `NEVPNStatus`, and `reload`, `resetNetwork`, `clearDnsCache` and `memoryInfo` cross as provider messages. Everything else crosses over `CommandClient`, as in Proxy mode. Proxy mode, and every mode in Simulator, runs inside the app process, where `openTun` fails with a reason. Every other method returns `FlutterMethodNotImplemented`, which reaches Dart as `MissingPluginException` and stays visible in AppLog. Exact tables: [§710](spec/tasks/710-ios-clean-startup.md), [§711](spec/tasks/711-ios-core-in-app-no-vpn.md), [§712](spec/tasks/712-ios-test-servers-and-probe-failure.md), [§713](spec/tasks/713-ios-flows-from-android.md), [§718](spec/tasks/718-ios-packet-tunnel.md).
 
 **The MethodChannel methods** (the groups follow the `_Methods` constants in `box_vpn_client.dart`):
 
@@ -1836,7 +1836,7 @@ re-check via checkNearbyWifiPermission → user re-Connect
 
 ### VPN Lifecycle & Status Sync
 
-This section describes Android, where the service outlives Flutter. On iOS (§711) the core lives in the app process, stops when the app leaves the foreground, and every cold launch starts `Stopped`.
+This section describes Android, where the service outlives Flutter. On iOS in VPN mode (§718) the core lives in a tunnel extension, outlives the app, and a cold launch adopts it. In Proxy mode (§711) the core lives in the app process, stops when the app leaves the foreground, and a cold launch starts `Stopped`.
 
 The tunnel's model: **`BoxVpnService` is an Android foreground service that lives separately from the Flutter process.**
 
@@ -2213,7 +2213,7 @@ LxBox is a monolith, but architecturally it holds several self-contained layers 
 
 **The quality gates have been passed:** the §049 audit (atomic CAS, the F1 split, the F2–F26 fixes) and the §050 closeout.
 
-**iOS:** core inside the app with no tunnel ([§710](spec/tasks/710-ios-clean-startup.md), [§711](spec/tasks/711-ios-core-in-app-no-vpn.md)). A cross-platform package would be a separate task (a Network Extension).
+**iOS:** VPN mode in a packet tunnel extension ([§718](spec/tasks/718-ios-packet-tunnel.md)), Local proxy inside the app ([§710](spec/tasks/710-ios-clean-startup.md), [§711](spec/tasks/711-ios-core-in-app-no-vpn.md)).
 
 ### Layer 2 — CommandClient channel
 
@@ -2257,6 +2257,6 @@ LxBox is a monolith, but architecturally it holds several self-contained layers 
 1. **Phase 1** — the sing-box VPN engine plus the CommandClient channel (Layers 1 and 2) into `packages/flutter_singbox/`.
 2. **Phase 2** — extract a reusable `NodeSpec` parser/emit from Layer 3 (without the builder pipeline).
 3. **Phase 3** — the publication decision: libbox's viral GPLv3 is the main blocker.
-4. **Phase 4** — iOS support (if it is wanted).
+4. **Phase 4** — iOS support. An internal build runs on a real iPhone (§718), nothing is distributed.
 
 **The current status:** nothing has been extracted. The VPN engine (Layer 1) and the CommandClient channel (Layer 2) are the closest candidates.

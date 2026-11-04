@@ -185,19 +185,29 @@ test config to keep in sync.
 
 ⚠ The core is controlled through the **libbox CommandClient**, not Clash HTTP (the Clash API was removed in §122). An `experimental.clash_api` block in a config is a **fatal startup failure** on our core (built without `with_clash_api`): `clash api is not included in this build`. Do not put it in a config you intend to test.
 
-## Running on iOS Simulator
+## Running on iOS
 
-The iOS app runs the core inside the app with no tunnel ([§711](spec/tasks/711-ios-core-in-app-no-vpn.md)). Use iPhone 17 with iOS 26.5 or newer. CI has no iOS job, so checks are manual. To connect, select Proxy in VPN Settings, Mode tab.
+Local proxy runs inside the app ([§711](spec/tasks/711-ios-core-in-app-no-vpn.md)). VPN mode runs in the `PacketTunnel` extension and needs a real iPhone ([§718](spec/tasks/718-ios-packet-tunnel.md)). CI has no iOS job, so checks are manual.
+
+**Simulator.** Use iPhone 17 with iOS 26.5 or newer. VPN mode stops with a reason here. To connect, select Proxy in VPN Settings.
 
 ```bash
 ./scripts/build-libbox-ios.sh
 cd app
 flutter build ios --simulator --debug
 xcrun simctl install <device id> build/ios/iphonesimulator/Runner.app
-xcrun simctl launch <device id> com.leadaxe.lxbox
+xcrun simctl launch <device id> com.gglprojects.lxbox
 ```
 
-Warnings and errors are in `applog.txt` in the app's `Documents` folder. Find it with `xcrun simctl get_app_container <device id> com.leadaxe.lxbox data`. A clean start doesn't create the file.
+**iPhone.** Signing is automatic, with the team and bundle ID set in `Runner.xcodeproj`. The team needs Network Extension and App Groups, so a Personal Team can't sign this. Device builds are Release, because a debug Flutter build needs an attached debugger.
+
+```bash
+cd app
+flutter build ios --release
+xcrun devicectl device install app --device <device id> build/ios/iphoneos/Runner.app
+```
+
+Warnings and errors are in `applog.txt`, in `Library/Documents` of the App Group. On Simulator, find it with `xcrun simctl get_app_container <device id> com.gglprojects.lxbox group.com.gglprojects.lxbox`. On a phone, copy it with `xcrun devicectl device copy from --domain-type appGroupDataContainer --domain-identifier group.com.gglprojects.lxbox --source Library/Documents/applog.txt`. `devicectl` can't reach files outside `Library` in an App Group. A clean start doesn't create the file.
 
 ## CI (GitHub Actions)
 

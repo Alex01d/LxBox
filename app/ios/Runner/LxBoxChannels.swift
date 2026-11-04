@@ -11,6 +11,9 @@ final class LxBoxChannels {
     "getCoreLogsVerbose": ("core_logs_verbose", false),
     "getAllowBypass": ("allow_bypass", false),
     "getAutoRedirect": ("auto_redirect", false),
+    "getNotificationStop": ("notification_stop", true),
+    "getNotificationRestart": ("notification_restart", true),
+    "getNotificationSend": ("notification_send", true),
   ]
   private static let boolSetters: [String: String] = [
     "setAutoStart": "auto_start",
@@ -19,8 +22,13 @@ final class LxBoxChannels {
     "setCoreLogsVerbose": "core_logs_verbose",
     "setAllowBypass": "allow_bypass",
     "setAutoRedirect": "auto_redirect",
+    "setHasTun": "has_tun",
+    "setNotificationStop": "notification_stop",
+    "setNotificationRestart": "notification_restart",
+    "setNotificationSend": "notification_send",
   ]
 
+  private static let vpnInterfacePrefixes = ["tap", "tun", "ppp", "ipsec", "utun"]
   private static let quitDelaySeconds = 0.25
   private static let quitStopBudgetSeconds = 3.0
 
@@ -81,6 +89,8 @@ final class LxBoxChannels {
     switch call.method {
     case "getFilesDir":
       result(CoreRuntime.filesDirectory.path)
+    case "getAppGroupPath":
+      result(CoreRuntime.appGroupDirectory?.path)
     case "saveConfig":
       result(saveConfig(arguments?["config"] as? String ?? ""))
     case "getConfig":
@@ -93,8 +103,7 @@ final class LxBoxChannels {
       respondOffMain(result) { Self.formatConfig(text) }
 
     case "startVPN":
-      service.start()
-      result(true)
+      service.start(result)
     case "stopVPN":
       service.stop(result)
     case "forceStopVPN":
@@ -110,13 +119,15 @@ final class LxBoxChannels {
       service.clearDnsCache()
       result(true)
     case "getVpnStatus":
-      result(["status": service.status.rawValue, "revoked": false])
+      service.whenTunnelKnown { [service] in
+        result(["status": service.status.rawValue, "revoked": service.revoked])
+      }
     case "getTunnelUptimeMs":
-      result(service.uptimeMs)
+      service.whenTunnelKnown { [service] in result(service.uptimeMs) }
     case "getCoreVersion":
       result(LibboxVersion())
     case "getMemoryInfo":
-      result(Self.memoryInfo())
+      service.memoryInfo(result)
 
     case "getBackgroundMode":
       result(NativePrefs.string("background_mode", fallback: "never"))
@@ -264,11 +275,15 @@ final class LxBoxChannels {
     case "getAppInfo":
       result(["notFound": true])
 
-    case "setHasTun", "setAppLanguage", "setAutomationEnabled", "setAutomationActiveState",
-      "setNotificationTitle", "setNotificationText":
+    case "setAppLanguage", "setAutomationEnabled", "setAutomationActiveState",
+      "setNotificationTitle", "setNotificationText", "setTaildropTags", "deleteLegacyPrefs":
       result(true)
-    case "isForeignVpnActive", "getCurrentSessionAllowBypass":
+    case "isForeignVpnActive":
+      result(Self.isForeignVpnActive())
+    case "getCurrentSessionAllowBypass":
       result(false)
+    case "openVpnSettings":
+      open(UIApplication.openSettingsURLString) { result($0) }
     case "getAppLanguageState":
       result(["supported": false])
     case "isIgnoringBatteryOptimizations", "areNotificationsEnabled":
@@ -372,14 +387,14 @@ final class LxBoxChannels {
     return LibboxFormatConfig(text, &error)?.value
   }
 
-  private static func memoryInfo() -> [String: Any] {
-    var info = task_vm_info_data_t()
-    var count = mach_msg_type_number_t(MemoryLayout<task_vm_info_data_t>.size / MemoryLayout<natural_t>.size)
-    let status = withUnsafeMutablePointer(to: &info) {
-      $0.withMemoryRebound(to: integer_t.self, capacity: Int(count)) {
-        task_info(mach_task_self_, task_flavor_t(TASK_VM_INFO), $0, &count)
-      }
-    }
-    return ["totalPss": status == KERN_SUCCESS ? Int(info.phys_footprint) : 0]
+  private static func isForeignVpnActive() -> Bool {
+    #if targetEnvironment(simulator)
+      return false
+    #else
+      guard let settings = CFNetworkCopySystemProxySettings()?.takeRetainedValue() as? [String: Any],
+        let scoped = settings["__SCOPED__"] as? [String: Any]
+      else { return false }
+      return scoped.keys.contains { name in vpnInterfacePrefixes.contains { name.hasPrefix($0) } }
+    #endif
   }
 }

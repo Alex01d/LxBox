@@ -8,6 +8,7 @@ import 'package:intl/date_symbol_data_local.dart' show initializeDateFormatting;
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'screens/home_screen.dart';
+import 'services/app_group_path_provider.dart';
 import 'services/app_log.dart';
 import 'services/l10n/locale_controller.dart';
 import 'services/automation/automation_dispatcher.dart';
@@ -67,6 +68,7 @@ void main() async {
   // покажет диагностику (лучше частично-инициализированного app, чем чёрный
   // экран). Порядок сохранён (зависимости: Identity ← VersionInfo).
   try {
+    await useAppGroupFoldersOnIos();
     // VersionInfo загружает PackageInfo → sync доступ к версии для About /
     // UpdateChecker (см. §066). Раньше версия дублировалась hardcoded const'ом
     // в AboutScreen — поднимать вручную легко забыть (произошло на v1.8.0).

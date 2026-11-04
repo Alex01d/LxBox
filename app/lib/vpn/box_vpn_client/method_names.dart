@@ -18,6 +18,7 @@ class _Methods {
   /// §316 — native `Context.filesDir` (краш-репорты и stderr ядра лежат там,
   /// а НЕ в Dart-овском `getApplicationDocumentsDirectory()` = `app_flutter`).
   static const getFilesDir = 'getFilesDir';
+  static const getAppGroupPath = 'getAppGroupPath';
 
   // VPN lifecycle
   static const startVPN = 'startVPN';

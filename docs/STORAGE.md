@@ -147,7 +147,7 @@ Every key is described in detail in the sections below.
 
 Every path is relative to the **Android internal documents directory** (`getApplicationDocumentsDirectory()`). On a device that directory is unreachable without root or the Debug API (`GET /state/storage`).
 
-On iOS (§710, §711) the same call resolves to the app's `Documents` folder. The native `getFilesDir` and the core's `workingPath` are `Library/Application Support/lxbox`, which holds `singbox_config.json`, `cache.db` and crash reports. `basePath` is `tmp` on a device, because `command.sock` does not fit the socket path limit elsewhere, and Simulator uses a loopback port instead. The core also writes `configuration.json`, a copy of the config, to `basePath` at each start and leaves it there after Stop. `tempPath` is `Library/Caches/lxbox-core`. A reinstall or update moves the container, so the saved config is dropped and rebuilt. `has_tun` is accepted and not stored.
+On iOS (§710, §711, §718) the app's data lives in the App Group `group.com.gglprojects.lxbox`, so the tunnel extension can read it. `AppGroupPathProvider` answers the same call with `<group>/Library/Documents`, and Application Support with `<group>/Library/Application Support`. The native `getFilesDir` and the core's `workingPath` are `<group>/Library/Application Support/lxbox`, which holds `singbox_config.json`, `cache.db`, crash reports and `tunnel_stop.json`. The extension writes `tunnel_stop.json` with its stop reason or start error, and the app consumes it. `basePath` is the App Group root, because `command.sock` fits the socket path limit there, and Simulator uses a loopback port instead. The core also writes `configuration.json`, a copy of the config, to `basePath` at each start and leaves it there after Stop. `tempPath` is `Library/Caches/lxbox-core` in the app's own container, and under `<group>/Library` for the extension. Crash reports are `CrashReport-lxbox.log` from the extension and `CrashReport-lxbox-app.log` from the app. If the App Group container is missing, every path falls back to the app's own container. When that folder changes, the saved config is dropped and rebuilt. `has_tun` picks the process that runs the core.
 
 ```
 getApplicationDocumentsDirectory()/         # Android: Context.getDir("flutter") = app_flutter/
@@ -1462,7 +1462,7 @@ CRUD: `getWifiHistory()` / `addToWifiHistory(ssid, bssid)` / `removeFromWifiHist
 A JSON mirror of the Android prefs that historically lived **only** in the native
 `SharedPreferences` (`boxvpn_boot.*`). The implementation is `lib/services/settings_storage/native_prefs.dart`.
 
-On iOS (§710) there is no `boxvpn_boot.*`. The native copy is `UserDefaults` under `lxbox.native_prefs.<key>`, with the defaults below. JSON stays the truth, as on Android.
+On iOS (§710) there is no `boxvpn_boot.*`. The native copy is `UserDefaults` in the App Group suite under `lxbox.native_prefs.<key>`, with the defaults below. JSON stays the truth, as on Android.
 
 ```jsonc
 {

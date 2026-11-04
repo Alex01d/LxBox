@@ -28,6 +28,8 @@ final class CoreCommandClient {
   private var profilerClient: LibboxCommandClient?
   private var connectionTestClient: LibboxCommandClient?
   private var connectionTestSession: LibboxConnectionTestSession?
+  private var logClient: LibboxCommandClient?
+  private var logHandler: ClientHandler?
   private var statusHandler: ClientHandler?
   private var screenHandler: ClientHandler?
   private var profilerHandler: ClientHandler?
@@ -43,6 +45,9 @@ final class CoreCommandClient {
   private var screenGeneration = 0
   private var profilerGeneration = 0
   private var connectionTestGeneration = 0
+  private var logGeneration = 0
+
+  var onLogLines: (([String]) -> Void)?
 
   private let connectionsLock = NSLock()
   private var connections: LibboxConnections?
@@ -62,6 +67,58 @@ final class CoreCommandClient {
       statusPaused = false
     }
     ops.async { [self] in connectStatus() }
+  }
+
+  func startLogs() {
+    ops.async { [self] in connectLogs(keepReplay: true) }
+  }
+
+  private func connectLogs(keepReplay: Bool) {
+    let setup: Int? = locked {
+      guard tunnelAlive else { return nil }
+      logGeneration += 1
+      return logGeneration
+    }
+    guard let generation = setup else { return }
+    let handler = ClientHandler()
+    handler.skipsLogReplay = !keepReplay
+    handler.onLogLines = { [weak self] lines in self?.onLogLines?(lines) }
+    handler.onDisconnected = { [weak self] in self?.logsDisconnected(generation) }
+    let options = LibboxCommandClientOptions()
+    options.addCommand(LibboxCommandLog)
+    guard let client = LibboxNewCommandClient(handler, options) else { return }
+    do {
+      try client.connect()
+      let previous: LibboxCommandClient? = locked {
+        let current = logClient
+        logClient = client
+        logHandler = handler
+        return current
+      }
+      disconnect(previous)
+    } catch {
+      NSLog("[core] log client failed: %@", error.localizedDescription)
+      scheduleLogsReconnect()
+    }
+  }
+
+  private func logsDisconnected(_ generation: Int) {
+    let reconnect = locked { generation == logGeneration && tunnelAlive }
+    if reconnect { scheduleLogsReconnect() }
+  }
+
+  private func scheduleLogsReconnect() {
+    ops.asyncAfter(deadline: .now() + Self.reconnectDelay) { [weak self] in
+      self?.connectLogs(keepReplay: false)
+    }
+  }
+
+  private func takeLogClient() -> LibboxCommandClient? {
+    locked {
+      let client = logClient
+      logClient = nil
+      return client
+    }
   }
 
   func setStatusFast(_ fast: Bool) {
@@ -146,10 +203,12 @@ final class CoreCommandClient {
         statusGeneration += 1
         screenGeneration += 1
         profilerGeneration += 1
+        logGeneration += 1
       }
       disconnect(takeStatusClient())
       disconnect(takeScreenClient())
       disconnect(takeProfilerClient())
+      disconnect(takeLogClient())
       cancelPing()
       closeConnectionTest()
       connectionsLock.lock()
@@ -887,12 +946,25 @@ final class ClientHandler: NSObject, LibboxCommandClientHandlerProtocol {
   var onGroups: ((LibboxOutboundGroupIteratorProtocol) -> Void)?
   var onConnectionEvents: ((LibboxConnectionEvents) -> Void)?
   var onDnsQuery: ((LibboxDnsQuery) -> Void)?
+  var onLogLines: (([String]) -> Void)?
+  var skipsLogReplay = false
 
   func connected() {}
   func disconnected(_: String?) { onDisconnected?() }
   func setDefaultLogLevel(_: Int32) {}
   func clearLogs() {}
-  func writeLogs(_: (any LibboxLogIteratorProtocol)?) {}
+  func writeLogs(_ messages: (any LibboxLogIteratorProtocol)?) {
+    guard let messages else { return }
+    var lines: [String] = []
+    while messages.hasNext() {
+      if let entry = messages.next() { lines.append(entry.message) }
+    }
+    if skipsLogReplay {
+      skipsLogReplay = false
+      return
+    }
+    onLogLines?(lines)
+  }
   func writeStatus(_ message: LibboxStatusMessage?) {
     if let message { onStatus?(message) }
   }

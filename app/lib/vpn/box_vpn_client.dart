@@ -97,6 +97,18 @@ class BoxVpnClient {
     }
   }
 
+  Future<String?> getAppGroupPath() async {
+    try {
+      return await _invoke<String>(
+        _Methods.getAppGroupPath,
+        timeout: _Timeouts.config,
+        onTimeoutValue: null,
+      );
+    } catch (_) {
+      return null;
+    }
+  }
+
   /// Read current config from native storage. Empty fallback `{}` чтобы
   /// caller (Builder) мог parse'ить без null-проверок.
   Future<String> getConfig() async {

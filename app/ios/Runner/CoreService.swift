@@ -1,6 +1,7 @@
 import Flutter
 import Foundation
 import Libbox
+import NetworkExtension
 import UIKit
 
 final class ChannelSink: NSObject, FlutterStreamHandler {
@@ -36,6 +37,11 @@ final class CoreService {
   private static let stopWaitSeconds = 9.0
   private static let logQueueMax = 4096
   private static let logBatchMax = 200
+  private static let revokedMessage = "Another VPN app took the system VPN slot (e.g. an always-on VPN). Start again to reconnect."
+  private static let tunnelStoppedMessage = "The tunnel stopped unexpectedly."
+  private static let revokingStopReasons: Set<NEProviderStopReason> = [
+    .superceded, .configurationDisabled, .configurationRemoved, .userInitiated,
+  ]
 
   let statusSink = ChannelSink()
   let logSink = ChannelSink()
@@ -43,12 +49,17 @@ final class CoreService {
   let probe = CoreProbeSession()
 
   private(set) var status = Status.stopped
+  private(set) var revoked = false
   private var startedAt: Date?
   private var stopWaiters: [FlutterResult] = []
   private var backgroundTask = UIBackgroundTaskIdentifier.invalid
 
   private let queue = DispatchQueue(label: "lxbox.core", qos: .userInitiated)
   private let platform = CorePlatform()
+  private let tunnel = TunnelController()
+  private var inTunnel = false
+  private var tunnelStartPending = false
+  private var tunnelStopRequested = false
   private let serverLock = NSLock()
   private var server: LibboxCommandServer?
 
@@ -70,10 +81,19 @@ final class CoreService {
     probe.onServiceStop = { [weak self] in
       self?.queue.async { self?.probe.stop() }
     }
+    client.onLogLines = { [weak self] lines in lines.forEach { self?.writeLog($0) } }
+    tunnel.onStatusChange = { [weak self] status in self?.tunnelStatusChanged(status) }
+    tunnel.whenLoaded { [weak self] in self?.adoptTunnelOnLaunch() }
     NotificationCenter.default.addObserver(
       self,
       selector: #selector(didEnterBackground),
       name: UIApplication.didEnterBackgroundNotification,
+      object: nil
+    )
+    NotificationCenter.default.addObserver(
+      self,
+      selector: #selector(didBecomeActive),
+      name: UIApplication.didBecomeActiveNotification,
       object: nil
     )
   }
@@ -89,10 +109,126 @@ final class CoreService {
     logLock.unlock()
   }
 
-  func start() {
-    guard status == .stopped else { return }
-    setStatus(.starting)
-    queue.async { [weak self] in self?.runStart() }
+  func whenTunnelKnown(_ action: @escaping () -> Void) {
+    tunnel.whenLoaded(action)
+  }
+
+  private var startsInTunnel: Bool {
+    #if targetEnvironment(simulator)
+      return false
+    #else
+      return NativePrefs.bool("has_tun", fallback: true)
+    #endif
+  }
+
+  func start(_ reply: @escaping FlutterResult) {
+    guard status == .stopped, !tunnelStartPending else {
+      reply(true)
+      return
+    }
+    guard startsInTunnel else {
+      setStatus(.starting)
+      queue.async { [weak self] in self?.runStart() }
+      reply(true)
+      return
+    }
+    tunnelStartPending = true
+    queue.async { [weak self] in
+      self?.probe.stop()
+      DispatchQueue.main.async { self?.startTunnel(reply) }
+    }
+  }
+
+  private func startTunnel(_ reply: @escaping FlutterResult) {
+    tunnel.start { [weak self] error in
+      self?.tunnelStartPending = false
+      if let error {
+        NSLog("[tunnel] start failed: %@", error.localizedDescription)
+        reply(false)
+      } else {
+        self?.inTunnel = true
+        reply(true)
+      }
+    }
+  }
+
+  private func adoptTunnelOnLaunch() {
+    if tunnel.isRunning {
+      tunnelStatusChanged(tunnel.status)
+      return
+    }
+    guard let record = TunnelStopRecord.take() else { return }
+    if statusSink.isListening {
+      reportTunnelStop(record)
+    } else {
+      statusSink.onListened = { [weak self] in
+        self?.statusSink.onListened = nil
+        self?.reportTunnelStop(record)
+      }
+    }
+  }
+
+  private func tunnelStatusChanged(_ vpnStatus: NEVPNStatus) {
+    switch vpnStatus {
+    case .connecting:
+      guard adoptTunnelSession() else { return }
+      if status == .stopped { setStatus(.starting) }
+    case .connected, .reasserting:
+      guard adoptTunnelSession(), status == .stopped || status == .starting else { return }
+      startedAt = tunnel.connectedDate ?? Date()
+      client.startStatus()
+      if NativePrefs.bool("core_logs_enabled", fallback: false) { client.startLogs() }
+      setStatus(.started)
+    case .disconnecting:
+      guard inTunnel, status == .starting || status == .started else { return }
+      setStatus(.stopping)
+      shutdownClientsOffMain()
+    case .disconnected, .invalid:
+      guard inTunnel else { return }
+      finishTunnelSession()
+    @unknown default:
+      break
+    }
+  }
+
+  private func adoptTunnelSession() -> Bool {
+    guard inTunnel || currentServer() == nil else { return false }
+    inTunnel = true
+    return true
+  }
+
+  private func shutdownClientsOffMain() {
+    queue.async { [client] in client.shutdownAll() }
+  }
+
+  private func finishTunnelSession() {
+    inTunnel = false
+    let requested = tunnelStopRequested
+    tunnelStopRequested = false
+    shutdownClientsOffMain()
+    let record = TunnelStopRecord.take()
+    if requested {
+      setStatus(.stopped)
+    } else {
+      reportTunnelStop(record)
+    }
+  }
+
+  private func reportTunnelStop(_ record: TunnelStopRecord?) {
+    if let message = record?.error {
+      setStatus(.stopped, error: message, coreError: record?.coreError)
+      return
+    }
+    let reason = record?.reason.flatMap(NEProviderStopReason.init(rawValue:))
+    if let reason, Self.revokingStopReasons.contains(reason) {
+      setStatus(.stopped, error: Self.revokedMessage, revoked: true)
+    } else if reason == NEProviderStopReason.none {
+      setStatus(.stopped)
+    } else {
+      tunnel.fetchLastDisconnectError { [weak self] detail in
+        self?.setStatus(.stopped, error: Self.tunnelStoppedMessage, coreError: detail)
+      }
+    }
   }
 
   private func runStart() {
@@ -149,7 +285,7 @@ final class CoreService {
     if let setupError = CoreRuntime.setupError {
       return CoreProbeSession.startResult(error: "Core init failed: \(setupError)")
     }
-    if currentServer() != nil {
+    if currentServer() != nil || tunnel.isRunning {
       return CoreProbeSession.startResult(error: "VPN is running")
     }
     return probe.start(config: config)
@@ -175,6 +311,12 @@ final class CoreService {
     DispatchQueue.main.asyncAfter(deadline: .now() + Self.stopWaitSeconds) { [weak self] in
       self?.finishStopWaiters(false)
     }
+    if inTunnel {
+      tunnelStopRequested = true
+      shutdownClientsOffMain()
+      tunnel.stop()
+      return
+    }
     queue.async { [weak self] in
       self?.teardown()
       DispatchQueue.main.async { self?.setStatus(.stopped) }
@@ -183,7 +325,13 @@ final class CoreService {
 
   func forceStop() {
     guard status != .stopped else { return }
-    DispatchQueue.global(qos: .userInitiated).async { [weak self] in self?.teardown() }
+    if inTunnel {
+      tunnelStopRequested = true
+      shutdownClientsOffMain()
+      tunnel.stop()
+    } else {
+      DispatchQueue.global(qos: .userInitiated).async { [weak self] in self?.teardown() }
+    }
     setStatus(.stopped)
   }
 
@@ -224,6 +372,10 @@ final class CoreService {
 
   func reload() {
     guard status == .started else { return }
+    if inTunnel {
+      tunnel.send(.reload)
+      return
+    }
     queue.async { [weak self] in self?.reloadOnQueue() }
   }
 
@@ -242,17 +394,37 @@ final class CoreService {
   }
 
   func resetNetwork() {
+    if inTunnel {
+      tunnel.send(.resetNetwork)
+      return
+    }
     queue.async { [weak self] in self?.currentServer()?.resetNetwork() }
   }
 
   func clearDnsCache() {
+    if inTunnel {
+      tunnel.send(.clearDnsCache)
+      return
+    }
     CoreRuntime.deleteCacheDb()
     reload()
   }
 
-  private func setStatus(_ newStatus: Status, error: String? = nil, coreError: String? = nil) {
+  func memoryInfo(_ reply: @escaping FlutterResult) {
+    guard inTunnel else {
+      reply(CoreRuntime.memoryInfo())
+      return
+    }
+    tunnel.send(.memoryInfo) { data in
+      let info = data.flatMap { try? JSONSerialization.jsonObject(with: $0) }
+      reply(info ?? ["totalPss": 0])
+    }
+  }
+
+  private func setStatus(_ newStatus: Status, error: String? = nil, coreError: String? = nil, revoked: Bool = false) {
     if status == newStatus, error == nil { return }
     status = newStatus
+    self.revoked = revoked
     if newStatus == .stopped {
       startedAt = nil
     }
@@ -262,6 +434,9 @@ final class CoreService {
     }
     if let coreError, !coreError.isEmpty {
       event["core_error"] = coreError
+    }
+    if revoked {
+      event["revoked"] = true
     }
     statusSink.send(event)
     if newStatus == .stopped {
@@ -281,12 +456,19 @@ final class CoreService {
       closeProbeInBackground()
       return
     }
-    guard status == .started || status == .starting else { return }
+    guard !inTunnel, status == .started || status == .starting else { return }
     backgroundTask = UIApplication.shared.beginBackgroundTask { [weak self] in
       self?.forceStop()
       self?.endBackgroundTask()
     }
     stop(nil)
+  }
+
+  @objc private func didBecomeActive() {
+    tunnel.whenLoaded { [weak self] in
+      guard let self else { return }
+      self.tunnelStatusChanged(self.tunnel.status)
+    }
   }
 
   private func closeProbeInBackground() {
