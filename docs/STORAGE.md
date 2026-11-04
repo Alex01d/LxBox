@@ -35,7 +35,7 @@ lxbox_settings.json                          # SettingsStorage (Dart), the main 
 │       ├─ detour_policy         object?       LxBox: the four flags, only when not default
 │       ├─ import_rules[], import_rules_enabled, on_update_action     LxBox (§302, §323)
 │       ├─ meta, last_updated, last_update_attempt, last_update_status,
-│       │  last_node_count, consecutive_fails                         LxBox runtime
+│       │  last_node_count, total_node_count, consecutive_fails       LxBox runtime
 │       │                        — server (UserServer) —
 │       ├─ id, tag, enabled
 │       ├─ origin                object        {kind: uri|wg_ini|json, raw} — the original text, re-parsed on load
@@ -114,6 +114,7 @@ lxbox_settings.json                          # SettingsStorage (Dart), the main 
 ├─ profiler_retention_sec        int           §044 — the profiler's live-journal window, default 600 (10 min); NOT config-significant
 ├─ editor_magnifier              bool          §660 — the code editor's selection magnifier, default true; NOT config-significant
 ├─ mixin_target_suggestions      bool          §704 — the mixin form's Target autocomplete suggestions, default true; NOT config-significant
+├─ node_budget                   int           §714 — the app-wide node budget, default 1000 (absent key), min 1, no upper limit
 ├─ warp_account                  object?       §025 — the cached WARP account (see the section below)
 ├─ masque_account                object?       §130 — the cached MASQUE-WARP account (see the section below)
 ├─ tun_apps                      object        §046 — split tunneling (see the section below)
@@ -126,8 +127,12 @@ lxbox_settings.json                          # SettingsStorage (Dart), the main 
     ├─ core_logs_enabled         bool          default false  — forwarding of the sing-box logs
     ├─ allow_bypass              bool          default false  — Allow VPN bypass (§069)
     ├─ auto_redirect             bool          default false  — auto-redirect
-    └─ memory_limit              string        default "auto" — §271/§705: memory threshold on the core's runtime memory (core lx.29+)
-                                                 (auto|off|"200"|"384"|"512"|"768" MB)
+    ├─ memory_limit              string        default "auto" — §271/§705: memory threshold on the core's runtime memory (core lx.29+)
+    │                                            (auto|off|"200"|"384"|"512"|"768" MB)
+    ├─ notification_stop         bool          default true   — §707: the Stop button in the VPN notification
+    ├─ notification_restart      bool          default true   — §707: the Restart button
+    ├─ notification_send         bool          default true   — §707: the Send button (Taildrop)
+    └─ app_theme_mode            string        default "system" — §707: system|light|dark; not mirrored to Kotlin
 
 # §439 — the 2.23.2 keys (server_lists / chains / custom_rules / dns_options) and the
 # keys with no readers (excluded_nodes / preset_ids_remapped / proxy_sources /
@@ -172,9 +177,8 @@ Context.filesDir/                           # native `files/` = Dart getApplicat
     ├── <url.hashCode>
     └── <url.hashCode>.headers
 
-Android SharedPreferences:
-├── Flutter prefs                # app_theme_mode, haptic_enabled, …
-└── boxvpn_boot.*                # pre-Flutter boot flags
+Android SharedPreferences (shared_prefs/):  # two files, boxvpn_boot and lxbox_native_cache —
+                                            #   see ARCHITECTURE §5 "Persistent storage"
 ```
 
 `[workspace]` — part of a saved workspace (§417): copied into `workspaces/<name>/` on Save as and back on Load. `[device]` — stays with the device, never copied.
@@ -220,6 +224,7 @@ Android SharedPreferences:
   "profiler_retention_sec": 600,   // §044 — the profiler's live-journal window (NOT config-significant)
   "editor_magnifier":   true,      // §660 — the code editor's selection magnifier (NOT config-significant)
   "mixin_target_suggestions": true, // §704 — the mixin form's Target suggestions (NOT config-significant)
+  "node_budget":        1000,      // §714 — app-wide node budget; absent = 1000
   "warp_account":       { … },     // §025 — the cached WARP account (secrets)
   "masque_account":     { … },     // §130 — the cached MASQUE-WARP account (secrets)
   "tun_apps":           { … },     // §046 — split-tunneling
@@ -610,6 +615,7 @@ the whole array (`reorderSources`).
   "last_update_attempt":   "ISO-8601",        // any attempt
   "last_update_status":    "ok",              // never|ok|failed|inProgress; "never" is not written
   "last_node_count":       12,
+  "total_node_count":      2000,              // §714 — size before the node-budget cut; written when not 0
   "consecutive_fails":     0                  // for the UI's "(N fails)"; freezing is in-memory
 }
 ```
@@ -644,6 +650,9 @@ The `nodes` of a subscription are **not stored**: they are re-parsed from `sub_c
   "allow_local":   true,                      // §656 — optional, only `true` is written; see below
   "allow_lan":     true,                      // §656
   "allow_gateway": true,                      // §656
+  "disable_taildrop_commands": true,          // §707 — optional, only `true` is written; see below
+  "disable_taildrop_autosave": true,          // §707
+  "state_dir_id":  "ts-ab12cd",               // §707, contract 1.1.160 — carried, not applied; see below
   "detour_policy": { … },                     // LxBox, only when a flag is not default
   "tag_policy":    { "prefix": "Home " }      // LxBox, only when set. The prefix is part of the
                                               // server's root address: changing it rewrites the
@@ -715,6 +724,46 @@ does not reset the local value (only `true` is stored, so absence cannot be
 told from `false`). The Debug API returns them in the node record
 (read-only).
 
+**Taildrop node fields (§707, contract 1.1.159).** Two more bool fields of a
+server and of a folder member, by the same rules: only `true` is written, a
+missing field is `false`, they do not go into the config, they travel in a
+backup, and a subscription node has no record and no fields. The fields turn a
+feature off: when Taildrop is allowed on the node, both features are on unless
+the field says otherwise. `disable_taildrop` stays in the node body as a core
+field.
+
+- `disable_taildrop_commands` — do not accept clipboard and links sent from
+  the user's own devices (sharees never count as own). Absent = accepted.
+- `disable_taildrop_autosave` — do not save received files to Downloads
+  without asking. Absent = saved; Android 10+.
+
+The names `taildrop_commands` / `taildrop_autosave` of contract 1.1.157 are not
+read (that version was never released). Kotlin does not read these fields.
+Dart computes from them two sets of final tags of the nodes where a feature is
+off and mirrors them into `boxvpn_boot` (`taildrop_commands_off_tags`,
+`taildrop_autosave_off_tags`, see [SharedPreferences](#sharedpreferences-android)).
+A tag missing from a set means the feature is on.
+
+Two more fields of a tailscale node record (contract 1.1.160), on a root
+server and on a folder member alike; a subscription node has no record and no
+fields:
+
+- `state_dir_id` (string) — the launcher's name for the node's state
+  directory. LxBox does **not** apply it: our state directory is not tied to
+  the tag or to this field, it is found through the index of §445
+  (`tailscale_state.json` by the record `id`). The field is only carried:
+  read and written as is (an empty string or a non-string = no field), goes
+  into a backup unchanged. On import a node that matches by body keeps its own
+  value (a value in the file does not overwrite it, a missing field does not
+  clear it); a new node whose name is already held by another stored node gets
+  a fresh `ts-` + 6 chars `[a-z0-9]`. Nodes without the field never get one
+  generated. Moving a node between the root and a folder keeps the value; a
+  root server split into several folder members keeps it on the first member
+  only.
+- `taildrop_double_copy` (`{peer_id, peer_name?}`) — applied by the launcher
+  only. A known key (no unknown-field warning in storage or in a backup), not
+  stored and not carried: it is dropped silently on read.
+
 #### Node sections — removed (§575)
 
 A free node no longer carries a config fragment of its own: the `sections` key
@@ -748,7 +797,8 @@ detour. A subscription cannot be put into a folder, and there is no nesting.
     { "kind": "server", "tag": "Alpha", "enabled": true,
       "origin": { "kind": "uri", "raw": "vless://…#Alpha" },
       "detour": { "folder_id": "<this folder id>", "tag": "Jump" },    // §237 — personal detour
-      "skip_tailscale_presets": true },                                // §578/§656 — as on a server
+      "skip_tailscale_presets": true,                                  // §578/§656 — as on a server
+      "disable_taildrop_autosave": true },                             // Taildrop — as on a server
     { "kind": "server", "tag": "Beta", "enabled": false,
       "origin": { "kind": "wg_ini", "raw": "[Interface]\n…" },
       "warnings": [ { "code": "core_rejected",
@@ -1176,6 +1226,7 @@ part of the contract's record shape; an old file carrying `false` is read as a p
 {
   "url":        "https://…",          // global default URL
   "timeout_ms": <int>,                 // global default timeout
+  "concurrency": <int>,                // [§713] parallel checks, 1..100; absent = 10
   "presets":   [ … ],                  // pre-built URL-options (template-side)
   "groups": {                          // a per-group override (optional)
     "<groupTag>": {
@@ -1188,7 +1239,9 @@ part of the contract's record shape; an old file carrying `false` is read as a p
 
 The resolve chain in `HomeController`: `groups[tag]` → root → the template default.
 
-CRUD helpers: `setGlobalPingUrl`, `setGlobalPingTimeout`, `setGroupPing`, `clearGroupPing`. All of them are sugar over `getPingOptions` / `savePingOptions`, which read and write the whole object.
+CRUD helpers: `setGlobalPingUrl`, `setGlobalPingTimeout`, `setPingConcurrency`, `setGroupPing`, `clearGroupPing`. All of them are sugar over `getPingOptions` / `savePingOptions`, which read and write the whole object.
+
+**`concurrency` — [§713].** How many servers the home-screen mass ping and the folder's Test servers measure at once. `getPingConcurrency` clamps a stored value into `1..100` and returns `10` when the key is absent or not a number; `setPingConcurrency(null)` removes the key (App Settings → General → Parallel checks → Reset to default). It is global only, there is no per-group override.
 
 **The keys of `groups` are direction tags — [§408] holds them to living ones.** A key
 counts as living when a direction with that `tag` exists (in any state, enabled or not)
@@ -1419,7 +1472,12 @@ On iOS (§710) there is no `boxvpn_boot.*`. The native copy is `UserDefaults` un
   "core_logs_enabled": false,    // forwarding of the sing-box logs into Dart
   "allow_bypass":      false,    // §069 — Allow VPN bypass
   "auto_redirect":     false,    // auto-redirect
-  "memory_limit":      "auto"    // §271/§705 — memory threshold on the core's runtime memory (core lx.29+; whole process before): auto (none) | MB as a string; legacy "off" is read as auto
+  "memory_limit":      "auto",   // §271/§705 — memory threshold on the core's runtime memory (core lx.29+; whole process before): auto (none) | MB as a string; legacy "off" is read as auto
+  "notification_stop":    true,  // §707 — the buttons of the VPN notification; the notification
+  "notification_restart": true,  //   updates at once on a change
+  "notification_send":    true,
+  "app_theme_mode":    "system"  // §707 — system | light | dark; in the backup, not mirrored to Kotlin
+                                 //   (the native window follows the system night mode)
 }
 ```
 
@@ -1469,8 +1527,8 @@ setting.
 > [`vars.app_language`](#vars--template-vars--app-flags) var (the JSON var is the source
 > of truth; the cache is re-pushed by `setAppLanguage` and
 > `bootstrapAndSyncNativePrefs`); the native surfaces (the notification shade, the QS
-> tile, the shortcuts) need it while Flutter is dead. `boxvpn_boot.last_pushed_locale`
-> mirrors the last value the app itself pushed into `LocaleManager` (Android 13+) and
+> tile, the shortcuts) need it while Flutter is dead. `last_pushed_locale` (in Kotlin's
+> cache `lxbox_native_cache` since §707) holds the last value the app itself pushed into `LocaleManager` (Android 13+) and
 > anchors the three-way “system versus storage” reconciliation. Both are a documented
 > exception from `NativePrefsKeys`: membership would export them into the backup's
 > `vpn_settings` block as a second representation of one setting (the backup home of
@@ -1735,6 +1793,7 @@ with a warning. A legacy 0.12 file carries a root `chains[]` section (contract 0
 | `node_manual_order` | `List<String>` | §100 — the manual order of node tags (relevant in manual mode). Written together with `node_sort_mode`. |
 | `profiler_retention_sec` | `int` | §044 — the retention window of the profiler's live journal (the rolling buffer), in seconds. Default `600` (10 minutes), the UI offers 60/600/3600, and valid values are `> 0`. **NOT** config-significant. CRUD: `getProfilerRetentionSec` / `setProfilerRetentionSec`. |
 | `editor_magnifier` | `bool` | §660 — the selection magnifier of the code editor (sora), one setting for the whole app; the ⋮ menu of any editor toggles it. Default `true` (a missing key reads as `true`). **NOT** config-significant. Travels in the backup with the app settings. CRUD: `getEditorMagnifier` / `setEditorMagnifier`. |
+| `node_budget` | `int` | §714 — the app-wide node budget: manual servers, enabled folder members and the nodes of enabled subscriptions together. Manual nodes are taken first and never cut; the rest is shared between enabled subscriptions equally with redistribution, and a subscription above its share keeps its first nodes (referenced nodes first) — the cut happens in the parse worker. Absent key = `1000`; a value below `1` reads as `1`; no upper limit. Changing it re-cuts subscriptions from the body cache. Travels in the backup with the app settings; not in LX Backup (its schema has no app-settings slot). CRUD: `getNodeBudget` / `setNodeBudget(null)` removes the key. |
 | `mixin_target_suggestions` | `bool` | §704 — the autocomplete suggestions under the Target field of the mixin form; the icon at the right of the field toggles them. Default `true` (a missing key reads as `true`). **NOT** config-significant. Travels in the backup with the app settings. CRUD: `getMixinTargetSuggestions` / `setMixinTargetSuggestions`. |
 | `urltest_passive_check` | `bool` | **Retired (§611)** — was §272 passive health checking (`urltest.passive_check`); core lx.12 removed the key. No longer written, emitted or exported to a backup; an old backup's value is skipped silently on import (`retiredTopLevelKeys`). Read once by the §612 migration (`SettingsStorage.migrateUrltestModeIfNeeded`, before the first build), which then deletes it. |
 | `urltest_mode_migrated` | `bool` | §612 — the guard for the one-shot migration from `passive_check` to the `failover` mode. The raw `urltest_passive_check` `true` or absent (the old default) → the Directions' `auto`, the folds' `replace.auto` and the folders' `kind: auto` members (`group.strategy`, not `group_type: selector`) with `least_test` or no `mode` become `failover`; `false` → nothing changes; `round_robin` is never touched. Then `urltest_passive_check` is deleted and this key set to `true`. Exported with Routing (as `directions_migrated`): a backup made before §612 restores without it, and the next start migrates its groups. |
@@ -1782,9 +1841,9 @@ with a warning. A legacy 0.12 file carries a root `chains[]` section (contract 0
 
 Not part of `lxbox_settings.json`. It serves two categories: **pre-Flutter boot flags** (read by Kotlin before the engine starts) and **UI preferences** (written by Flutter through `shared_preferences`).
 
-> **§189 — `boxvpn_boot.*` is now a MIRROR, not the original.** The six native prefs
+> **§189 — `boxvpn_boot.*` is now a MIRROR, not the original.** The native prefs
 > (`auto_start` / `keep_vpn_on_exit` / `background_mode` / `core_logs_enabled` /
-> `allow_bypass` / `auto_redirect`) are a **working copy in memory** for the Dart-less
+> `allow_bypass` / `auto_redirect` / the notification buttons, …) are a **working copy in memory** for the Dart-less
 > moments (boot, a swipe `onTaskRemoved`, `openTun`). **The source of truth is the
 > [`native_prefs`](#native_prefs--189-a-mirror-of-boxvpn_boot) section of
 > `lxbox_settings.json` (the disk)**: every write is write-through (the JSON first, then
@@ -1799,7 +1858,6 @@ Not part of `lxbox_settings.json`. It serves two categories: **pre-Flutter boot 
 
 | Key | Type | Source | Spec | Purpose |
 |---|---|---|---|---|
-| `app_theme_mode` | `"system"` / `"light"` / `"dark"` | Flutter | — | UI theme. |
 | `boxvpn_boot.auto_start_vpn` | `Boolean` | Kotlin (mirrors the JSON) | [§189] | Auto-start the VPN at boot (when it was running before). |
 | `boxvpn_boot.keep_vpn_on_exit` | `Boolean` | Kotlin (mirrors the JSON) | [§189]/§188 | Do not kill the tun on a swipe-kill. |
 | `boxvpn_boot.background_mode` | `String` | Kotlin (mirrors the JSON) | [§189] | The foreground-service mode (`never` / `lazy` / `always`). |
@@ -1808,8 +1866,13 @@ Not part of `lxbox_settings.json`. It serves two categories: **pre-Flutter boot 
 | `boxvpn_boot.auto_redirect` | `Boolean` | Kotlin (mirrors the JSON) | [§189] | Auto-redirect. The truth lives in `native_prefs`. |
 | `boxvpn_boot.has_tun` | `Boolean` | Kotlin (mirrors `vpn_mode`) | [§192] | **Computed**, default `true`. Gates `VpnService.prepare()`; not stored in the JSON. |
 | `boxvpn_boot.app_language` | `String` | Kotlin (mirrors `vars.app_language`) | [§279] | `system` \| `en` \| `ru`. A derived cache for the native surfaces. |
-| `boxvpn_boot.last_pushed_locale` | `String` | Kotlin | [§279] | The last value the app itself pushed into `LocaleManager` (Android 13+). |
-| `lxbox_taildrop` file: `autosave.<node tag>` | `Boolean` (only `true` is stored) | Kotlin (`Taildrop`); Flutter writes it over the method channel | §707 | Taildrop auto-save to Downloads per Tailscale node tag. A device setting: not in `lxbox_settings.json`, so not in the backup; read by the VPN service without Flutter. The record goes when the node is deleted or its tag changes. |
+| `boxvpn_boot.notification_stop` / `notification_restart` / `notification_send` | `Boolean` | Kotlin (mirrors the JSON) | §707 | The buttons of the VPN notification, default `true`. The truth lives in `native_prefs`. |
+| `boxvpn_boot.taildrop_commands_off_tags` / `taildrop_autosave_off_tags` | `StringSet` | Kotlin (mirrors the node fields) | §707 | **Computed**: the final tags of the nodes with `disable_taildrop_commands` / `disable_taildrop_autosave`; a tag not in the set has the feature on. Pushed after a config build, on a switch change and at startup; not stored in the JSON. |
+| `lxbox_native_cache.clip_tag` / `clip_peer` / `clip_name` | `String` | Kotlin (`NativeCache`) | §707 | The last recipient of the Send window. Kotlin's own cache, not in the backup. |
+| `lxbox_native_cache.vpn_desired`, `sticky_restart_count`, `sticky_restart_window_start`, `shortcut_relabel_pending` | — | Kotlin (`NativeCache`) | §707 | Kotlin's run state, moved out of `boxvpn_boot`; old values there are not carried over. |
+| `lxbox_native_cache.last_pushed_locale` | `String` | Kotlin (`NativeCache`) | [§279] | The last value the app itself pushed into `LocaleManager` (Android 13+). |
+
+`lxbox_automation` and the Flutter `shared_preferences` file are reviewed separately. The app theme is `native_prefs.app_theme_mode`, not mirrored here.
 
 ---
 

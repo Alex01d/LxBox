@@ -184,4 +184,26 @@ void main() {
     expect(pc.rawOf('L: 🇪🇺 Авто')?['balancer'], isNotNull);
     expect(pc.rawOf('L: БС')?['balancer'], isNull);
   });
+
+  group('§715 хвост метки пула: значки, иначе имена слотов', () {
+    const flag = kDefaultPoolBadge;
+    test('значки нашлись → значки, имён нет', () {
+      expect(
+        poolLabelSuffix(const ['L: 🇩🇪 DE', 'L: 🇳🇱 NL-1', 'L: 🇳🇱 NL-2'], flag),
+        '🇩🇪, 🇳🇱[2]',
+      );
+    });
+    test('ни одного значка → имена слотов в порядке пула', () {
+      expect(
+        poolLabelSuffix(const ['s-wawg-903', 's-our-husi'], flag),
+        's-wawg-903, s-our-husi',
+      );
+    });
+    test('пустой regexp (значки выключены) → имена', () {
+      expect(poolLabelSuffix(const ['s-wawg-903'], ''), 's-wawg-903');
+    });
+    test('пустой пул → пусто', () {
+      expect(poolLabelSuffix(const [], flag), isEmpty);
+    });
+  });
 }

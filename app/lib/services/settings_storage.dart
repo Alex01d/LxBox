@@ -29,6 +29,7 @@ import 'selectable_to_custom.dart';
 import 'settings_storage_keys.dart';
 import 'storage_migration/migrate_storage.dart';
 import 'subscription/http_cache.dart';
+import 'taildrop_tags_sync.dart' show pushTaildropTags;
 import 'template_loader.dart';
 import 'warp/masque_account.dart';
 import 'warp/warp_account.dart';
@@ -243,6 +244,7 @@ class SettingsStorage {
     'profiler_retention_sec', // §044/new-profiler — окно хранения Live-журнала
     'editor_magnifier', // §660 — лупа выделения редактора кода
     'mixin_target_suggestions', // §704 — подсказки поля Target формы миксина
+    kNodeBudgetKey, // бюджет узлов приложения
   };
 
   /// Var-ключи, которые живут ТОЛЬКО в коде (app feature-flags), а НЕ в
@@ -743,6 +745,57 @@ class SettingsStorage {
   /// Sugared: установить global URL без затирания timeout / groups.
   static Future<void> setGlobalPingUrl(String url) => _setGlobalPingUrl(url);
 
+  /// §713 — параллельность проверки серверов (`ping_options.concurrency`):
+  /// сколько узлов mass ping и «Test servers» меряют одновременно.
+  static const int pingConcurrencyDefault = 10;
+  static const int pingConcurrencyMin = 1;
+  static const int pingConcurrencyMax = 100;
+
+  /// §713 — значение из storage, приведённое к диапазону; нет/мусор → дефолт.
+  static Future<int> getPingConcurrency() => _getPingConcurrency();
+
+  /// §713 — `null` снимает ключ (= дефолт).
+  static Future<void> setPingConcurrency(int? value) =>
+      _setPingConcurrency(value);
+
+  /// Бюджет узлов приложения (верхнеуровневый `node_budget`): сколько узлов
+  /// всего держат ручные серверы, включённые члены папок и подписки.
+  /// Минимум 1, верхнего потолка нет.
+  static const int nodeBudgetDefault = 1000;
+  static const int nodeBudgetMin = 1;
+
+  /// Текущее значение бюджета для подписчиков (контроллер подписок
+  /// перерезает доли при смене). Обновляется чтением и записью.
+  static final ValueNotifier<int> nodeBudget =
+      ValueNotifier<int>(nodeBudgetDefault);
+
+  /// Значение из storage; нет/мусор → дефолт, ниже минимума → минимум.
+  static Future<int> getNodeBudget() async {
+    final c = await _load();
+    final raw = c[kNodeBudgetKey];
+    final v = raw is num
+        ? (raw.toInt() < nodeBudgetMin ? nodeBudgetMin : raw.toInt())
+        : nodeBudgetDefault;
+    nodeBudget.value = v;
+    return v;
+  }
+
+  /// `null` снимает ключ (= дефолт); число ниже минимума → минимум.
+  static Future<void> setNodeBudget(int? value) async {
+    final c = await _load();
+    final int effective;
+    if (value == null) {
+      c.remove(kNodeBudgetKey);
+      effective = nodeBudgetDefault;
+    } else {
+      effective = value < nodeBudgetMin ? nodeBudgetMin : value;
+      c[kNodeBudgetKey] = effective;
+    }
+    SettingsStorage._cache = c;
+    await _save();
+    nodeBudget.value = effective;
+  }
+
   /// Sugared: установить global timeout (ms) без затирания url / groups.
   static Future<void> setGlobalPingTimeout(int timeoutMs) =>
       _setGlobalPingTimeout(timeoutMs);
@@ -1224,11 +1277,26 @@ class SettingsStorage {
   static Future<String> getNativeMemoryLimit() => _getNativeMemoryLimit();
   static Future<void> setNativeMemoryLimit(String wireValue) =>
       _setNativeMemoryLimit(wireValue);
+  // §707 итер. 9 — тема приложения (AppThemeModeSetting): только JSON.
+  static Future<String> getNativeThemeMode() => _getNativeThemeMode();
+  static Future<void> setNativeThemeMode(String value) =>
+      _setNativeThemeMode(value);
+  static Future<bool> hasNativeThemeMode() => _hasNativeThemeMode();
 
   /// Старт: bootstrap (первый запуск §189 — seed native⇒JSON) или sync
   /// (JSON⇒native). Зовётся из app init до UI.
-  static Future<void> bootstrapAndSyncNativePrefs() =>
-      _bootstrapAndSyncNativePrefs();
+  static Future<void> bootstrapAndSyncNativePrefs() async {
+    await _bootstrapAndSyncNativePrefs();
+    nativePrefsGeneration.value++;
+  }
+
+  /// §707 итер. 9 — поколение секции `native_prefs`: растёт после импорта
+  /// бэкапа ([applyNativePrefsBackup]) и после пересинка на старте или при
+  /// смене Workspaces ([bootstrapAndSyncNativePrefs]). Слушатели, живущие в
+  /// памяти (тема в `ThemeNotifier`), перечитывают хранилище по нему, а не
+  /// по перезапуску. Обычные сеттеры поколение не трогают: их вызывает тот
+  /// же экран, что и держит значение.
+  static final ValueNotifier<int> nativePrefsGeneration = ValueNotifier<int>(0);
 
   /// §189 — единая сериализация backup-блока vpn_settings (состав/дефолты/типы
   /// в одном месте). backup_service и Debug-handler делегируют сюда.
@@ -1238,11 +1306,14 @@ class SettingsStorage {
   /// §633 — [onlyMissing]: Merge — применяются только ключи, которых нет в
   /// зеркале `native_prefs` получателя; прочие отдаются в [onKept].
   static Future<int> applyNativePrefsBackup(Map<String, dynamic> data,
-          {void Function(String, Object)? onError,
-          bool onlyMissing = false,
-          void Function(String key)? onKept}) =>
-      _applyFromBackupMap(data,
-          onError: onError, onlyMissing: onlyMissing, onKept: onKept);
+      {void Function(String, Object)? onError,
+      bool onlyMissing = false,
+      void Function(String key)? onKept}) async {
+    final n = await _applyFromBackupMap(data,
+        onError: onError, onlyMissing: onlyMissing, onKept: onKept);
+    nativePrefsGeneration.value++;
+    return n;
+  }
 
   /// §192 — зеркалить has_tun (производное от vpn_mode) в native. Гейтит
   /// VpnService.prepare(). Зовётся при смене режима в Mode-вкладке.

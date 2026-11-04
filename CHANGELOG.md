@@ -8,6 +8,42 @@
 
 ## [Unreleased]
 
+### Added
+
+- **Parallel checks setting ([task 713](docs/spec/tasks/713-ping-concurrency-setting.md)).**
+  App Settings → General → Parallel checks sets how many servers the mass ping
+  and a folder's Test servers measure at once (1..100, default 10, with a reset
+  button). Stored as `ping_options.concurrency`, travels with the backup,
+  exposed through the Debug API. Issue #192.
+
+- **Node budget ([task 714](docs/spec/tasks/714-node-budget-subscription-cut.md)).**
+  One app-wide limit on nodes, App Settings → General → Node budget (default
+  1000, from 1, no upper limit). Manual servers and enabled folder members are
+  taken first and never cut; the rest is shared between enabled subscriptions
+  equally, and what a small subscription does not need goes to the others. A
+  subscription above its share keeps its first nodes when its body is parsed;
+  nodes a rule, a chain or a Direction's default filter points to stay first.
+  The card shows «N of M nodes» with ⚠. Enabling a subscription, editing manual
+  servers or folders and changing the budget re-cut subscriptions from the
+  cache, without network. Travels with the backup, exposed through the Debug API
+  (`/settings/node_budget`). Issue #190.
+  (RU: Бюджет узлов: один лимит узлов на приложение, App Settings → General →
+  Node budget (по умолчанию 1000, от 1, без верхнего потолка). Ручные серверы
+  и включённые члены папок берутся первыми и не режутся никогда; остаток
+  делится между включёнными подписками поровну, а то, что не нужно маленькой
+  подписке, уходит остальным. Подписка сверх доли оставляет первые узлы при
+  разборе тела; узлы, на которые ссылаются правило, цепочка или default-фильтр
+  Направления, остаются первыми. Карточка показывает «N of M nodes» с ⚠.
+  Включение подписки, правка ручных серверов и папок и смена бюджета
+  перерезают подписки из кэша, без сети. Едет в бэкапе, доступен через Debug API
+  (`/settings/node_budget`). Issue #190.)
+
+- **Core URL test results in the node list ([task 715](docs/spec/tasks/715-auto-twin-pool-label-core-delays.md)).**
+  While the tunnel is up, the result of the core's URL test (`getOutbounds`)
+  shows in the node list as a foreign measurement: dimmed, with the `~` prefix,
+  like a measurement from another Direction. The app's own ping and a
+  measurement from another Direction take precedence. Issue #191.
+
 ### Fixed
 
 - **Test servers: a failed core call no longer hangs the test
@@ -19,6 +55,50 @@
 - **Keyboard no longer changes links, JSON and other values the app parses
   ([task 713](docs/spec/tasks/713-ios-flows-from-android.md)).** Autocorrect
   and smart punctuation are off in those fields.
+
+- **Auto card in Load balance showed the protocol instead of the pool ([task 715](docs/spec/tasks/715-auto-twin-pool-label-core-delays.md)).**
+  The Direction's Auto twin in Load balance had neither the arrow nor the pool
+  label, so the row fell back to the protocol of the core's `now`, which
+  `round_robin` does not keep as a current pick. The card now shows
+  `🔀 [N/M]` with the pool badges, or the slot names when no member yields a
+  badge, the same as an auto-select node. Issue #191.
+
+- **Ru internet segment resolved its domains through the default resolver with
+  Force IPv4 off ([task 711](docs/spec/tasks/711-ru-direct-resolve-always-dedicated-sets-resolve.md)).**
+  The box removed the whole resolve rule instead of only the IPv4 strategy, so
+  with FakeIP above the preset the Yandex DNS group was not used. The resolve
+  rule is now always present; the box controls only the address family.
+  Choosing a dedicated DNS server in a rule's editor now also turns on Resolve
+  before routing with that server, for the same reason; the box can be cleared.
+
+- **FakeIP: fake IPv6 addresses could not be turned off ([task 690](docs/spec/tasks/690-fakeip-custom-ranges.md)).**
+  An emptied IPv6 pool could not be saved: the field refilled with the default
+  `fc00::/18`. The preset now has a "Fake IPv6 addresses" toggle; when it is
+  off, the server has no IPv6 pool and AAAA queries get an answer with no
+  address, while the IPv4 pool stays in use. Issue #181.
+
+### Added
+
+- **Regex conditions in routing rules ([task 712](docs/spec/tasks/712-package-name-regex-domain-regex-rules.md)).**
+  A rule now takes package name regex (under the app picker) and domain regex
+  (under Domain keyword), one Go RE2 pattern per line, emitted as
+  `package_name_regex` and `domain_regex`. One pattern such as
+  `^com\.oplus\.` replaces picking every system package of a vendor. Remote
+  `.srs` rules take the package regex too. Issue #193.
+
+- **Reorder DNS servers ([task 710](docs/spec/tasks/710-dns-servers-reorder.md)).**
+  Servers on the DNS tab move by dragging the strip on the left of a row, as
+  DNS rules do; the order is saved in the template's server list.
+
+### Changed
+
+- **Taildrop and notification settings in storage ([task 707](docs/spec/tasks/707-taildrop-send-receive-files.md)).**
+  The Taildrop settings of a node (accept clipboard and links from my devices,
+  save received files to Downloads) and the VPN notification buttons moved
+  into `lxbox_settings.json` and the backup. Both Taildrop settings are on by
+  default when Taildrop is allowed on the node; the auto-save choice from
+  2.25.19-rc.3 is not carried over. Per-device Taildrop permissions are
+  removed. The app theme mode is backed up.
 
 ## [2.25.19] — 2026-11-02
 
@@ -58,7 +138,7 @@
   kept on the device, not in the backup).
 - **Send clipboard: text and links to your devices
   ([task 707](docs/spec/tasks/707-taildrop-send-receive-files.md#итерация-7--окно-send-clipboard-буфер-и-ссылки-с-телефона)).**
-  "📋 Send clipboard" in the VPN notification opens a chat-like window over
+  "📋 Send" in the VPN notification opens a chat-like window over
   the current app with the clipboard text in the field: ➤ sends it to the
   device's clipboard, "Open on <device>" opens a single http(s) link there.
   Shared text and "Send to device" in the text selection menu open the same
@@ -256,9 +336,10 @@
 - **Taildrop is now off by default on every Tailscale node, existing ones
   included** (contract 1.1.150): after this update a node receives and sends
   files only once "Allow Taildrop" is turned on in its settings.
-- **The VPN notification has Stop and "📋 Send clipboard"; Reconnect is gone
-  from it ([task 707](docs/spec/tasks/707-taildrop-send-receive-files.md#итерация-7--окно-send-clipboard-буфер-и-ссылки-с-телефона)).** Reconnect stays in the
-  ⟳ menu on the home screen.
+- **The VPN notification has Stop, "🔄 Restart" and "📋 Send"
+  ([task 707](docs/spec/tasks/707-taildrop-send-receive-files.md#итерация-8--кнопки-уведомления-vpn-restart-вернулся-список-в-настройках)).**
+  App Settings → General → Quick connect chooses which of them are shown; all
+  by default. "📋 Send" exists only while a Tailscale node has Allow Taildrop.
 - **WireGuard sleep settings start from the defaults
   ([task 709](docs/spec/tasks/709-quic-sniff-decoy-toggle.md)).** They moved
   from storage keys to template variables without migration: Suspend idle

@@ -1568,7 +1568,14 @@ class HomeController extends ChangeNotifier
     if (list == null) return; // недоступно — прошлую карту не трогаем
     final next = <String, String>{};
     final idle = <String, int>{};
+    // §715 — замеры URL-теста ядра (история узла, общая для всех групп):
+    // в псевдо-Направление `coreDirection`, в показе — «чужой» замер §325.
+    // 0 при ненулевом времени теста = ядро мерило и не дождалось → ERR.
+    final core = <String, int>{};
     for (final o in list) {
+      if (o.urlTestTime > 0) {
+        core[o.tag] = o.urlTestDelay > 0 ? o.urlTestDelay : -1;
+      }
       if (o.endpointState.isEmpty) continue;
       next[o.tag] = o.endpointState;
       // §540 — простой нужен только спящим (свойства узла: «idle for N s»).
@@ -1587,13 +1594,27 @@ class HomeController extends ChangeNotifier
     // Ровно те же карты — не будим UI лишним emit'ом (тик идёт каждые 5 с).
     final prev = _state.endpointStates;
     final prevIdle = _state.endpointIdleSince;
+    final prevCore = _state.delayByDirection[HomeState.coreDirection] ??
+        const <String, int>{};
     if (next.length == prev.length &&
         next.entries.every((e) => prev[e.key] == e.value) &&
         idle.length == prevIdle.length &&
-        idle.entries.every((e) => prevIdle[e.key] == e.value)) {
+        idle.entries.every((e) => prevIdle[e.key] == e.value) &&
+        core.length == prevCore.length &&
+        core.entries.every((e) => prevCore[e.key] == e.value)) {
       return;
     }
-    _emit(_state.copyWith(endpointStates: next, endpointIdleSince: idle));
+    final delays = Map<String, Map<String, int>>.of(_state.delayByDirection);
+    if (core.isEmpty) {
+      delays.remove(HomeState.coreDirection);
+    } else {
+      delays[HomeState.coreDirection] = core;
+    }
+    _emit(_state.copyWith(
+      endpointStates: next,
+      endpointIdleSince: idle,
+      delayByDirection: delays,
+    ));
   }
 
   /// §557 (ядро SPEC 106) — теги WG/AWG-узлов, выключенных пользователем в

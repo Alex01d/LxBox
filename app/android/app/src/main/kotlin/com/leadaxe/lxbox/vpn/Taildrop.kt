@@ -498,38 +498,17 @@ object Taildrop {
         return CoreNote.Received(tag, rest)
     }
 
-    // ─────────────── автосохранение (настройка устройства) ───────────────
-
-    /// Настройки Taildrop этого устройства: не в `lxbox_settings.json`,
-    /// значит не в бэкапе L×Box; сервис читает их без Flutter.
-    private const val PREFS = "lxbox_taildrop"
-    private const val AUTOSAVE_PREFIX = "autosave."
+    // ─────────────── автосохранение (поле записи узла) ───────────────
 
     /// Автосохранение в Downloads — только API 29+ (MediaStore без разрешений).
     fun autoSaveSupported(): Boolean = Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q
 
-    private fun prefs(ctx: Context) =
-        ctx.applicationContext.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
-
+    /// §707 итер. 9 (контракт 1.1.159) — по умолчанию включено (узел с Allow
+    /// Taildrop); выключает поле `disable_taildrop_autosave` записи узла,
+    /// Kotlin видит его как итоговый тег в зеркале `taildrop_autosave_off_tags`
+    /// (наполняет Dart).
     fun isAutoSave(ctx: Context, tag: String): Boolean =
-        autoSaveSupported() && prefs(ctx).getBoolean(AUTOSAVE_PREFIX + tag, false)
-
-    /// Хранится только включённое значение; выключение убирает запись.
-    fun setAutoSave(ctx: Context, tag: String, enabled: Boolean) {
-        val e = prefs(ctx).edit()
-        if (enabled) e.putBoolean(AUTOSAVE_PREFIX + tag, true) else e.remove(AUTOSAVE_PREFIX + tag)
-        e.apply()
-    }
-
-    /// Узлы удалены или переименованы — их записи убираются.
-    fun forgetAutoSave(ctx: Context, tags: Collection<String>) {
-        if (tags.isEmpty()) return
-        val e = prefs(ctx).edit()
-        for (t in tags) e.remove(AUTOSAVE_PREFIX + t)
-        e.apply()
-        // §707 итер. 4 — и разрешения служебных файлов узлов.
-        TaildropServiceFiles.forgetTags(ctx, tags)
-    }
+        autoSaveSupported() && tag !in BootReceiver.taildropAutosaveOffTags(ctx)
 
     // ─────────────── уведомления приёма: кнопки и сохранение ───────────────
 

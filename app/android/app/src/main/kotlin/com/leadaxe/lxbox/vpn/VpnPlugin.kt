@@ -32,6 +32,9 @@ class VpnPlugin : FlutterPlugin, MethodChannel.MethodCallHandler, ActivityAware,
 
     companion object {
         private const val TAG = "VpnPlugin"
+        /// §707 итер. 9 — файлы SharedPreferences rc.3, только для переноса и удаления.
+        private const val LEGACY_TAILDROP_PREFS = "lxbox_taildrop"
+        private const val LEGACY_NOTIFICATION_BUTTONS_PREFS = "lxbox_notification_buttons"
         /// §639 — сколько Quit ждёт Stopped от штатной остановки сервиса
         /// перед убийством процесса. Уведомление снимается раньше (Stopping).
         private const val QUIT_STOP_BUDGET_MS = 3_000L
@@ -492,6 +495,26 @@ class VpnPlugin : FlutterPlugin, MethodChannel.MethodCallHandler, ActivityAware,
             "getKeepOnExit" -> {
                 result.success(BootReceiver.isKeepOnExit(context))
             }
+            // §707 итер. 9 — кнопки уведомления VPN: зеркало native_prefs
+            // (§189), по образцу core_logs_verbose; уведомление — сразу.
+            "setNotificationStop" -> {
+                BootReceiver.setNotificationStop(context, call.argument<Boolean>("enabled") ?: true)
+                BoxVpnService.updateNotification(context)
+                result.success(true)
+            }
+            "getNotificationStop" -> result.success(BootReceiver.isNotificationStop(context))
+            "setNotificationRestart" -> {
+                BootReceiver.setNotificationRestart(context, call.argument<Boolean>("enabled") ?: true)
+                BoxVpnService.updateNotification(context)
+                result.success(true)
+            }
+            "getNotificationRestart" -> result.success(BootReceiver.isNotificationRestart(context))
+            "setNotificationSend" -> {
+                BootReceiver.setNotificationSend(context, call.argument<Boolean>("enabled") ?: true)
+                BoxVpnService.updateNotification(context)
+                result.success(true)
+            }
+            "getNotificationSend" -> result.success(BootReceiver.isNotificationSend(context))
             "setCoreLogsEnabled" -> {
                 val enabled = call.argument<Boolean>("enabled") ?: false
                 BootReceiver.setCoreLogsEnabled(context, enabled)
@@ -1136,51 +1159,27 @@ class VpnPlugin : FlutterPlugin, MethodChannel.MethodCallHandler, ActivityAware,
                 BoxVpnService.taildropOpenRequest = null
                 result.success(tag)
             }
-            // §707 итер. 2 — автосохранение принятого в Downloads: настройка
-            // устройства по тегу узла (SharedPreferences, не бэкап L×Box).
-            "taildropAutoSaveState" -> {
-                val tag = call.argument<String>("tag") ?: ""
-                result.success(mapOf(
-                    "enabled" to (tag.isNotEmpty() && Taildrop.isAutoSave(context, tag)),
-                    "supported" to Taildrop.autoSaveSupported(),
-                ))
-            }
-            "taildropSetAutoSave" -> {
-                val tag = call.argument<String>("tag") ?: ""
-                val enabled = call.argument<Boolean>("enabled") == true
-                if (tag.isEmpty() || (enabled && !Taildrop.autoSaveSupported())) {
-                    result.success(false)
-                } else {
-                    Taildrop.setAutoSave(context, tag, enabled)
-                    // §707 итер. 3 — включили: забрать и то, что уже лежит.
-                    if (enabled) Taildrop.sweepInboxesAsync(context)
-                    result.success(true)
-                }
-            }
-            "taildropForgetAutoSave" -> {
-                val tags = call.argument<List<String>>("tags") ?: emptyList()
-                Taildrop.forgetAutoSave(context, tags)
+            // §707 итер. 9 — производные множества итоговых тегов узлов с
+            // галками Taildrop (зеркало boxvpn_boot), заменяются целиком.
+            // Множество autosave выросло — забрать и то, что уже лежит.
+            "setTaildropTags" -> {
+                // §707 итер. 9 (контракт 1.1.159) — множества ВЫКЛЮЧЕННЫХ тегов.
+                val commandsOff = call.argument<List<String>>("commands_off") ?: emptyList()
+                val autosaveOff = call.argument<List<String>>("autosave_off") ?: emptyList()
+                val enabled = BootReceiver.setTaildropTags(context, commandsOff, autosaveOff)
+                if (enabled && Taildrop.autoSaveSupported()) Taildrop.sweepInboxesAsync(context)
                 result.success(true)
             }
-            // §707 итер. 4 — разрешения служебных файлов от устройства:
-            // настройка устройства (SharedPreferences, не бэкап L×Box).
-            "taildropPermissions" -> {
-                val tag = call.argument<String>("tag") ?: ""
-                val peerId = call.argument<String>("peer_id") ?: ""
-                result.success(
-                    if (tag.isEmpty() || peerId.isEmpty()) emptyMap()
-                    else TaildropServiceFiles.permissions(context, tag, peerId),
-                )
-            }
-            "taildropSetPermission" -> {
-                result.success(TaildropServiceFiles.setPermission(
-                    context,
-                    call.argument<String>("tag") ?: "",
-                    call.argument<String>("peer_id") ?: "",
-                    call.argument<String>("peer_name") ?: "",
-                    call.argument<String>("kind") ?: "",
-                    call.argument<Boolean>("allowed") == true,
-                ))
+            // §707 итер. 9 — старые файлы SharedPreferences Taildrop и кнопок
+            // уведомления удаляются (настройки Taildrop из rc.3 не переносятся,
+            // контракт 1.1.159).
+            "deleteLegacyPrefs" -> {
+                val ok = runCatching {
+                    context.deleteSharedPreferences(LEGACY_TAILDROP_PREFS)
+                    context.deleteSharedPreferences(LEGACY_NOTIFICATION_BUTTONS_PREFS)
+                    true
+                }.getOrDefault(false)
+                result.success(ok)
             }
             "ccTakeOpenConnectOpenRequest" -> {
                 val tag = BoxVpnService.openConnectOpenRequest

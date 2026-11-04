@@ -78,6 +78,9 @@
   "%1$s · %2$d events": {
     "value": "%1$s · %2$d соб."
   },
+  "%1$s: invalid regex %2$s": {
+    "value": "%1$s: неверная регулярка %2$s"
+  },
   "%d app settings": {
     "value": {
       "one": "%d настройка приложения",
@@ -100,6 +103,14 @@
       "few": "%d в цепочке",
       "many": "%d в цепочке",
       "other": "%d в цепочке"
+    }
+  },
+  "%d domain regex": {
+    "value": {
+      "one": "%d regex домена",
+      "few": "%d regex домена",
+      "many": "%d regex домена",
+      "other": "%d regex домена"
     }
   },
   "%d elements": {
@@ -356,6 +367,14 @@
   },
   "%d ok": {
     "value": "%d ок"
+  },
+  "%d package regex": {
+    "value": {
+      "one": "%d regex пакета",
+      "few": "%d regex пакета",
+      "many": "%d regex пакета",
+      "other": "%d regex пакета"
+    }
   },
   "%d packages copied": {
     "value": {
@@ -808,11 +827,20 @@
   "Custom server": {
     "value": "Свой сервер"
   },
+  "Domain regex": {
+    "value": "Regex домена"
+  },
   "Enter an IP address": {
     "value": "Введите IP-адрес"
   },
   "Fixed IP": {
     "value": "Фиксированный IP"
+  },
+  "Go RE2, matched anywhere in the domain, e.g. %s": {
+    "value": "Go RE2, совпадение в любом месте домена, например %s"
+  },
+  "Go RE2, matched anywhere in the package name, e.g. %s": {
+    "value": "Go RE2, совпадение в любом месте имени пакета, например %s"
   },
   "How domains matched by this rule are resolved.": {
     "value": "Как резолвятся домены, совпавшие с этим правилом."
@@ -837,6 +865,9 @@
   },
   "One address per line, IPv4 or IPv6.": {
     "value": "По адресу на строку, IPv4 или IPv6."
+  },
+  "Package name regex": {
+    "value": "Regex имени пакета"
   },
   "Resolve before routing": {
     "value": "Резолвить до маршрутизации"
@@ -1147,6 +1178,32 @@
   },
   "Auto-ping after connect": {
     "value": "Автопинг после подключения"
+  },
+  "Parallel checks": {
+    "value": "Параллельные проверки"
+  },
+  "How many servers the ping and Test servers measure at once. Fewer requests look quieter to the network, more finish faster. Range %1$d..%2$d, default %3$d": {
+    "value": "Сколько серверов пинг и «Test servers» меряют одновременно. Меньше запросов — тише для сети, больше — быстрее. Диапазон %1$d..%2$d, по умолчанию %3$d"
+  },
+  "Node budget": {
+    "value": "Бюджет узлов"
+  },
+  "Above %d the app may freeze or be killed by the system": {
+    "value": "Больше %d — приложение может зависнуть или быть закрыто системой"
+  },
+  "%2$d of %1$d nodes": {
+    "value": {
+      "one": "%2$d из %1$d узла",
+      "few": "%2$d из %1$d узлов",
+      "many": "%2$d из %1$d узлов",
+      "other": "%2$d из %1$d узла"
+    }
+  },
+  "Node budget in App settings": {
+    "value": "Бюджет узлов — в настройках приложения"
+  },
+  "Budget used by manual servers": {
+    "value": "Бюджет занят ручными серверами"
   },
   "Auto-record is off": {
     "value": "Автозапись выключена"
@@ -5512,6 +5569,9 @@
   "Why it happens": {
     "value": "Почему так"
   },
+  "Wi-Fi networks": {
+    "value": "Сети Wi-Fi"
+  },
   "Wi-Fi rules need permissions": {
     "value": "Правилам Wi-Fi нужны разрешения"
   },
@@ -6881,11 +6941,11 @@
   "Taildrop is off for this node.": {
     "value": "Taildrop у этого узла выключен."
   },
-  "Clipboard from this device": {
-    "value": "Буфер обмена с этого устройства"
+  "Accept clipboard and links from my devices": {
+    "value": "Принимать буфер обмена и ссылки с моих устройств"
   },
-  "Links from this device": {
-    "value": "Ссылки с этого устройства"
+  "Devices shared by other users are not counted as yours.": {
+    "value": "Устройства, которыми поделились другие пользователи, вашими не считаются."
   },
   "Core: lx.wg.idle_suspend. An idle WireGuard endpoint that is not on the active route is torn down and rebuilt on its next dial.": {
     "value": "Ядро: lx.wg.idle_suspend. Простаивающий эндпоинт WireGuard вне активного маршрута разбирается и собирается заново при следующем подключении."
@@ -6922,5 +6982,14 @@
   },
   "online": {
     "value": "в сети"
+  },
+  "VPN notification buttons": {
+    "value": "Кнопки уведомления VPN"
+  },
+  "Restart": {
+    "value": "Рестарт"
+  },
+  "Appears only while a Tailscale node has Allow Taildrop.": {
+    "value": "Есть, только пока у узла Tailscale включён Allow Taildrop."
   }
 }

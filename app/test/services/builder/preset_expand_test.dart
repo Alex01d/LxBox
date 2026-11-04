@@ -1082,7 +1082,7 @@ void main() {
       expect(f.warnings, isEmpty, reason: 'без второй строки (§570)');
     });
 
-    test('force_ipv4=false → resolve-элемент выпадает, остаётся только route',
+    test('force_ipv4=false → resolve остаётся без strategy, затем route',
         () {
       final f = expandPreset(
         CustomRulePreset(
@@ -1094,9 +1094,13 @@ void main() {
       );
 
       expect(f.warnings, isEmpty);
-      expect(f.routingRules.single,
-          {'rule_set': 'ru-direct:ru-domains', 'outbound': 'direct-out'},
-          reason: 'галка off → ipv4-резолв не эмитится (юзер сам решил)');
+      expect(f.routingRules.length, 2,
+          reason: 'map-spread #if (4 ключа) не array-element: правило не выпадает');
+      expect(f.routingRules[0],
+          {'rule_set': 'ru-direct:ru-domains', 'action': 'resolve'},
+          reason: 'галка off → resolve без strategy (общая dns.strategy)');
+      expect(f.routingRules[1],
+          {'rule_set': 'ru-direct:ru-domains', 'outbound': 'direct-out'});
     });
 
     test('force_ipv4=true (дефолт) → resolve ipv4_only + route', () {
@@ -1326,7 +1330,7 @@ void main() {
           reason: 'direct-out → detour снят (§117)');
     });
 
-    test('fakeip: пулы из vars — дефолт как раньше, свой, пустой IPv6 (§690)', () {
+    test('fakeip: пулы из vars — дефолт как раньше, свой, IPv6 выключен (§690, #181)', () {
       Map<String, dynamic> server(Map<String, String> vars) => expandPreset(
             CustomRulePreset(name: 'FakeIP', presetId: 'fakeip', varsValues: vars),
             realPreset('fakeip'),
@@ -1340,10 +1344,21 @@ void main() {
       expect(own['inet4_range'], '10.233.0.0/16');
       expect(own['inet6_range'], 'fd00:233::/48');
 
-      final noV6 = server(const {'inet6_range': ''});
+      expect(def, {
+        'type': 'fakeip',
+        'tag': 'fakeip:fakeip',
+        'inet4_range': '198.18.0.0/15',
+        'description': 'FakeIP allocator',
+        'inet6_range': 'fc00::/18',
+      }, reason: 'тело по умолчанию — прежние поля, `#if` снят');
+
+      // #181 — пустой пул сохранить нельзя (Н3/Н4 контракта): IPv6 гасится
+      // тумблером, ключ выпадает map-spread `#if` без else.
+      final noV6 = server(const {'inet6_enabled': 'false', 'inet6_range': 'fd00:233::/48'});
       expect(noV6['inet4_range'], '198.18.0.0/15');
       expect(noV6.containsKey('inet6_range'), isFalse,
-          reason: 'пусто = explicit none (§033), ядро отвечает на AAAA пустым NOERROR');
+          reason: 'тумблер выключен — ядро отвечает на AAAA пустым NOERROR');
+      expect(noV6.keys.where((k) => k.startsWith('#')), isEmpty);
     });
 
     test('ru-direct: галочка dns_encrypted_via_outbound — DoT/DoH по @outbound (§684)', () {
@@ -1443,8 +1458,8 @@ void main() {
       expect(warnings, isEmpty, reason: 'дропов быть не должно');
     });
 
-    test('ru-direct: force_ipv4=false → route без resolve, DNS без AAAA-гейта',
-        () {
+    test('ru-direct: force_ipv4=false → resolve без strategy + route, '
+        'DNS без AAAA-гейта', () {
       final preset = realPreset('ru-direct');
       final f = expandPreset(
         CustomRulePreset(
@@ -1454,9 +1469,14 @@ void main() {
         ),
         preset,
       );
-      // Галка off → resolve-элемент выпал, остался только терминальный route.
-      expect(f.routingRules.length, 1);
-      expect(f.routingRules.single['outbound'], 'direct-out');
+      // Галка off → resolve остаётся (под галкой только strategy), затем route.
+      expect(f.routingRules.length, 2);
+      expect(f.routingRules[0], {
+        'rule_set': ['ru-direct:ru-domains', 'ru-direct:ru-services'],
+        'action': 'resolve',
+        'server': 'ru-direct:dns_ru',
+      });
+      expect(f.routingRules[1]['outbound'], 'direct-out');
       // §253: AAAA-гейт выпал целиком (array-element #if), маршрут остался.
       expect(f.dnsRules.length, 1);
       expect(f.dnsRules.single['server'], 'ru-direct:dns_ru');
@@ -1721,7 +1741,8 @@ void main() {
 }
 
 /// §246: реплика `ru-direct` с гейтом resolve по bool-var `force_ipv4`
-/// (default true). Галка off → resolve-элемент выпадает.
+/// (default true). Под галкой только `strategy` (map-spread `#if`, §711):
+/// галка off → resolve без strategy.
 SelectableRule _ruDirectForceIpv4() => SelectableRule(
       label: 'Russian domains & IPs',
       presetId: 'ru-direct',
@@ -1752,13 +1773,11 @@ SelectableRule _ruDirectForceIpv4() => SelectableRule(
       ],
       rule: const [
         {
+          'rule_set': 'ru-domains',
+          'action': 'resolve',
           '#if': {
-            'and': ['@force_ipv4'],
-            'value': {
-              'rule_set': 'ru-domains',
-              'action': 'resolve',
-              'strategy': 'ipv4_only',
-            },
+            '#and': ['@force_ipv4'],
+            '#value': {'strategy': 'ipv4_only'},
           },
         },
         {'rule_set': 'ru-domains', 'outbound': '@outbound'},

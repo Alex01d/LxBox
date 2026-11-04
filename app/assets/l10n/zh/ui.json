@@ -63,6 +63,9 @@
   "%1$s · %2$d events": {
     "value": "%1$s · %2$d 个事件"
   },
+  "%1$s: invalid regex %2$s": {
+    "value": "%1$s：无效的正则 %2$s"
+  },
   "%d app settings": {
     "value": {
       "other": "%d 项应用设置"
@@ -76,6 +79,11 @@
   "%d chained": {
     "value": {
       "other": "%d 个链式"
+    }
+  },
+  "%d domain regex": {
+    "value": {
+      "other": "%d 个域名正则"
     }
   },
   "%d elements": {
@@ -242,6 +250,11 @@
   },
   "%d ok": {
     "value": "%d 正常"
+  },
+  "%d package regex": {
+    "value": {
+      "other": "%d 个包名正则"
+    }
   },
   "%d packages copied": {
     "value": {
@@ -628,11 +641,20 @@
   "Custom server": {
     "value": "自定义服务器"
   },
+  "Domain regex": {
+    "value": "域名正则"
+  },
   "Enter an IP address": {
     "value": "请输入 IP 地址"
   },
   "Fixed IP": {
     "value": "固定 IP"
+  },
+  "Go RE2, matched anywhere in the domain, e.g. %s": {
+    "value": "Go RE2，匹配域名中的任意位置，例如 %s"
+  },
+  "Go RE2, matched anywhere in the package name, e.g. %s": {
+    "value": "Go RE2，匹配包名中的任意位置，例如 %s"
   },
   "How domains matched by this rule are resolved.": {
     "value": "如何解析与此规则匹配的域名。"
@@ -657,6 +679,9 @@
   },
   "One address per line, IPv4 or IPv6.": {
     "value": "每行一个地址，IPv4 或 IPv6。"
+  },
+  "Package name regex": {
+    "value": "包名正则"
   },
   "Resolve before routing": {
     "value": "路由前解析"
@@ -961,6 +986,29 @@
   },
   "Auto-ping after connect": {
     "value": "连接后自动测速"
+  },
+  "Parallel checks": {
+    "value": "并行检测"
+  },
+  "How many servers the ping and Test servers measure at once. Fewer requests look quieter to the network, more finish faster. Range %1$d..%2$d, default %3$d": {
+    "value": "Ping 和「Test servers」同时测量的服务器数量。越少对网络越安静，越多完成越快。范围 %1$d..%2$d，默认 %3$d"
+  },
+  "Node budget": {
+    "value": "节点预算"
+  },
+  "Above %d the app may freeze or be killed by the system": {
+    "value": "超过 %d 时应用可能卡死或被系统关闭"
+  },
+  "%2$d of %1$d nodes": {
+    "value": {
+      "other": "%2$d / %1$d 个节点"
+    }
+  },
+  "Node budget in App settings": {
+    "value": "节点预算位于应用设置"
+  },
+  "Budget used by manual servers": {
+    "value": "预算已被手动服务器占满"
   },
   "Auto-record is off": {
     "value": "自动记录已关闭"
@@ -5245,6 +5293,9 @@
   "Why it happens": {
     "value": "为什么会这样"
   },
+  "Wi-Fi networks": {
+    "value": "Wi-Fi 网络"
+  },
   "Wi-Fi rules need permissions": {
     "value": "Wi-Fi 规则需要权限"
   },
@@ -6599,11 +6650,11 @@
   "Taildrop is off for this node.": {
     "value": "此节点的 Taildrop 已关闭。"
   },
-  "Clipboard from this device": {
-    "value": "来自此设备的剪贴板"
+  "Accept clipboard and links from my devices": {
+    "value": "接受来自我的设备的剪贴板和链接"
   },
-  "Links from this device": {
-    "value": "来自此设备的链接"
+  "Devices shared by other users are not counted as yours.": {
+    "value": "其他用户共享的设备不算作你的设备。"
   },
   "Core: lx.wg.idle_suspend. An idle WireGuard endpoint that is not on the active route is torn down and rebuilt on its next dial.": {
     "value": "内核：lx.wg.idle_suspend。不在活动路由上的空闲 WireGuard 端点会被拆除，并在下次拨号时重建。"
@@ -6640,5 +6691,14 @@
   },
   "online": {
     "value": "在线"
+  },
+  "VPN notification buttons": {
+    "value": "VPN 通知按钮"
+  },
+  "Restart": {
+    "value": "重连"
+  },
+  "Appears only while a Tailscale node has Allow Taildrop.": {
+    "value": "仅当 Tailscale 节点启用 Allow Taildrop 时显示。"
   }
 }

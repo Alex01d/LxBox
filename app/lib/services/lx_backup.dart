@@ -3,6 +3,7 @@
 library;
 
 import 'dart:convert';
+import 'dart:math';
 
 import 'package:package_info_plus/package_info_plus.dart';
 
@@ -36,6 +37,7 @@ import 'parser/parse_all.dart';
 import 'parser/uri_utils.dart' show newUuidV4;
 import 'platform_features.dart';
 import 'record_vars.dart';
+import 'settings_storage.dart' show NativePrefsKeys;
 import 'storage_migration/legacy_autogroup.dart';
 import 'tag_resolver.dart';
 
@@ -431,6 +433,9 @@ class LxServer {
     this.allowLocal = false,
     this.allowLan = false,
     this.allowGateway = false,
+    this.disableTaildropCommands = false,
+    this.disableTaildropAutosave = false,
+    this.stateDirId = '',
     this.detour,
     this.position = 0,
     this.autoGroup,
@@ -483,21 +488,50 @@ class LxServer {
   final bool allowLan;
   final bool allowGateway;
 
+  /// §707 итер. 9 (контракт 1.1.159) — `disable_taildrop_commands` /
+  /// `disable_taildrop_autosave`, те же правила, что у полей выше.
+  final bool disableTaildropCommands;
+  final bool disableTaildropAutosave;
+
+  /// §707 (контракт 1.1.160) — `state_dir_id` записи файла как есть (пусто —
+  /// поля нет). Только перенос: совпавший узел держит своё, новый с занятым
+  /// именем получает другое ([mergeBackupServers]).
+  final String stateDirId;
+
   /// §656 — флаги записи файла поверх своих: только `true` (слияние
   /// совпавшего узла). Все поля уже стоят — null.
-  ({bool skip, bool local, bool lan, bool gateway})? flagsOver({
+  ({
+    bool skip,
+    bool local,
+    bool lan,
+    bool gateway,
+    bool commandsOff,
+    bool autosaveOff
+  })? flagsOver({
     required bool skip,
     required bool local,
     required bool lan,
     required bool gateway,
+    required bool commandsOff,
+    required bool autosaveOff,
   }) {
     final r = (
       skip: skip || skipTailscalePresets,
       local: local || allowLocal,
       lan: lan || allowLan,
       gateway: gateway || allowGateway,
+      commandsOff: commandsOff || disableTaildropCommands,
+      autosaveOff: autosaveOff || disableTaildropAutosave,
     );
-    return r == (skip: skip, local: local, lan: lan, gateway: gateway)
+    return r ==
+            (
+              skip: skip,
+              local: local,
+              lan: lan,
+              gateway: gateway,
+              commandsOff: commandsOff,
+              autosaveOff: autosaveOff
+            )
         ? null
         : r;
   }
@@ -709,6 +743,7 @@ class LxBackupFile {
     this.warp = const [],
     this.rulesDeclared = true,
     this.mixins = const [],
+    this.nativePrefs = const {},
   });
 
   final int version;
@@ -791,6 +826,11 @@ class LxBackupFile {
   /// план импорта.
   final List<Mixin> mixins;
 
+  /// §707 итер. 9 (контракт 1.1.158, D-141) — секция `native_prefs`
+  /// (настройки телефона): только известные ключи с типом схемы. Импорт
+  /// применяет присланные ключи; отсутствие ключа своё значение не трогает.
+  final Map<String, Object> nativePrefs;
+
   final Map<String, String> vars;
 
   /// `route.final` файла. У [decodeLxBackup] — как в файле; после
@@ -823,6 +863,7 @@ class LxBackupFile {
         dns: dns,
         warp: warp,
         mixins: mixins,
+        nativePrefs: nativePrefs,
         vars: vars,
         routeFinal: routeFinal,
         warnings: warnings ?? this.warnings,
@@ -884,6 +925,7 @@ Future<LxBackupExport> buildLxBackup({
   List<Map<String, dynamic>> warp = const [],
   RecordVarDecls recordVars = RecordVarDecls.none,
   List<Mixin> mixins = const [],
+  Map<String, dynamic> nativePrefs = const {},
 }) async {
   var appVersion = '';
   try {
@@ -956,6 +998,12 @@ Future<LxBackupExport> buildLxBackup({
     // запрос объявить ключ терпимым в `backup.schema.json`.
     if (mixins.isNotEmpty)
       'mixins': [for (final m in mixins) m.toBackupJson()],
+    // §707 итер. 9 (контракт 1.1.158) — настройки телефона, все ключи секции.
+    if (nativePrefs.isNotEmpty)
+      'native_prefs': {
+        for (final k in NativePrefsKeys.all)
+          if (nativePrefs[k] != null) k: nativePrefs[k],
+      },
   };
 
   return LxBackupExport(
@@ -1302,6 +1350,7 @@ LxBackupFile _parse0x(
   final routeFinal = _parseRouteFinal(decoded);
   final warp = _parseWarp(decoded, warnings);
   final mixins = _parseMixins(decoded, warnings);
+  final nativePrefs = _parseNativePrefs(decoded, warnings);
   final subscriptions = [
     for (final s in (decoded['subscriptions'] as List? ?? const []))
       if (s is Map) _subscriptionFromJson(s.cast<String, dynamic>(), warnings),
@@ -1328,6 +1377,7 @@ LxBackupFile _parse0x(
     dns: parsedVars.dns,
     warp: warp,
     mixins: mixins,
+    nativePrefs: nativePrefs,
     vars: parsedVars.vars,
     routeFinal: routeFinal,
     warnings: warnings,
@@ -1512,6 +1562,30 @@ List<Map<String, dynamic>> _parseWarp(
   return warp;
 }
 
+/// §707 итер. 9 (контракт 1.1.158) — секция `native_prefs`: известные
+/// ключи с типом схемы (bool у тумблеров, строка у `background_mode`,
+/// `memory_limit`, `app_theme_mode`). Значение не того типа — пропуск с
+/// [kWarnFieldTypeMismatch]; нормализацию значения делает слой native_prefs.
+Map<String, Object> _parseNativePrefs(
+  Map<String, dynamic> decoded,
+  List<LxBackupWarning> warnings,
+) {
+  final raw = decoded['native_prefs'];
+  if (raw is! Map) return const {};
+  final out = <String, Object>{};
+  for (final key in NativePrefsKeys.all) {
+    if (!raw.containsKey(key)) continue;
+    final v = raw[key];
+    final ok = NativePrefsKeys.bools.contains(key) ? v is bool : v is String;
+    if (!ok || v == null) {
+      warnings.add(LxBackupWarning(kWarnFieldTypeMismatch, 'native_prefs.$key'));
+      continue;
+    }
+    out[key] = v as Object;
+  }
+  return out;
+}
+
 /// §704 — секция `mixins`: записи без `id` (новый при разборе). Запись без
 /// строковых `target`/`op` не применима — пропуск с
 /// [kWarnFieldTypeMismatch] по пути поля. Неизвестный глагол доезжает до
@@ -1581,6 +1655,7 @@ const Set<String> _rootKeys = {
   'route',
   'warp',
   'mixins', // §704
+  'native_prefs', // §707 итер. 9 (контракт 1.1.158)
 };
 
 const Set<String> _exportedByKeys = {'app', 'version', 'platform'};
@@ -2975,6 +3050,7 @@ LxBackupFile _parse10(
   final routeFinal = _parseRouteFinal(decoded);
   final warp = _parseWarp(decoded, warnings);
   final mixins = _parseMixins(decoded, warnings);
+  final nativePrefs = _parseNativePrefs(decoded, warnings);
   warnings.addAll(dnsWarnings);
   final dns = parsedVars.dns;
 
@@ -2997,6 +3073,7 @@ LxBackupFile _parse10(
     dns: dns,
     warp: warp,
     mixins: mixins,
+    nativePrefs: nativePrefs,
     vars: vars,
     routeFinal: routeFinal,
     warnings: warnings,
@@ -3106,6 +3183,9 @@ LxServer? _server10(
     allowLocal: node.allowLocal,
     allowLan: node.allowLan,
     allowGateway: node.allowGateway,
+    disableTaildropCommands: node.disableTaildropCommands,
+    disableTaildropAutosave: node.disableTaildropAutosave,
+    stateDirId: node.stateDirId,
     tls: _carries(folder == null ? BackupRecord.server : BackupRecord.folderNode,
             j, 'tls')
         ? node.tls
@@ -3513,6 +3593,7 @@ const Set<String> _root10Keys = {
   'route',
   'warp',
   'mixins', // §704
+  'native_prefs', // §707 итер. 9 (контракт 1.1.158)
 };
 
 /// Общая часть узла (`$defs/node`): её несёт и корневая запись, и член папки.
@@ -3535,6 +3616,13 @@ const Set<String> _node10Keys = {
   'allow_local',
   'allow_lan',
   'allow_gateway',
+  // §707 итер. 9 (контракт 1.1.159) — Taildrop узла, знак «выключено»; пишется только true.
+  'disable_taildrop_commands',
+  'disable_taildrop_autosave',
+  // §707 (контракт 1.1.160): `state_dir_id` переносится как есть;
+  // `taildrop_double_copy` — поле лаунчера, молча пропускается.
+  'state_dir_id',
+  'taildrop_double_copy',
   // Фича 478 — вердикт на члене папки. Ключ известен обходу, чтобы старый
   // файл с `core_rejected` не давал `backup_unknown_field`; содержимое
   // срезает санитизация §489.
@@ -3640,6 +3728,7 @@ List<LxBackupWarning> _scanUnknown10(Map<String, dynamic> root) {
   sc.object('', root, _root10Keys);
   sc.nested(root, 'exported_by', _exportedByKeys);
   sc.nested(root, 'route', _routeKeys);
+  sc.nested(root, 'native_prefs', NativePrefsKeys.all); // §707 итер. 9
 
   final dns = _obj(root['dns']);
   if (dns != null) {
@@ -3989,6 +4078,7 @@ BackupServerMerge mergeBackupServers(
 }) {
   final merged = lists.toList();
   final takenIds = <String>{for (final l in merged) l.id};
+  final stateDirs = StateDirNames.of(merged);
   var applied = 0;
   final touched = <BackupNodeRef>[];
   // Заведённые этим импортом источники → место в файле (подписки приходят
@@ -4161,7 +4251,7 @@ BackupServerMerge mergeBackupServers(
       final count = (merged[at] as FolderServers).members.length;
       applied += _mergeFolderMember(
           merged, at, srv, body, NodeLink.none, touched,
-          landings: landings);
+          landings: landings, stateDirs: stateDirs);
       if ((merged[at] as FolderServers).members.length > count) {
         pendingLinks
             .add((at: at, member: count, link: srv.detour, count: false));
@@ -4186,6 +4276,8 @@ BackupServerMerge mergeBackupServers(
           local: local.allowLocal,
           lan: local.allowLan,
           gateway: local.allowGateway,
+          commandsOff: local.disableTaildropCommands,
+          autosaveOff: local.disableTaildropAutosave,
         );
         if (side || rec != null) {
           merged[hit] = local.copyWith(
@@ -4195,6 +4287,8 @@ BackupServerMerge mergeBackupServers(
             allowLocal: rec?.local,
             allowLan: rec?.lan,
             allowGateway: rec?.gateway,
+            disableTaildropCommands: rec?.commandsOff,
+            disableTaildropAutosave: rec?.autosaveOff,
           );
           applied++;
         }
@@ -4217,6 +4311,9 @@ BackupServerMerge mergeBackupServers(
         allowLocal: srv.allowLocal,
         allowLan: srv.allowLan,
         allowGateway: srv.allowGateway,
+        disableTaildropCommands: srv.disableTaildropCommands,
+        disableTaildropAutosave: srv.disableTaildropAutosave,
+        stateDirId: stateDirs.adopt(srv.stateDirId),
       ));
       pendingLinks.add((
         at: merged.length - 1,
@@ -4235,7 +4332,7 @@ BackupServerMerge mergeBackupServers(
     final at =
         _folder0xAt(merged, srv, folderByName, takenIds, added, position);
     applied += _mergeFolderMember(merged, at, srv, body, NodeLink.none, touched,
-        landings: landings);
+        landings: landings, stateDirs: stateDirs);
   }
 
   applied += _bindBackupAutoGroups(merged, autoGroups, linkIds, landings);
@@ -4462,6 +4559,7 @@ int _mergeFolderMember(
   NodeLink detour,
   List<BackupNodeRef> touched, {
   Map<(int, String), String>? landings,
+  StateDirNames? stateDirs,
 }) {
   final folder = merged[folderAt] as FolderServers;
   final canon = canonicalNodeBody(body);
@@ -4480,6 +4578,8 @@ int _mergeFolderMember(
       local: own.allowLocal,
       lan: own.allowLan,
       gateway: own.allowGateway,
+      commandsOff: own.disableTaildropCommands,
+      autosaveOff: own.disableTaildropAutosave,
     );
     if (rec == null) return 0;
     final members = folder.members.toList();
@@ -4488,6 +4588,8 @@ int _mergeFolderMember(
       allowLocal: rec.local,
       allowLan: rec.lan,
       allowGateway: rec.gateway,
+      disableTaildropCommands: rec.commandsOff,
+      disableTaildropAutosave: rec.autosaveOff,
     );
     merged[folderAt] = folder.copyWith(members: members);
     return 1;
@@ -4503,6 +4605,9 @@ int _mergeFolderMember(
     allowLocal: srv.allowLocal,
     allowLan: srv.allowLan,
     allowGateway: srv.allowGateway,
+    disableTaildropCommands: srv.disableTaildropCommands,
+    disableTaildropAutosave: srv.disableTaildropAutosave,
+    stateDirId: stateDirs?.adopt(srv.stateDirId) ?? srv.stateDirId,
     tls: srv.tls ?? TlsPolicy.none, // §636
   );
   final here = member.node?.tag ?? '';
@@ -4512,6 +4617,45 @@ int _mergeFolderMember(
   merged[folderAt] = folder.copyWith(members: [...folder.members, member]);
   touched.add((list: folderAt, member: folder.members.length));
   return 1;
+}
+
+/// §707 (контракт 1.1.160) — занятые имена `state_dir_id` хранимых узлов.
+/// Новый узел импорта со своим именем держит его, если оно свободно; занятое
+/// заменяется на `ts-` + 6 символов [a-z0-9]. Совпавший по телу узел сюда не
+/// ходит: у него своё имя, файл его не трогает.
+class StateDirNames {
+  StateDirNames(this._taken, {Random? random})
+      : _random = random ?? Random.secure();
+
+  /// Имена всех хранимых узлов (корень и члены папок).
+  factory StateDirNames.of(Iterable<ServerList> lists, {Random? random}) =>
+      StateDirNames({
+        for (final l in lists)
+          if (l is UserServer && l.stateDirId.isNotEmpty)
+            l.stateDirId
+          else if (l is FolderServers)
+            for (final m in l.members)
+              if (m.stateDirId.isNotEmpty) m.stateDirId,
+      }, random: random);
+
+  final Set<String> _taken;
+  final Random _random;
+
+  static const _alphabet = 'abcdefghijklmnopqrstuvwxyz0123456789';
+
+  /// Имя для нового узла: пусто → пусто (своим без поля не генерируется).
+  String adopt(String name) {
+    if (name.isEmpty) return '';
+    var out = name;
+    while (_taken.contains(out)) {
+      out = 'ts-${String.fromCharCodes([
+            for (var i = 0; i < 6; i++)
+              _alphabet.codeUnitAt(_random.nextInt(_alphabet.length)),
+          ])}';
+    }
+    _taken.add(out);
+    return out;
+  }
 }
 
 /// Папка члена 0.x [srv] по имени; заведённая им же папка находится по
