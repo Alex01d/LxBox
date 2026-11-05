@@ -74,7 +74,7 @@ void main() {
   test('a thrown probeUrlTest stops other workers and closes the session',
       () async {
     final results = <int, ProbeResult>{};
-    final runner = ProbeRunner();
+    final runner = ProbeRunner(concurrency: 6);
     final done = runner.run(nodes,
         url: '', timeoutMs: 0, onResult: (i, r) => results[i] = r);
     await _until(() => fake.pendingCount == 6, what: '6 tests in flight');
@@ -125,7 +125,10 @@ void main() {
   });
 
   test('Stop ends the run with an error when a test never replies', () async {
-    final runner = ProbeRunner(stopDeadline: const Duration(milliseconds: 20));
+    final runner = ProbeRunner(
+      concurrency: 6,
+      stopDeadline: const Duration(milliseconds: 20),
+    );
     messenger.setMockMethodCallHandler(channel, (call) {
       if (call.method == 'probeUrlTest' || call.method == 'probeCancel') {
         fake.calls.add(call);
@@ -147,7 +150,7 @@ void main() {
   test('a session closed by core Start leaves untested nodes without a verdict',
       () async {
     final results = <int, ProbeResult>{};
-    final runner = ProbeRunner();
+    final runner = ProbeRunner(concurrency: 6);
     final done = runner.run(nodes,
         url: '', timeoutMs: 0, onResult: (i, r) => results[i] = r);
     await _until(() => fake.pendingCount == 6, what: '6 tests in flight');
