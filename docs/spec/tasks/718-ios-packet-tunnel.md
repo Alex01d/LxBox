@@ -84,7 +84,7 @@ Made by Pavel on 2026-11-04.
 |---|---|---|---|
 | D1 | Run the spike on the iPhone before changing L×Box? | n/a | Yes. It gives the real limit and the cost of the real config, see "Spike run" |
 | D2 | Keep Local proxy on iOS, core inside the app, stopping on leaving the foreground? | Proxy mode runs in the same service as VPN mode | Keep. Simulator has no other way to run the core |
-| D3 | Restart the tunnel automatically after iOS kills it? | Yes. `START_STICKY` plus `VpnWatchdog`, limit 3 per 5 minutes | Not now, decide after measuring. iOS On Demand rules are the only way, and a memory kill could loop. Accepted cost: a killed tunnel leaves the phone on its direct connection until Pavel notices |
+| D3 | Restart the tunnel automatically after iOS kills it? | Yes. `START_STICKY` plus `VpnWatchdog`, limit 3 per 5 minutes | Off, decided again on 2026-11-05 after measuring. iOS never killed the tunnel in real use, On Demand rules are the only way to restart it, and a memory kill could loop. Accepted cost: a killed tunnel leaves the phone on its direct connection until Pavel notices. Revisit if kills appear in real use |
 | D4 | Ask before replacing another VPN? | Yes, P8, using `TRANSPORT_VPN` | Yes. Answer `isForeignVpnActive` from the `__SCOPED__` keys of `CFNetworkCopySystemProxySettings`. The Dart dialog already exists. A false positive costs one extra question |
 | D5 | Memory limit setting on iOS? | Auto, 200, 384, 512, 768 MB | Hide it on iOS. The extension always uses its 50 MB, so the setting would do nothing in VPN mode. The stored value stays for backups |
 | D6 | Bring back the Wi-Fi network list (§716 D2)? | Works, needs location permission | Leave hidden. It needs the `wifi-info` entitlement and an iOS location prompt, so it gets its own task |
@@ -311,15 +311,19 @@ Release build on iPhone 15 with iOS 26.3.1, core `v1.14.4-lx.30`, Pavel's real n
 | 4 | Pass | Ping and node switch work, per Pavel |
 | 6 | Pass | Left 2 minutes: still `Connected`, uptime kept counting |
 | 7 | Pass | Swiped away, Safari still went through the node. Reopened: `Connected`, right uptime |
+| 8 | Partly | One tunnel session ran 9.5 hours from 2026-11-05 01:32, through 6+ locked hours, messaging, TikTok, browsing and closing the app. Pavel saw no problems. The core stayed in state `normal` with no crash. Wi-Fi to cellular not checked on purpose |
 | 9 | Partly | One Stop ended in `Disconnected`. Five cycles not run |
-| 10 | Partly | Foreign VPN dialog appeared for real with the spike's tunnel running, and Switch took over. Revoke from iOS Settings not checked |
+| 10 | Pass | Foreign VPN dialog appeared for real with the spike's tunnel running, and Switch took over. Status off in iOS Settings: `Disconnected` and Android's `onRevoke` message. The chip reads `Disconnected` for a revoked tunnel on every platform, by `status_chip.dart` |
+| 13 | Pass | With the tunnel up, a folder's test showed the `VPN is running` popup, per Pavel |
 | 14 | Pass | `devicectl` killed the extension with the app swiped away. Traffic went direct, as D3 accepts, and Start reconnected. The reason did not show on reopening at first, because of the Dart guard above. After the fix it showed once, and not again on the next launch. The kill with the app on screen is not checked |
 | 16 | Partly | Local proxy checked on Simulator, not on the phone |
 | 17 | Partly | Simulator: VPN mode stops with the new text. Local proxy connects, port 2080 and the TCP command port listen, fake node `ERR`, Direct 390 ms, port closes on leaving, no auto-start. Test servers and workspaces not rechecked |
 | 18 | Partly | Simulator: VPN Settings shows Core and Mode only. Backup not checked |
 | 19 | Partly | No change under `app/android/`. `flutter analyze` clean. Tests pass for the merged and changed files. Full suite not run |
 
-Not checked yet: 3 node with a domain name, 5 core logs, 8 lock and Wi-Fi to cellular, 11 rejected config, 12 reload and clear DNS, 13 Test servers with the tunnel up, 15 crash test.
+Not checked yet: 3 node with a domain name, 5 core logs, 11 rejected config, 12 reload and clear DNS, 15 crash test.
+
+**Memory in real use.** Median 23.4 MB, peak 36.9 MB with 186 connections and 410 goroutines. That left 13.1 MB before the limit, and it is 3.1 MB below the 40 MB where the core's OOM service arms, with its trigger at 45 MB, in the core's own binary MB. Busy browsing cost more memory than a 100 MB download did. The log's `connections` field is not Home's connection count: Home showed 26 when the log said 2, so 186 is the log's own number.
 
 ### Memory table to fill
 
@@ -328,12 +332,13 @@ First pass in the spike, from `memory.csv`, with the real limit from `limit_mb`.
 | Row | Spike peak MB | Spike limit MB | Spike killed? | L×Box peak MB | L×Box killed? |
 |---|---|---|---|---|---|
 | Bare core, direct, idle and 100 MB download | 21.7 | 50.0 | No | | |
-| Pavel's real config, one VLESS node, idle | 20.6 | 50.0 | No | | |
+| Pavel's real config, one VLESS node, idle | 20.6 | 50.0 | No | About 23 | No |
 | Same, browsing, 95 connections | 30.4 | 50.0 | No | | |
+| Same, 9.5 hours of real use, up to 186 connections | | | | 36.9 | No |
 | Same, 100 MB download in Safari | About 26 | 50.0 | No | | |
-| One AWG node, 100 MB | | | | | |
-| MASQUE group, live | | | | | |
-| Screen locked 10 minutes | | | | | |
+| One WARP WireGuard node, 11 minutes of TikTok and browsing, sampled once a minute | | | | 26.7 | No |
+| One WARP MASQUE node, 20 minutes of TikTok and browsing, WireGuard node asleep | | | | 28.0 | No |
+| Screen locked for hours overnight | | | | About 23 | No |
 
 ## Unresolved / follow-up
 
@@ -341,9 +346,9 @@ First pass in the spike, from `memory.csv`, with the real limit from `limit_mb`.
 - Renumber or alias §710 to §716 against the original repo's tasks.
 - An iOS core artifact and hash in fork releases, before any real distribution (§711).
 - iPhone 17 with iOS 26.5, the project's target device, still unmeasured.
-- D3 revisited with memory results.
+- Many-node configs are unmeasured. Only needed if someone plans to use one.
 - The Wi-Fi network list on iOS (D6), as its own task.
-- The spike's own `URLSession` download fails through the VLESS node while Safari reaches the same host. Cause not found. It could affect other apps on the phone, so it needs an answer before this task is done (`ios-spike/logs/measure-device.md`, "Open").
+- The spike's own `URLSession` download fails through the VLESS node while Safari reaches the same host. Cause not found. Everyday apps worked for 9.5 hours in L×Box, so it looks specific to the spike and is low priority (`ios-spike/logs/measure-device.md`, "Open", T1 in `docs/IOS_FINDINGS.md`).
 
 ## Docs to update
 
