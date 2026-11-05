@@ -41,7 +41,7 @@ Android was not run. Where this document says Android, it means the shared Dart 
 | Metered text | "Mobile data and Wi-Fi marked as metered in Android settings" is right | Same text. The condition works: `CorePlatform` passes `path.isExpensive` as `network_is_expensive`. On iOS that means cellular or personal hotspot | D3 |
 | Preset text | "Russian apps (by package name)", "Russian apps by package", "Play region" are right | Same text, and package conditions never match. The core documents `package_name` as Android only | D3 |
 | Sticky session by, Load balance | `process` and domain | `process` stays preselected, with no owner on iOS. `urltest_balance_lx.go` then hashes the domain alone, so nothing breaks | Recorded |
-| System DNS | `localDNSTransport` is `LocalResolver` | `localDNSTransport` is nil. See F26 | Recorded |
+| System DNS | `localDNSTransport` is `LocalResolver` | `localDNSTransport` is nil. Checked on a phone in §718, check 3 | Recorded |
 | Paste prompt | No prompt | Same as §715 D4 | §715 D4 |
 
 ## Solution: Wi-Fi list hidden
@@ -57,7 +57,7 @@ Android: the gate is true, nothing changes.
 
 ## Found, recorded by D1 and D4
 
-Items F1 to F5, F9 to F18, F21 to F23, F25, F26 and specs S3 to S7 in [`docs/IOS_FINDINGS.md`](../../IOS_FINDINGS.md).
+Items F1 to F5, F9 to F18, F21 to F23, F25 and specs S3 to S7 in [`docs/IOS_FINDINGS.md`](../../IOS_FINDINGS.md). F26, System DNS, closed in §718.
 
 ## Verification
 

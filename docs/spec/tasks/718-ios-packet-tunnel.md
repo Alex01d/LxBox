@@ -2,7 +2,7 @@
 
 | Field | Value |
 |-------|-------|
-| Status | Implemented, works on a real iPhone, part of the checks still open. Not merged |
+| Status | Implemented, phone checks pass on the iPhone 15, findings in `docs/IOS_FINDINGS.md`, a few checks still open. Not merged |
 | Start date | 2026-11-04 |
 | End date | |
 | Commits | |
@@ -236,7 +236,7 @@ Written down so nobody re-asks. Each goes into `docs/IOS_DISABLED_FEATURES.md`.
 | Feature | Android | iOS with the tunnel |
 |---|---|---|
 | Keep VPN on exit | Default on. Off stops the tunnel on swipe | Always on, setting stays hidden. iOS does not reliably tell an app it was swiped away |
-| Service notification, Stop and Restart buttons | Yes | None. Control Center and Settings → VPN show the connection. iPhones with a Dynamic Island show no status bar icon |
+| Service notification, Stop and Restart buttons | Yes | None. Control Center and Settings → VPN show the connection. The iPhone 15, which has a Dynamic Island, showed a `VPN` badge in the status bar right after connecting and none a few minutes later |
 | Per-app routing, Allow VPN bypass | Yes | Hidden (§714) |
 | Boot start | Yes | Hidden. Only On Demand rules could do it, see D3 |
 | `autoDetectInterfaceControl`, `protect(fd)` | Yes | Not needed. iOS keeps the extension's own traffic out of its tunnel |
@@ -267,8 +267,8 @@ All come from the tunnel existing. Most of them §711 expected.
 - **Memory is the risk that can sink this.** iOS kills the extension with no warning, and it leaves no `tunnel_stop.json`. The phone then falls back to its direct connection. If the real config does not fit, the options are a smaller MTU, another stack, or fewer live nodes. All of them touch §700 or the template, so they go to Pavel first.
 - **Other apps leak after a kill.** Nothing stops traffic going direct once the tunnel is gone, and `includeAllNetworks` stays false.
 - **`system` stack and MTU 9000 in an extension.** Both untested. Check before blaming the core for odd behaviour.
-- **DNS.** `localDNSTransport` stays nil, as in `sing-box-for-apple`. A node with a domain name proves the `local` server resolves without looping through the tunnel. §716 lists this as unchecked on a phone.
-- **`find_process: true`.** `findConnectionOwner` stays unavailable. Watch for log noise (§711).
+- **DNS.** `localDNSTransport` stays nil, as in `sing-box-for-apple`. A node with a domain name proves the `local` server resolves without looping through the tunnel. Checked on the phone, see check 3.
+- **`find_process: true`.** `findConnectionOwner` stays unavailable. With core logs on, every connection logs one line, T3 in `docs/IOS_FINDINGS.md`.
 - **Slow starts.** Dart allows up to 4 minutes (010 P3). iOS's own limit for `startTunnel` is not documented, so test with AWG nodes.
 - **Stale socket.** A killed extension leaves `command.sock`. `command_server.go` removes it on the next start. Until then a client connect fails, and the 012 heartbeat handles that as with a silent core.
 - **Credentials.** The config and `configuration.json` move to the App Group, which only these two targets can read. The risk level matches the app's sandbox.
@@ -304,24 +304,39 @@ Release build on iPhone 15 with iOS 26.3.1, unless noted. Pavel taps the phone a
 
 Release build on iPhone 15 with iOS 26.3.1, core `v1.14.4-lx.30`, Pavel's real node. Pavel reported the phone checks. The logs after them have no crash and no error, the extension had exited after Stop, and the spike's tunnel was displaced.
 
+A second round ran the same day on the same build, with no code change. Pavel tapped through checks 1, 3, 5, 9, 11 and the reload and clear DNS part of 12. From `reset-network` on, the Debug API did the work over USB, through a throwaway script that forwards a Mac port to the phone with `usbmuxd`, and `devicectl` opened Safari and L×Box. Pavel rotated the API token and turned the API off afterwards. The fake report from check 15 stays in Debug → Crashes, because neither the app nor `devicectl` can delete it. Like any crash report, it holds a copy of the config.
+
 | # | Result | Evidence |
 |---|---|---|
-| 1 | Partly | Allow worked and `Connected` appeared. Refusing the prompt is not checked yet |
+| 1 | Pass | L×Box open, entry deleted in iOS Settings. Start showed the prompt, `Don't Allow` gave `Failed to start VPN`, the entry stayed absent, and no extension process ran. The next Start asked again, and `Allow` gave `Connected`. Refusing at a cold launch was not run. It differs only in creating a new manager before the same save |
 | 2 | Pass | whatismyipaddress shows the node's country |
+| 3 | Pass | `🔥☁️ WARP`, server `engage.cloudflareclient.com`. On the default `dns_shield`: `warp=on` and `lookup succeed for engage.cloudflareclient.com: 162.159.192.1`. On `local_dns_resolver` with `cache.db` deleted: `Connected`, and the name resolved, shown by `cached A ... 231 IN A` at 121 s. The first exchange line was not in the log, so that step is inferred. Deleting the cache resets the selection, so that session likely ran on Auto, and its `warp=on` may have come from the MASQUE node. Resolver restored to `dns_shield` |
 | 4 | Pass | Ping and node switch work, per Pavel |
+| 5 | Pass | Forwarding on, then `Quit & reopen app`: INFO lines in Debug → Log → Core. Seven `ERROR` lines from `http://ya.ru:81` reached `corelog.txt`. A line's time is when the app received it: all seven read 13:56:10, the moment the app came back from Safari, and none was lost. Forwarding off and a relaunch: only the app's own `status=` lines |
 | 6 | Pass | Left 2 minutes: still `Connected`, uptime kept counting |
 | 7 | Pass | Swiped away, Safari still went through the node. Reopened: `Connected`, right uptime |
 | 8 | Partly | One tunnel session ran 9.5 hours from 2026-11-05 01:32, through 6+ locked hours, messaging, TikTok, browsing and closing the app. Pavel saw no problems. The core stayed in state `normal` with no crash. Wi-Fi to cellular not checked on purpose |
-| 9 | Partly | One Stop ended in `Disconnected`. Five cycles not run |
+| 9 | Pass | Five Stop and Start cycles by Pavel: no error, no stuck status. A new extension process after the cycles, the same app process, no crash log |
 | 10 | Pass | Foreign VPN dialog appeared for real with the spike's tunnel running, and Switch took over. Status off in iOS Settings: `Disconnected` and Android's `onRevoke` message. The chip reads `Disconnected` for a revoked tunnel on every platform, by `status_chip.dart` |
+| 11 | Pass | `⚡ bad-node`, Shadowsocks with `plugin=nosuchplugin`: the extension refused with `initialize outbound[4] shadowsocks[⚡ bad-node]: plugin not found: nosuchplugin`, the node turned off with that reason, the second start reached `Connected`, and the banner said `1 server disabled`. Direction Interval `abc`, not about a node: `Disconnected` with `Failed to start service: start or reload service: decode config: outbounds[4].interval: time: invalid duration "abc"`, the extension exited, no crash log. Both restored. F29 is the toast seen on the way |
+| 12 | Pass | Reload: after a resolver change, long press ↻ then `Reload`. Stayed `Connected`, same extension process, config re-read. Clear DNS cache with the tunnel up: `DNS cache cleared — reloading`, stayed `Connected`, same process, `cache.db` recreated, `warp=on`, and the selected node moved to Auto, F27. `reset-network` has no button, so it ran through the Debug API: `native_ok:true`, same start time and process, traffic and ping continued |
 | 13 | Pass | With the tunnel up, a folder's test showed the `VPN is running` popup, per Pavel |
 | 14 | Pass | `devicectl` killed the extension with the app swiped away. Traffic went direct, as D3 accepts, and Start reconnected. The reason did not show on reopening at first, because of the Dart guard above. After the fix it showed once, and not again on the next launch. The kill with the app on screen is not checked |
-| 16 | Partly | Local proxy checked on Simulator, not on the phone |
+| 15 | Pass | Planted `CrashReport-lxbox.log` and a marker file in temp, then Start. `cache.db` recreated, 512 KB to 256 KB. Marker gone, log emptied, report archived to `crash_reports/2026-11-05T12-11-05/` with an 82-byte `go.log`, and `/files/crash/list` shows it. The selected node moved to Auto with `cache.db`. The banner appeared after the next app launch, T2 |
+| 16 | Pass | Phone, core in the app: `Connected`, no extension process. Curl from the Mac over USB: `407` with no password, 20 MB at about 180 Mbit/s with it. Through `WARP (MASQUE)`: `warp=on`, `loc=BY`, while the Mac reads `LV`. Groups, counters, ping, mass ping and node switch work over the socket. Five cycles clean, port closed after each Stop, selection kept. Opening Safari closed the port. Back in L×Box: `Disconnected`, no auto-start, and Start works. No `memory threshold` line in about 4 minutes. T4 is one log line seen here |
 | 17 | Partly | Simulator: VPN mode stops with the new text. Local proxy connects, port 2080 and the TCP command port listen, fake node `ERR`, Direct 390 ms, port closes on leaving, no auto-start. Test servers and workspaces not rechecked |
-| 18 | Partly | Simulator: VPN Settings shows Core and Mode only. Backup not checked |
+| 18 | Partly | Simulator and phone: VPN Settings shows Core and Mode only. Backup not checked |
 | 19 | Partly | No change under `app/android/`. `flutter analyze` clean. Tests pass for the merged and changed files. Full suite not run |
 
-Not checked yet: 3 node with a domain name, 5 core logs, 11 rejected config, 12 reload and clear DNS, 15 crash test.
+Still open: 8 Wi-Fi to cellular, left out on purpose. 14 the kill with the app on screen. 17 test servers and workspaces. 18 backup. 19 full suite.
+
+Not on the list, also run through the API on the phone. `VPN + Proxy`: extension running and port 2080 answering, 200 through it. `System HTTP proxy`: Safari and iOS services connected through `sysproxy-in`. Both restored to off.
+
+### `IOS_DISABLED_FEATURES.md` walk, 2026-11-05
+
+Every row under "Turned off" is hidden. On the phone: App Settings General and Diagnostics, 4 tabs, VPN Settings. On iPhone 17 Simulator with iOS 26.5, debug build, chosen by Pavel because the gates read only `Platform.isIOS`: Routing tabs, Presets, Rules, rule editor with Wi-Fi selected, URL Check, About, and the Servers menu. The phone's config has no `package_name` rule, and the stored Unknown traffic rule stays. Control Center shows the VPN as connected.
+
+Not confirmed: the camera prompt's language, since access was already granted and no prompt appeared. Send to TV opens the camera, and sending needs a TV. An OpenConnect node adds, starts and shows `ERR` on a fake server, and a real server is untested. The document's rows are corrected to match.
 
 **Memory in real use.** Median 23.4 MB, peak 36.9 MB with 186 connections and 410 goroutines. That left 13.1 MB before the limit, and it is 3.1 MB below the 40 MB where the core's OOM service arms, with its trigger at 45 MB, in the core's own binary MB. Busy browsing cost more memory than a 100 MB download did. The log's `connections` field is not Home's connection count: Home showed 26 when the log said 2, so 186 is the log's own number.
 

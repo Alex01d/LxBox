@@ -11,6 +11,9 @@ What Android has and iOS hides is in [IOS_DISABLED_FEATURES.md](IOS_DISABLED_FEA
 | # | What happens | Cause | Found |
 |---|---|---|---|
 | T1 | A `URLSession` download inside the spike app failed with `The network connection was lost` about 1 s after the tap, every time, through a VLESS node. Safari reached the same host through the same tunnel and downloaded 100 MB. Messaging apps, TikTok and browsing then worked for 9.5 hours through L×Box's tunnel, so this looks specific to the spike. Details in `ios-spike/logs/measure-device.md` | Not found. Low priority | [§718](spec/tasks/718-ios-packet-tunnel.md) |
+| T2 | After a tunnel crash the crash banner comes one app launch later than on Android. Checked with a planted report: the banner showed after a relaunch, and by code it cannot show earlier | The extension archives a report at the next tunnel Start, and Dart reads the archive only at app launch, `main.dart:186`. Android archives at app start | §718 |
+| T3 | With core logs on, every connection logs `router: failed to search process: Not available on iOS` at INFO | `find_process: true` in the template, and iOS has no owner lookup. Changing it touches the template, a §718 non-goal | §718 |
+| T4 | Local proxy only: WARP logs `failed to send data packets: address family not supported by protocol family`, 2 lines in about 4 minutes. Ping to WARP still answered. None in VPN mode | Not found. Low priority | §718 |
 
 ## Start fails, or a rule silently does nothing
 
@@ -29,6 +32,9 @@ What Android has and iOS hides is in [IOS_DISABLED_FEATURES.md](IOS_DISABLED_FEA
 | F6 | Share .conf leaves `<tag>.conf` with the private key in the temporary folder | Shared. `_shareIni` never removes it | §715 |
 | F7 | A server moved out of a folder, or kept on folder delete, is written to the end of the list, not right after the folder as [server-folders](spec/features/007-NODE_LIST/FUNCTIONS/server-folders.md) says. The next save puts it right | Shared. `_replaceKind` puts entries with new keys at the end of `sources[]`. §715 D2: record only | §715 |
 | F8 | Empty subscription: `1 dropped` opens a sheet saying "The core rejected this server. Its technical message: empty body", though no server was involved | Shared | §715 |
+| F27 | Clear DNS cache moves the selected node to Auto. Seen with the tunnel up. The crash test's cache reset did the same | Shared by code. The core stores the selection in `cache.db`, and the action deletes that file, `BoxService.kt:228` on Android. No spec mentions it | §718 |
+| F28 | `corelog.txt` loses errors while the app is still running. 7 `ERROR` lines were gone after a browsing session, and the file shrank from 2 KB to 743 bytes | Shared. `_writePersistent` writes from the 500-line Core window, so INFO lines push older errors out | §718 |
+| F29 | Auto-disable: a toast `Stopped: Failed to start service: ...` stays beside `Connected` while the banner reports the disabled node | Shared by code. The first refused start sets `lastError`. Spec 478 asks for a banner, not a snackbar, for the result | §718 |
 
 ## Values lost or not checked
 
@@ -64,8 +70,7 @@ All shared.
 
 | # | What is open | Found |
 |---|---|---|
-| F25 | `oom-killer` resets the network: `memory threshold reached, usage: 321 MB, available: 0 B, resetting network`, up to 371 MB. It counts the app's own memory, because the core runs in the app (§711). Debug inflates that number and Flutter has no release mode on Simulators. Belongs to VPN Settings | §715, §716 |
-| F26 | System DNS: `localDNSTransport` is nil on iOS, `LocalResolver` on Android. Direct ran on it in 180 ms on Simulator | §716 |
+| F25 | `oom-killer` resets the network: `memory threshold reached, usage: 321 MB, available: 0 B, resetting network`, up to 371 MB. It counts the app's own memory, because the core runs in the app (§711). Debug inflates that number and Flutter has no release mode on Simulators. Belongs to VPN Settings. A release build on the iPhone 15 logged no `memory threshold` line in about 4 minutes of Local proxy with a 25 MB download, too short to close this | §715, §716, §718 |
 
 ## Specs behind the code
 

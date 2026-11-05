@@ -34,17 +34,17 @@ A hidden setting keeps its stored value, so a backup taken on iOS still restores
 | Tunnel killed by the system | Restarts by itself, up to 3 times in 5 minutes | Stays down, traffic goes direct, and the app shows the reason at next open. Decided for now in §718 D3 |
 | Local proxy | Runs in the VPN service | Runs inside the app (§711, §718 D2) |
 | App in the background | Service keeps running | VPN mode keeps running. Proxy mode stops when the app leaves the foreground (§711) |
-| Code editor | Native editor with highlighting, line numbers, search and wrap | Plain text field. The search and wrap buttons and Magnifier do nothing (§714 D4) |
+| Code editor | Native editor with highlighting, line numbers, search and wrap | Plain text field. Search opens a Find bar that stays at `0/0` (§718). The wrap button and Magnifier do nothing (§714 D4) |
 | Closing the keyboard | Back button | A tap outside the field (§714 D5) |
 | Back gesture on a screen that guards back | System back runs the screen's handler | A swipe from the left edge runs the same handler at the end of the drag. The screen does not follow the finger (§715 D1) |
 | Paste from clipboard | No prompt | iOS asks to allow paste, once per clipboard content from another app. Don't Allow shows "Clipboard is empty" (§715 D4) |
 | Quit & reopen, Restart now | Process ends, home screen shows | Same, through `exit(0)`, which can look like a crash (§714 D6) |
-| Usage region, Auto | Country of the mobile network, then device locale | Device locale only. The network lookup is not ported |
+| Usage region, Auto | Country of the mobile network, then device locale | Device locale only. The network lookup is not ported, and a try logs `MissingPluginException` |
 | Identity sent to panels | `LxBox-android/<version>`, OS `android` | `LxBox-ios/<version>`, OS `ios` (§714 D7) |
 | Camera prompt language | System's own text | Our text in English, Russian or Chinese, by system language (§714 D8) |
 | File picker | A tap returns the file | A tap, then Open. Left as is (§714 D9) |
 | Sticky session by, Load balance | `process` and domain | `process` has no owner here, so the core hashes the domain alone (§716) |
-| System DNS | Uses `LocalResolver` | The core's own lookup, `localDNSTransport` is nil (§716). A real node resolved through it on a phone (§718) |
+| System DNS | Uses `LocalResolver` | The core's own lookup, `localDNSTransport` is nil (§716). With `local_dns_resolver` set, a node's domain name resolved through it in VPN mode on a phone (§718). The default resolver is `dns_shield`, which does not use it |
 | Device sleep | Pauses only with Tunnel sleep mode set | The core pauses when iOS reports sleep, with no setting (§718 D7) |
 | Another VPN check | From the network's VPN transport | From interfaces the system lists, so it can ask needlessly (§718 D4) |
 
@@ -52,7 +52,8 @@ A hidden setting keeps its stored value, so a backup taken on iOS still restores
 
 | Feature | State on iOS |
 |---|---|
-| Google push (FCM) preset | Off by default. Its package condition never matches |
-| Tailscale, Taildrop, OpenConnect screens | Native calls not ported |
-| Send to TV | Depends on the camera, not tested |
-| Text in settings that stayed | Debug API mentions `adb forward`. System HTTP proxy mentions Android 10. The Rules tab says rules can match by app. Metered says "in Android settings", though the condition works on iOS as cellular or personal hotspot. Ru internet segment says "Russian apps (by package name)", with a "Russian apps by package" option, and FCM says "Play region" (§716 D3) |
+| Google push (FCM) preset | Off by default. Its default rule matches FCM ports and hosts. The option Limit to Google Play Services adds a package condition that never matches |
+| Tailscale, Taildrop, OpenConnect screens | Native calls not ported. An OpenConnect node adds, starts with the rest and shows `ERR` on a fake server, with no crash. A real server is not tested (§718) |
+| Send to TV | `Scan code` opens the camera on a phone. Sending is not tested, it needs a TV |
+| TUN interface name | Has no effect, by code: the extension does not read it and iOS names the interface. Not run |
+| Text in settings that stayed | Debug API mentions `adb forward`. System HTTP proxy mentions Android 10, though it works on iOS (§718). The Rules tab says rules can match by app. Metered says "in Android settings", though the condition works on iOS as cellular or personal hotspot. Ru internet segment says "Russian apps (by package name)", with a "Russian apps by package" option, and FCM says "Play region" (§716 D3). The drawer's App Settings subtitle says "automation". Usage region says Auto uses the mobile network. Haptic feedback names the "Touch feedback" setting. Certificate store names Android 7.x, Direct connect timeout describes Android's retries, and the core logs note says force-stop |
