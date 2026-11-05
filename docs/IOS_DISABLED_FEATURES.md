@@ -17,8 +17,6 @@ A hidden setting keeps its stored value, so a backup taken on iOS still restores
 | Check for updates, update block in About | Finds a new APK | Hidden | Releases hold Android files only |
 | Installed from, Where to get L×Box | Shows the install channel and links | Hidden | Android channels only |
 | Battery, Notifications, Location, Nearby Wi-Fi, App info rows | Show real permission state, open system settings | Hidden | Android system services. On iOS they would always read as granted |
-| Auto-record visited Wi-Fi networks | Remembers networks for Wi-Fi rules | Hidden | Needs native Wi-Fi reading that iOS does not have here |
-| Wi-Fi network list in the rule editor | A rule matches named networks. Add current, Pick saved, Manual | Hidden. Network type and Metered stay (§716 D2) | Needs the Wi-Fi information entitlement and a location prompt, left for its own task (§718 D6). A rule from an Android backup keeps its networks and never matches here |
 | Automation tab | Tasker and other apps control L×Box through intents | Hidden | Android intents |
 | Tunnel sleep mode | Pauses the tunnel in Doze or with the screen off | Hidden | Android Doze and screen events |
 | Keep VPN on exit | VPN outlives the app, or stops on swipe when off | Hidden, always on in VPN mode | iOS does not reliably tell an app it was swiped away (§718) |
@@ -30,6 +28,8 @@ A hidden setting keeps its stored value, so a backup taken on iOS still restores
 
 | Feature | On Android | On iOS |
 |---|---|---|
+| Wi-Fi rules | Location and nearby Wi-Fi permissions, a named reason on failure | No prompt, through the Wi-Fi information entitlement. An empty answer from iOS says `Not connected to Wi-Fi.`, which can be wrong before the first VPN start (§721) |
+| Auto-record visited Wi-Fi networks | Records while the app process lives | Records from the tunnel, so only while the VPN is on. A network shows in Pick saved after the next return to the app (§721) |
 | VPN mode | System-wide tunnel | Same on a real iPhone, through a tunnel extension (§718). Simulator fails with a reason and needs Proxy mode |
 | Tunnel killed by the system | Restarts by itself, up to 3 times in 5 minutes | Stays down, traffic goes direct, and the app shows the reason at next open. Decided for now in §718 D3 |
 | Local proxy | Runs in the VPN service | Runs inside the app (§711, §718 D2) |

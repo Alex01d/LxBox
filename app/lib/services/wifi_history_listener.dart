@@ -42,10 +42,7 @@ class WifiHistoryListener {
     // Sync native observer state со storage flag на старте app. Без
     // этого после reboot / process restart observer был бы stopped до
     // следующего toggle в UI.
-    final enabled = await SettingsStorage.getAutoRecordWifi();
-    if (enabled) {
-      await setEnabled(true);
-    }
+    await setEnabled(await SettingsStorage.getAutoRecordWifi());
   }
 
   /// Отписаться от MethodChannel + stop native observer. По умолчанию

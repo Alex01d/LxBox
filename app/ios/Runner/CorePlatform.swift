@@ -1,6 +1,7 @@
 import Foundation
 import Libbox
 import Network
+import NetworkExtension
 
 class CorePlatform: NSObject, LibboxPlatformInterfaceProtocol, LibboxCommandServerHandlerProtocol {
   var onDebugMessage: ((String) -> Void)?
@@ -122,7 +123,16 @@ class CorePlatform: NSObject, LibboxPlatformInterfaceProtocol, LibboxCommandServ
   func findConnectionOwner(_: Int32, sourceAddress _: String?, sourcePort _: Int32, destinationAddress _: String?, destinationPort _: Int32) throws -> LibboxConnectionOwner {
     throw Self.failure("Not available on iOS")
   }
-  func readWIFIState() -> LibboxWIFIState? { nil }
+  func readWIFIState() -> LibboxWIFIState? {
+    let semaphore = DispatchSemaphore(value: 0)
+    var current: NEHotspotNetwork?
+    NEHotspotNetwork.fetchCurrent { network in
+      current = network
+      semaphore.signal()
+    }
+    semaphore.wait()
+    return current.flatMap { LibboxWIFIState($0.ssid, wifiBSSID: $0.bssid) }
+  }
   func send(_: LibboxNotification?) throws {}
   func cancelNotification(_: String?, typeID _: Int32) throws {}
   func startNeighborMonitor(_: LibboxNeighborUpdateListenerProtocol?) throws {}

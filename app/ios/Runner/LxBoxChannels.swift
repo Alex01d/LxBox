@@ -1,6 +1,7 @@
 import Flutter
 import Foundation
 import Libbox
+import NetworkExtension
 import UIKit
 
 final class LxBoxChannels {
@@ -35,11 +36,13 @@ final class LxBoxChannels {
   private let client = CoreCommandClient()
   private let service: CoreService
   private let silentStream = ChannelSink()
+  private let wifiHistory: WifiHistoryBridge
   private var channels: [NSObject] = []
 
   init(messenger: FlutterBinaryMessenger) {
     CoreRuntime.setup()
     service = CoreService(client: client)
+    wifiHistory = WifiHistoryBridge(messenger: messenger)
 
     let methods = FlutterMethodChannel(name: "com.leadaxe.lxbox/methods", binaryMessenger: messenger)
     methods.setMethodCallHandler { [weak self] call, result in
@@ -307,8 +310,26 @@ final class LxBoxChannels {
       result(false)
     case "checkNotificationPermission":
       result(true)
+    case "getCurrentWifiInfo":
+      getCurrentWifiInfo(result)
+    case "setAutoRecordWifi":
+      wifiHistory.setEnabled((call.arguments as? [String: Any])?["enable"] as? Bool ?? false)
+      service.applyAutoRecordWifi()
+      result(nil)
     default:
       result(FlutterMethodNotImplemented)
+    }
+  }
+
+  private func getCurrentWifiInfo(_ result: @escaping FlutterResult) {
+    NEHotspotNetwork.fetchCurrent { network in
+      DispatchQueue.main.async {
+        guard let network else {
+          result(["error": "no_wifi"])
+          return
+        }
+        result(["ssid": network.ssid, "bssid": network.bssid])
+      }
     }
   }
 

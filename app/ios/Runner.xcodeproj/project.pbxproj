@@ -18,6 +18,7 @@
 		3B3967161E833CAA004F5970 /* AppFrameworkInfo.plist in Resources */ = {isa = PBXBuildFile; fileRef = 3B3967151E833CAA004F5970 /* AppFrameworkInfo.plist */; };
 		630B5E842F55AB8B827125AB /* Pods_Runner.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 623D215BF8279B8EF5F1F0FE /* Pods_Runner.framework */; };
 		70800000000000000000A002 /* LxBoxChannels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70800000000000000000A001 /* LxBoxChannels.swift */; };
+		72100000000000000000A002 /* WifiHistoryBridge.swift in Sources */ = {isa = PBXBuildFile; fileRef = 72100000000000000000A001 /* WifiHistoryBridge.swift */; };
 		74858FAF1ED2DC5600515810 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 74858FAE1ED2DC5600515810 /* AppDelegate.swift */; };
 		7884E8682EC3CC0700C636F2 /* SceneDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7884E8672EC3CC0400C636F2 /* SceneDelegate.swift */; };
 		78A318202AECB46A00862997 /* FlutterGeneratedPluginSwiftPackage in Frameworks */ = {isa = PBXBuildFile; productRef = 78A3181F2AECB46A00862997 /* FlutterGeneratedPluginSwiftPackage */; };
@@ -30,6 +31,7 @@
 		71800000000000000000A002 /* CorePlatform.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70900000000000000000A003 /* CorePlatform.swift */; };
 		71800000000000000000A003 /* PacketTunnelProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 71800000000000000000B001 /* PacketTunnelProvider.swift */; };
 		71800000000000000000A004 /* TunnelPlatform.swift in Sources */ = {isa = PBXBuildFile; fileRef = 71800000000000000000B002 /* TunnelPlatform.swift */; };
+		72100000000000000000B002 /* WifiNetworkObserver.swift in Sources */ = {isa = PBXBuildFile; fileRef = 72100000000000000000B001 /* WifiNetworkObserver.swift */; };
 		71800000000000000000A005 /* Libbox.xcframework in Frameworks */ = {isa = PBXBuildFile; fileRef = 70900000000000000000A101 /* Libbox.xcframework */; };
 		71800000000000000000A006 /* PacketTunnel.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 71800000000000000000B005 /* PacketTunnel.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		71800000000000000000A007 /* TunnelController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 71800000000000000000B006 /* TunnelController.swift */; };
@@ -93,6 +95,7 @@
 		62A1B88101678164F2611CD9 /* Pods-Runner.profile.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Runner.profile.xcconfig"; path = "Target Support Files/Pods-Runner/Pods-Runner.profile.xcconfig"; sourceTree = "<group>"; };
 		68666C33B3101538A331577C /* Pods-RunnerTests.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-RunnerTests.debug.xcconfig"; path = "Target Support Files/Pods-RunnerTests/Pods-RunnerTests.debug.xcconfig"; sourceTree = "<group>"; };
 		70800000000000000000A001 /* LxBoxChannels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LxBoxChannels.swift; sourceTree = "<group>"; };
+		72100000000000000000A001 /* WifiHistoryBridge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WifiHistoryBridge.swift; sourceTree = "<group>"; };
 		74858FAD1ED2DC5600515810 /* Runner-Bridging-Header.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "Runner-Bridging-Header.h"; sourceTree = "<group>"; };
 		74858FAE1ED2DC5600515810 /* AppDelegate.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
 		7884E8672EC3CC0400C636F2 /* SceneDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SceneDelegate.swift; sourceTree = "<group>"; };
@@ -113,6 +116,7 @@
 		B429134F332B177241E07D66 /* Pods-Runner.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Runner.release.xcconfig"; path = "Target Support Files/Pods-Runner/Pods-Runner.release.xcconfig"; sourceTree = "<group>"; };
 		71800000000000000000B001 /* PacketTunnelProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PacketTunnelProvider.swift; sourceTree = "<group>"; };
 		71800000000000000000B002 /* TunnelPlatform.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TunnelPlatform.swift; sourceTree = "<group>"; };
+		72100000000000000000B001 /* WifiNetworkObserver.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WifiNetworkObserver.swift; sourceTree = "<group>"; };
 		71800000000000000000B003 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		71800000000000000000B004 /* PacketTunnel.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = PacketTunnel.entitlements; sourceTree = "<group>"; };
 		71800000000000000000B005 /* PacketTunnel.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = PacketTunnel.appex; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -215,6 +219,7 @@
 				1498D2331E8E89220040F4C2 /* GeneratedPluginRegistrant.m */,
 				74858FAE1ED2DC5600515810 /* AppDelegate.swift */,
 				70800000000000000000A001 /* LxBoxChannels.swift */,
+				72100000000000000000A001 /* WifiHistoryBridge.swift */,
 				70900000000000000000A001 /* CoreRuntime.swift */,
 				70900000000000000000A003 /* CorePlatform.swift */,
 				70900000000000000000A005 /* CoreService.swift */,
@@ -247,6 +252,7 @@
 			children = (
 				71800000000000000000B001 /* PacketTunnelProvider.swift */,
 				71800000000000000000B002 /* TunnelPlatform.swift */,
+				72100000000000000000B001 /* WifiNetworkObserver.swift */,
 				71800000000000000000B003 /* Info.plist */,
 				71800000000000000000B004 /* PacketTunnel.entitlements */,
 			);
@@ -488,6 +494,7 @@
 			files = (
 				74858FAF1ED2DC5600515810 /* AppDelegate.swift in Sources */,
 				70800000000000000000A002 /* LxBoxChannels.swift in Sources */,
+				72100000000000000000A002 /* WifiHistoryBridge.swift in Sources */,
 				70900000000000000000A002 /* CoreRuntime.swift in Sources */,
 				70900000000000000000A004 /* CorePlatform.swift in Sources */,
 				70900000000000000000A006 /* CoreService.swift in Sources */,
@@ -505,6 +512,7 @@
 			files = (
 				71800000000000000000A003 /* PacketTunnelProvider.swift in Sources */,
 				71800000000000000000A004 /* TunnelPlatform.swift in Sources */,
+				72100000000000000000B002 /* WifiNetworkObserver.swift in Sources */,
 				71800000000000000000A001 /* CoreRuntime.swift in Sources */,
 				71800000000000000000A002 /* CorePlatform.swift in Sources */,
 			);

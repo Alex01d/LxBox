@@ -393,6 +393,11 @@ final class CoreService {
     }
   }
 
+  func applyAutoRecordWifi() {
+    guard inTunnel else { return }
+    tunnel.send(.autoRecordWifi)
+  }
+
   func resetNetwork() {
     if inTunnel {
       tunnel.send(.resetNetwork)

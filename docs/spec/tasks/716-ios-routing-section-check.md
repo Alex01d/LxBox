@@ -25,7 +25,7 @@ Made by Pavel on 2026-11-03.
 | # | Question | Answer |
 |---|---|---|
 | D1 | Bugs found in shared code | Don't fix now, record |
-| D2 | Wi-Fi network list in the rule editor does not work on iOS | Hide it. The network type stays |
+| D2 | Wi-Fi network list in the rule editor does not work on iOS | Hide it. The network type stays. Replaced by [§721](721-ios-wifi-rules.md) on 2026-11-05 |
 | D3 | Shared text speaks about Android: Metered, package presets, Play region | Leave, record |
 | D4 | Where findings live | One file, [`docs/IOS_FINDINGS.md`](../../IOS_FINDINGS.md), for all sections. §715 leftovers moved there |
 

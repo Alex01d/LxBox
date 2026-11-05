@@ -18,9 +18,11 @@ is connected to one of the listed Wi-Fi networks (by SSID name and,
 optionally, by access point BSSID). For example, "at home — direct, on other
 networks — via VPN".
 
-On iOS (§716) the list of networks is hidden, because the app and the core
-cannot read the network name there. Choosing the network type still works, and
-networks that came with a rule from a backup stay stored.
+On iOS (§721) the app and the core read the network name through the Wi-Fi
+information entitlement, with no permission prompt. An empty answer from iOS
+shows as "Not connected to Wi-Fi", which can be wrong before the first VPN
+start. Auto-record of seen networks runs from the tunnel, so only while the VPN
+is on.
 
 ## Parameters
 
@@ -71,3 +73,4 @@ Wi-Fi.
 | 3 | [567](../../../tasks/567-wifi-ssid-read-preflight-and-diagnostics.md) | Done | Checking precise location and whether it is enabled, an honest failure reason |
 | 4 | [569](../../../tasks/569-wifi-ssid-transport-info-api31.md) | Done | Reading SSID on newer OSes via network transport info |
 | 5 | [716](../../../tasks/716-ios-routing-section-check.md) | Simulator, no merge | iOS: the list of networks is hidden |
+| 6 | [721](../../../tasks/721-ios-wifi-rules.md) | iPhone, no merge | iOS: Wi-Fi rules and auto-record work, replaces 716 |

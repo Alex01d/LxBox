@@ -87,7 +87,7 @@ Made by Pavel on 2026-11-04.
 | D3 | Restart the tunnel automatically after iOS kills it? | Yes. `START_STICKY` plus `VpnWatchdog`, limit 3 per 5 minutes | Off, decided again on 2026-11-05 after measuring. iOS never killed the tunnel in real use, On Demand rules are the only way to restart it, and a memory kill could loop. Accepted cost: a killed tunnel leaves the phone on its direct connection until Pavel notices. Revisit if kills appear in real use |
 | D4 | Ask before replacing another VPN? | Yes, P8, using `TRANSPORT_VPN` | Yes. Answer `isForeignVpnActive` from the `__SCOPED__` keys of `CFNetworkCopySystemProxySettings`. The Dart dialog already exists. A false positive costs one extra question |
 | D5 | Memory limit setting on iOS? | Auto, 200, 384, 512, 768 MB | Hide it on iOS. The extension always uses its 50 MB, so the setting would do nothing in VPN mode. The stored value stays for backups |
-| D6 | Bring back the Wi-Fi network list (§716 D2)? | Works, needs location permission | Leave hidden. It needs the `wifi-info` entitlement and an iOS location prompt, so it gets its own task |
+| D6 | Bring back the Wi-Fi network list (§716 D2)? | Works, needs location permission | Leave hidden. It needs the `wifi-info` entitlement and an iOS location prompt, so it gets its own task. Replaced by [§721](721-ios-wifi-rules.md), which needs no prompt |
 | D7 | Pause the core when the phone sleeps? | Default `never`. Only `lazy` and `always` pause | Pause, as `sing-box-for-apple` does in `sleep()` and `wake()`. iOS calls these itself and there is no setting |
 | D8 | Move the app's durable folders into the App Group? This breaks §711's "no Dart diff" | n/a | Yes, with one small Dart class, see "Paths" |
 
@@ -362,7 +362,7 @@ First pass in the spike, from `memory.csv`, with the real limit from `limit_mb`.
 - An iOS core artifact and hash in fork releases, before any real distribution (§711).
 - iPhone 17 with iOS 26.5, the project's target device, still unmeasured.
 - Many-node configs are unmeasured. Only needed if someone plans to use one.
-- The Wi-Fi network list on iOS (D6), as its own task.
+- The Wi-Fi network list on iOS (D6), done in [§721](721-ios-wifi-rules.md).
 - The spike's own `URLSession` download fails through the VLESS node while Safari reaches the same host. Cause not found. Everyday apps worked for 9.5 hours in L×Box, so it looks specific to the spike and is low priority (`ios-spike/logs/measure-device.md`, "Open", T1 in `docs/IOS_FINDINGS.md`).
 
 ## Docs to update

@@ -144,6 +144,8 @@ enum CoreRuntime {
 }
 
 enum NativePrefs {
+  static let autoRecordWifi = "auto_record_wifi"
+
   private static let prefix = "lxbox.native_prefs."
   private static let defaults = UserDefaults(suiteName: CoreRuntime.appGroupId) ?? .standard
 
@@ -165,6 +167,48 @@ enum TunnelMessage: String {
   case resetNetwork
   case clearDnsCache
   case memoryInfo
+  case autoRecordWifi
+}
+
+struct WifiSeen: Codable, Equatable {
+  let ssid: String
+  let bssid: String
+}
+
+enum WifiSeenStore {
+  private static var file: URL {
+    CoreRuntime.filesDirectory.appendingPathComponent("wifi_seen.jsonl")
+  }
+
+  private static var drainingFile: URL {
+    CoreRuntime.filesDirectory.appendingPathComponent("wifi_seen.draining.jsonl")
+  }
+
+  static func append(_ seen: WifiSeen) {
+    guard var line = try? JSONEncoder().encode(seen) else { return }
+    line.append(0x0A)
+    guard let handle = try? FileHandle(forWritingTo: file) else {
+      try? line.write(to: file)
+      return
+    }
+    defer { try? handle.close() }
+    _ = try? handle.seekToEnd()
+    try? handle.write(contentsOf: line)
+  }
+
+  static func drain() -> [WifiSeen] {
+    try? FileManager.default.removeItem(at: drainingFile)
+    guard (try? FileManager.default.moveItem(at: file, to: drainingFile)) != nil else { return [] }
+    defer { try? FileManager.default.removeItem(at: drainingFile) }
+    let lines = (try? String(contentsOf: drainingFile, encoding: .utf8)) ?? ""
+    return lines.split(separator: "\n").compactMap {
+      try? JSONDecoder().decode(WifiSeen.self, from: Data($0.utf8))
+    }
+  }
+
+  static func discard() {
+    try? FileManager.default.removeItem(at: file)
+  }
 }
 
 struct TunnelStopRecord: Codable {

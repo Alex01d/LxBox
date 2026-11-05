@@ -323,33 +323,32 @@ class DiagnosticsTab extends StatelessWidget {
         // сетей — след приватности даже локально. Без неё «Pick saved»
         // наполняют только Add current / Manual. 5-минутный stickiness
         // отсекает drive-by сети (магазин/проход).
-        if (PlatformFeatures.hasAndroidSystemSettings)
-          SettingsIsland(
-            title: getLocalText.s("Wi-Fi networks"),
-            children: [
-              SwitchListTile(
-                title: Text(getLocalText.s("Auto-record visited Wi-Fi networks")),
-                subtitle: Text(
-                  autoRecordWifi
-                      ? getLocalText.s("Networks where you stay ≥ 5 minutes appear in routing rule editor → Pick saved.")
-                      : getLocalText.s("Off. Pick saved is populated only by Add current / Manual."),
-                ),
-                secondary: const Icon(Icons.history),
-                value: autoRecordWifi,
-                onChanged: loaded ? onAutoRecordWifiChanged : null,
+        SettingsIsland(
+          title: getLocalText.s("Wi-Fi networks"),
+          children: [
+            SwitchListTile(
+              title: Text(getLocalText.s("Auto-record visited Wi-Fi networks")),
+              subtitle: Text(
+                autoRecordWifi
+                    ? getLocalText.s("Networks where you stay ≥ 5 minutes appear in routing rule editor → Pick saved.")
+                    : getLocalText.s("Off. Pick saved is populated only by Add current / Manual."),
               ),
-              Padding(
-                padding: const EdgeInsets.fromLTRB(72, 0, 16, 12),
-                child: Text(
-                  getLocalText.s("Stored locally only. Existing entries persist when you turn this off — remove them one by one in Pick saved with ✕ (Remove from history)."),
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: Theme.of(context).colorScheme.onSurfaceVariant,
-                  ),
+              secondary: const Icon(Icons.history),
+              value: autoRecordWifi,
+              onChanged: loaded ? onAutoRecordWifiChanged : null,
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(72, 0, 16, 12),
+              child: Text(
+                getLocalText.s("Stored locally only. Existing entries persist when you turn this off — remove them one by one in Pick saved with ✕ (Remove from history)."),
+                style: TextStyle(
+                  fontSize: 12,
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
                 ),
               ),
-            ],
-          ),
+            ),
+          ],
+        ),
       ],
     );
   }

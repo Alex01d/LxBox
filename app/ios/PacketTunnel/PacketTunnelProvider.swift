@@ -8,6 +8,7 @@ final class PacketTunnelProvider: NEPacketTunnelProvider {
   private let queue = DispatchQueue(label: "lxbox.tunnel", qos: .userInitiated)
   private var server: LibboxCommandServer?
   private var interfaceSwitchReset: DispatchWorkItem?
+  private let wifiObserver = WifiNetworkObserver()
   private lazy var platform = makePlatform()
 
   private func makePlatform() -> TunnelPlatform {
@@ -20,6 +21,15 @@ final class PacketTunnelProvider: NEPacketTunnelProvider {
   override func startTunnel(options _: [String: NSObject]?) async throws {
     TunnelStopRecord().write()
     try queue.sync { try startCore() }
+    applyAutoRecordWifi()
+  }
+
+  private func applyAutoRecordWifi() {
+    if NativePrefs.bool(NativePrefs.autoRecordWifi, fallback: false) {
+      wifiObserver.start()
+    } else {
+      wifiObserver.stop()
+    }
   }
 
   private func startCore() throws {
@@ -63,6 +73,7 @@ final class PacketTunnelProvider: NEPacketTunnelProvider {
   }
 
   private func closeCore() {
+    wifiObserver.stop()
     interfaceSwitchReset?.cancel()
     interfaceSwitchReset = nil
     guard let server else {
@@ -101,6 +112,8 @@ final class PacketTunnelProvider: NEPacketTunnelProvider {
       }
     case .memoryInfo:
       return try? JSONSerialization.data(withJSONObject: CoreRuntime.memoryInfo())
+    case .autoRecordWifi:
+      applyAutoRecordWifi()
     }
     return nil
   }

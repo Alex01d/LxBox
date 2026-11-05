@@ -60,7 +60,7 @@ One gate, `app/lib/services/platform_features.dart`, so the list stays in one pl
 | Where | What | Gate |
 |---|---|---|
 | App Settings, General | Auto-start on boot, Quick connect, Updates | `hasAndroidSystemSettings` |
-| App Settings, Diagnostics | System setup, Auto-record visited Wi-Fi networks | `hasAndroidSystemSettings` |
+| App Settings, Diagnostics | System setup. Auto-record visited Wi-Fi networks until [§721](721-ios-wifi-rules.md) | `hasAndroidSystemSettings` |
 | App Settings | Automation tab | `hasAndroidSystemSettings` |
 | VPN Settings, System | Tunnel sleep mode | `hasAndroidSystemSettings` |
 | VPN Settings, Mode | Keep VPN on exit, Allow VPN bypass | `hasAndroidSystemSettings` |

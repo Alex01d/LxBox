@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 
-import '../../../services/platform_features.dart';
 import '../../../widgets/wifi_entry.dart';
 import '../network_choice.dart';
 import '../widgets/section_header.dart';
@@ -110,8 +109,7 @@ class WifiSection extends StatelessWidget {
             if (sel.isNotEmpty) onChoiceChanged(sel.first);
           },
         ),
-        if (choice == NetworkChoice.wifi && PlatformFeatures.canReadWifiName)
-          ..._wifiList(t),
+        if (choice == NetworkChoice.wifi) ..._wifiList(t),
         CheckboxListTile(
           dense: true,
           contentPadding: EdgeInsets.zero,
