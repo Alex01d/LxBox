@@ -26,6 +26,10 @@ String maskSubscriptionUrl(String raw) {
 /// подписчику Automation и не должна раскрывать адрес сервера.
 String maskNetworkAddresses(String raw) {
   if (raw.isEmpty) return raw;
+  return maskIpAddresses(raw).replaceAll(_hostRe, '***');
+}
+
+String maskIpAddresses(String raw) {
   var s = raw.replaceAll(_bracketV6Re, '[***]');
   s = s.replaceAllMapped(_bareV6Re, (m) {
     final t = m[0]!;
@@ -33,10 +37,32 @@ String maskNetworkAddresses(String raw) {
     final colons = ':'.allMatches(t).length;
     return (t.contains('::') || colons >= 3) ? '***' : t;
   });
-  s = s.replaceAll(_v4Re, '***');
-  s = s.replaceAll(_hostRe, '***');
-  return s;
+  return s.replaceAll(_v4Re, '***');
 }
+
+String maskSecrets(String raw) {
+  if (raw.isEmpty) return raw;
+  final withoutLinks = raw.replaceAllMapped(_linkRe, (m) => _maskLink(m[0]!));
+  final withoutIds = withoutLinks
+      .replaceAll(_emailRe, '***')
+      .replaceAll(_uuidRe, '***')
+      .replaceAll(_base64KeyRe, '***')
+      .replaceAll(_hexTokenRe, '***');
+  return maskIpAddresses(withoutIds);
+}
+
+String _maskLink(String link) {
+  final scheme = link.substring(0, link.indexOf('://')).toLowerCase();
+  final isWebLink = scheme == 'http' || scheme == 'https';
+  return isWebLink ? maskSubscriptionUrl(link) : '$scheme://***';
+}
+
+final _linkRe = RegExp(r'\b[A-Za-z][A-Za-z0-9+.-]*://[^\s"' "'" r'<>`]+');
+final _emailRe = RegExp(r'[\w.+-]+@[\w-]+(?:\.[\w-]+)+');
+final _uuidRe = RegExp(
+    r'\b[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{12}\b');
+final _base64KeyRe = RegExp(r'(?<![A-Za-z0-9+/])[A-Za-z0-9+/]{43}=(?![A-Za-z0-9+/=])');
+final _hexTokenRe = RegExp(r'\b[0-9A-Fa-f]{32,}\b');
 
 final _bracketV6Re = RegExp(r'\[[0-9A-Za-z:.%]*:[0-9A-Za-z:.%]*\]');
 final _bareV6Re =

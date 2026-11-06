@@ -168,10 +168,13 @@ class AppLog extends ChangeNotifier {
   /// разбора собираются и воспроизводятся на main после возврата.
   void Function(DebugLevel level, String message, DebugSource source)? capture;
 
+  void Function(String message, DebugSource source)? errorReporter;
+
   void log(
     DebugLevel level,
     String message, {
     DebugSource source = DebugSource.app,
+    bool alreadyReported = false,
   }) {
     final line = message.trim();
     if (line.isEmpty) return;
@@ -182,7 +185,7 @@ class AppLog extends ChangeNotifier {
     }
     final queue = _entriesBySource[source];
     if (queue == null) return; // unknown source — silently ignore
-    _appendOne(queue, source, level, line);
+    _appendOne(queue, source, level, line, alreadyReported: alreadyReported);
     _scheduleNotify();
   }
 
@@ -213,8 +216,9 @@ class AppLog extends ChangeNotifier {
     ListQueue<DebugEntry> queue,
     DebugSource source,
     DebugLevel level,
-    String line,
-  ) {
+    String line, {
+    bool alreadyReported = false,
+  }) {
     queue.addFirst(DebugEntry(
       time: DateTime.now(),
       source: source,
@@ -225,7 +229,10 @@ class AppLog extends ChangeNotifier {
     while (queue.length > cap) {
       queue.removeLast();
     }
-    if (level == DebugLevel.error) _errorsTotal++;
+    if (level == DebugLevel.error) {
+      _errorsTotal++;
+      if (!alreadyReported) errorReporter?.call(line, source);
+    }
     if (kDebugMode) {
       // ignore: avoid_print
       print('[${source.name}/${level.name}] $line');
@@ -276,8 +283,13 @@ class AppLog extends ChangeNotifier {
       log(DebugLevel.info, message, source: source);
   void warning(String message, {DebugSource source = DebugSource.app}) =>
       log(DebugLevel.warning, message, source: source);
-  void error(String message, {DebugSource source = DebugSource.app}) =>
-      log(DebugLevel.error, message, source: source);
+  void error(
+    String message, {
+    DebugSource source = DebugSource.app,
+    bool alreadyReported = false,
+  }) =>
+      log(DebugLevel.error, message,
+          source: source, alreadyReported: alreadyReported);
 
   /// Очищает все source-buckets + помечает все persist files dirty
   /// (чтобы при ближайшем write они опустошились).
@@ -413,6 +425,7 @@ class AppLog extends ChangeNotifier {
     }
     _persistDirty.clear();
     _persistInitialized = false;
+    errorReporter = null;
     // Окно троттлинга тоже: таймер прошлого теста (в т.ч. fake-таймер из
     // отработавшей зоны fakeAsync) иначе проглотит первое уведомление.
     _notifyThrottleTimer?.cancel();

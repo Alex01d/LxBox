@@ -207,6 +207,14 @@ flutter build ios --release
 xcrun devicectl device install app --device <device id> build/ios/iphoneos/Runner.app
 ```
 
+**Sentry ([§722](spec/tasks/722-ios-sentry-error-reports.md)).** iOS builds send uncaught errors, AppLog errors and app crashes to Sentry, with secrets masked, when they get a DSN. Put it in `app/.env`, which git ignores, and add `--dart-define-from-file=.env` to `flutter build ios` and `flutter run`. Without it Sentry stays off.
+
+```bash
+cd app
+echo 'SENTRY_DSN=https://…' > .env
+flutter build ios --release --dart-define-from-file=.env
+```
+
 Warnings and errors are in `applog.txt`, in `Library/Documents` of the App Group. On Simulator, find it with `xcrun simctl get_app_container <device id> com.gglprojects.lxbox group.com.gglprojects.lxbox`. On a phone, copy it with `xcrun devicectl device copy from --domain-type appGroupDataContainer --domain-identifier group.com.gglprojects.lxbox --source Library/Documents/applog.txt`. `devicectl` can't reach files outside `Library` in an App Group. A clean start doesn't create the file.
 
 ## CI (GitHub Actions)

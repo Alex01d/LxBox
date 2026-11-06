@@ -18,6 +18,7 @@ import 'services/contract/registry.dart';
 import 'services/parser/engine/section_loader.dart';
 import 'services/parser/mappers/draft_sections.dart';
 import 'services/crash_banner_state.dart';
+import 'services/crash_reporting.dart';
 import 'services/install_source.dart';
 import 'services/oom_reports.dart';
 import 'services/platform_features.dart';
@@ -54,14 +55,16 @@ void main() async {
     AppLog.I.error(
       'Flutter error: ${details.exceptionAsString()}'
       '${details.context != null ? " @ ${details.context}" : ""}',
+      alreadyReported: true,
     );
     if (kDebugMode) prevOnError?.call(details);
   };
   PlatformDispatcher.instance.onError = (error, stack) {
-    AppLog.I.error('Uncaught async: $error');
+    AppLog.I.error('Uncaught async: $error', alreadyReported: true);
     return true;
   };
   ErrorWidget.builder = (details) => _FallbackErrorWidget(details: details);
+  await CrashReporting.start();
 
   // §141 P1.9b — init-await'ы обёрнуты: краш одного из них больше не валит
   // запуск целиком. Логируем и продолжаем best-effort — UI поднимется и
@@ -210,7 +213,7 @@ void main() async {
   } catch (_) {
     // Storage недоступен — остаётся дефолт (true).
   }
-  runApp(const LxBoxApp());
+  runApp(CrashReporting.wrap(const LxBoxApp()));
 }
 
 /// §220 — применяет сохранённый `allow_rotation`-флаг к preferred
