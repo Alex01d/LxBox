@@ -2,7 +2,7 @@
 
 | Field | Value |
 |-------|-------|
-| Status | Implemented, phone checks pass on the iPhone 15, findings in `docs/IOS_FINDINGS.md`, a few checks still open. Not merged |
+| Status | Implemented, all checks pass on the iPhone 15 and Simulator, findings in `docs/IOS_FINDINGS.md`. Not merged |
 | Start date | 2026-11-04 |
 | End date | |
 | Commits | |
@@ -315,7 +315,7 @@ A second round ran the same day on the same build, with no code change. Pavel ta
 | 5 | Pass | Forwarding on, then `Quit & reopen app`: INFO lines in Debug → Log → Core. Seven `ERROR` lines from `http://ya.ru:81` reached `corelog.txt`. A line's time is when the app received it: all seven read 13:56:10, the moment the app came back from Safari, and none was lost. Forwarding off and a relaunch: only the app's own `status=` lines |
 | 6 | Pass | Left 2 minutes: still `Connected`, uptime kept counting |
 | 7 | Pass | Swiped away, Safari still went through the node. Reopened: `Connected`, right uptime |
-| 8 | Partly | One tunnel session ran 9.5 hours from 2026-11-05 01:32, through 6+ locked hours, messaging, TikTok, browsing and closing the app. Pavel saw no problems. The core stayed in state `normal` with no crash. Wi-Fi to cellular not checked on purpose |
+| 8 | Pass | One tunnel session ran 9.5 hours from 2026-11-05 01:32, through 6+ locked hours, messaging, TikTok, browsing and closing the app. Pavel saw no problems. The core stayed in state `normal` with no crash. On 2026-11-06, release build with `develop` at `442d5401` merged, Pavel turned Wi-Fi off in Settings with the tunnel up. With mobile data on, the phone moved to LTE: the same extension process kept running, `Connected` with uptime unbroken, counters moving, and Safari's `api.ipify.org` showed the node's address, as on Wi-Fi. Wi-Fi back on gave the same result. Before mobile data was turned on the phone had no internet at all, and the tunnel stayed `Connected` with no traffic |
 | 9 | Pass | Five Stop and Start cycles by Pavel: no error, no stuck status. A new extension process after the cycles, the same app process, no crash log |
 | 10 | Pass | Foreign VPN dialog appeared for real with the spike's tunnel running, and Switch took over. Status off in iOS Settings: `Disconnected` and Android's `onRevoke` message. The chip reads `Disconnected` for a revoked tunnel on every platform, by `status_chip.dart` |
 | 11 | Pass | `⚡ bad-node`, Shadowsocks with `plugin=nosuchplugin`: the extension refused with `initialize outbound[4] shadowsocks[⚡ bad-node]: plugin not found: nosuchplugin`, the node turned off with that reason, the second start reached `Connected`, and the banner said `1 server disabled`. Direction Interval `abc`, not about a node: `Disconnected` with `Failed to start service: start or reload service: decode config: outbounds[4].interval: time: invalid duration "abc"`, the extension exited, no crash log. Both restored. F29 is the toast seen on the way |
@@ -328,7 +328,7 @@ A second round ran the same day on the same build, with no code change. Pavel ta
 | 18 | Pass | Simulator and phone: VPN Settings shows Core and Mode only. On 2026-11-06 the Debug API imported `vpn_settings` with `memory_limit: "384"`, as an Android backup carries it. The JSON mirror and the App Group `UserDefaults` both held `384`, and the next export gave `384`. Restored to `auto` |
 | 19 | Pass | No change under `app/android/` against `develop`. `flutter analyze` clean. Full suite on 2026-11-06, after merging `develop` at `442d5401`: 7636 passed, 37 skipped, 0 failed |
 
-Still open: 8 Wi-Fi to cellular, left out on purpose.
+All 19 checks pass.
 
 Not on the list, also run through the API on the phone. `VPN + Proxy`: extension running and port 2080 answering, 200 through it. `System HTTP proxy`: Safari and iOS services connected through `sysproxy-in`. Both restored to off.
 

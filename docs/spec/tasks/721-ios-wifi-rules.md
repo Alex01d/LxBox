@@ -124,7 +124,7 @@ Locked phone, 2026-11-06, release build of `ios-app` with `develop` at `442d5401
 
 ### Open checks
 
-- Moving between two Wi-Fi networks with the tunnel up. The phone has one network and cellular off.
+- Moving between two Wi-Fi networks with the tunnel up. The phone knows one Wi-Fi network.
 - A BSSID with a zero byte. Core matching is exact, so a rule from an Android backup with `0a:...` fails if iOS gives `a:...`. The phone's BSSID has no zero byte.
 - TestFlight build with this entitlement.
 
