@@ -20,9 +20,10 @@ networks — via VPN".
 
 On iOS (§721) the app and the core read the network name through the Wi-Fi
 information entitlement, with no permission prompt. An empty answer from iOS
-shows as "Not connected to Wi-Fi", which can be wrong before the first VPN
-start. Auto-record of seen networks runs from the tunnel, so only while the VPN
-is on.
+shows as "Not connected to Wi-Fi", which is wrong while no L×Box VPN profile
+is installed, as before the first VPN start or after the profile is deleted in
+Settings. Auto-record of seen networks runs from the tunnel, so only while the
+VPN is on, also with the phone locked.
 
 ## Parameters
 

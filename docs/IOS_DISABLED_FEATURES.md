@@ -28,8 +28,8 @@ A hidden setting keeps its stored value, so a backup taken on iOS still restores
 
 | Feature | On Android | On iOS |
 |---|---|---|
-| Wi-Fi rules | Location and nearby Wi-Fi permissions, a named reason on failure | No prompt, through the Wi-Fi information entitlement. An empty answer from iOS says `Not connected to Wi-Fi.`, which can be wrong before the first VPN start (§721) |
-| Auto-record visited Wi-Fi networks | Records while the app process lives | Records from the tunnel, so only while the VPN is on. A network shows in Pick saved after the next return to the app (§721) |
+| Wi-Fi rules | Location and nearby Wi-Fi permissions, a named reason on failure | No prompt, through the Wi-Fi information entitlement. An empty answer from iOS says `Not connected to Wi-Fi.`, which is wrong while no L×Box VPN profile is installed, as before the first VPN start or after the profile is deleted in Settings (§721) |
+| Auto-record visited Wi-Fi networks | Records while the app process lives | Records from the tunnel, so only while the VPN is on, also with the phone locked. A network shows in Pick saved after the next return to the app (§721) |
 | VPN mode | System-wide tunnel | Same on a real iPhone, through a tunnel extension (§718). Simulator fails with a reason and needs Proxy mode |
 | Tunnel killed by the system | Restarts by itself, up to 3 times in 5 minutes | Stays down, traffic goes direct, and the app shows the reason at next open. Decided for now in §718 D3 |
 | Local proxy | Runs in the VPN service | Runs inside the app (§711, §718 D2) |

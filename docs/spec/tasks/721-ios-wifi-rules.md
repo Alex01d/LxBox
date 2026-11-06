@@ -2,7 +2,7 @@
 
 | Field | Value |
 |-------|-------|
-| Status | Checked on Simulator and iPhone 15 on `ios-app`, not merged. Check 12 not run |
+| Status | Checked on Simulator and iPhone 15 on `ios-app`, not merged |
 | Start date | 2026-11-05 |
 | End date | |
 | Commits | |
@@ -39,7 +39,7 @@ Made by Pavel on 2026-11-05.
 
 | What | Android | iOS | Decision |
 |---|---|---|---|
-| Reading the name | Location and nearby Wi-Fi permissions, asked at runtime | `wifi-info` entitlement and no prompt. Apple may need an installed VPN profile, see check 12 | D1 |
+| Reading the name | Location and nearby Wi-Fi permissions, asked at runtime | `wifi-info` entitlement and no prompt. iOS returns nothing while no L×Box VPN profile is installed, see check 12 | D1 |
 | Failure reason | Names the permission or setting | iOS gives none, so every empty answer is `no_wifi` | D3 |
 | Permission dialog on Save | Shows when a permission is missing | Never shows. `checkBackgroundLocationPermission` and `checkNearbyWifiPermission` are not ported and Dart reads that as granted | D1 |
 | Where auto-record runs | App process, whenever it is alive | Tunnel extension, only while the VPN is on. Proxy mode records nothing | D2 |
@@ -112,18 +112,19 @@ Run on 2026-11-05 with `develop` merged, core `v1.14.4-lx.32`. Simulator is a de
 | 9 | Pass | `wifi_ssid` only in the config, `api.ipify.org` exits at the home IP |
 | 10 | Pass | Turned on with the tunnel up at 18:46:46. By 18:52:40 `wifi_seen.jsonl` held the network. A return to the app moved it to `wifi_history` and removed the file, and Pick saved listed it with no banner |
 | 11 | Pass | Turned off with the tunnel up and a timer running. No `wifi_seen.jsonl` after 5 min 54 s |
-| 12 | Not run | Needs Pavel to delete the VPN profile and allow it again |
+| 12 | Pass | On 2026-11-06, VPN stopped and the L×Box profile deleted in iOS Settings by Pavel, phone on Wi-Fi: Add current said `Not connected to Wi-Fi.` Start showed the iOS prompt to add VPN configurations, Pavel allowed it, and the tunnel reached `Connected`. Add current then filled the chip with the real SSID and BSSID. The test rule was discarded |
 
 On the Simulator a planted `wifi_seen.jsonl` reached the history at launch and on return from Safari, and not while the app was in the background.
 
-The phone stayed awake through 10 and 11, because the runner tapped an empty area every 50 seconds. A locked phone is not measured.
+The phone stayed awake through 10 and 11, because the runner tapped an empty area every 50 seconds.
+
+Locked phone, 2026-11-06, release build of `ios-app` with `develop` at `442d5401` merged, tunnel up on Wi-Fi, history empty. Auto-record turned on at 10:53:10 and the phone locked at 10:53:17. `wifi_seen.jsonl` appeared at 10:58:30 while `devicectl` still reported the phone locked, so the timer runs while the phone is locked. After Pavel unlocked, the app moved the entry into `wifi_history` and removed the file. Auto-record was turned off and the entry removed afterwards.
 
 `flutter analyze` on the changed Dart files: no issues. The three named test files pass, 12 tests. The full suite ends at 7633 passed, 37 skipped, 0 failed. It first had 5 failures in `probe_runner_failure_test.dart`, which also failed on `7ca3c9c3`, before this task. That test assumed 6 parallel checks, and `f712ad53` made the default 10. It now passes `concurrency: 6`, as `probe_runner_cancel_test.dart` does.
 
 ### Open checks
 
 - Moving between two Wi-Fi networks with the tunnel up. The phone has one network and cellular off.
-- Auto-record with the phone locked for 5 minutes. The timer may stall while iOS keeps the extension asleep.
 - A BSSID with a zero byte. Core matching is exact, so a rule from an Android backup with `0a:...` fails if iOS gives `a:...`. The phone's BSSID has no zero byte.
 - TestFlight build with this entitlement.
 
