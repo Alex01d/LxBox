@@ -120,11 +120,12 @@ The phone stayed awake through 10 and 11, because the runner tapped an empty are
 
 Locked phone, 2026-11-06, release build of `ios-app` with `develop` at `442d5401` merged, tunnel up on Wi-Fi, history empty. Auto-record turned on at 10:53:10 and the phone locked at 10:53:17. `wifi_seen.jsonl` appeared at 10:58:30 while `devicectl` still reported the phone locked, so the timer runs while the phone is locked. After Pavel unlocked, the app moved the entry into `wifi_history` and removed the file. Auto-record was turned off and the entry removed afterwards.
 
+Two Wi-Fi networks, 2026-11-06, same build. A rule of `api.ipify.org` plus the home network from Add current, action direct, applied with ↻. On home Wi-Fi `api.ipify.org` exited at the home IP and `icanhazip.com` at the node. Pavel joined another phone's hotspot with the tunnel up: `api.ipify.org` exited at the node, in the same extension process. Back on home Wi-Fi it exited at the home IP again, still the same process. The rule was deleted afterwards. Add current had also put the home network into `wifi_history`, as it does with Auto-record off.
+
 `flutter analyze` on the changed Dart files: no issues. The three named test files pass, 12 tests. The full suite ends at 7633 passed, 37 skipped, 0 failed. It first had 5 failures in `probe_runner_failure_test.dart`, which also failed on `7ca3c9c3`, before this task. That test assumed 6 parallel checks, and `f712ad53` made the default 10. It now passes `concurrency: 6`, as `probe_runner_cancel_test.dart` does.
 
 ### Open checks
 
-- Moving between two Wi-Fi networks with the tunnel up. The phone knows one Wi-Fi network.
 - A BSSID with a zero byte. Core matching is exact, so a rule from an Android backup with `0a:...` fails if iOS gives `a:...`. The phone's BSSID has no zero byte.
 - TestFlight build with this entitlement.
 
