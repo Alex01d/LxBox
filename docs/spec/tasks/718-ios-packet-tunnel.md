@@ -336,7 +336,7 @@ Not on the list, also run through the API on the phone. `VPN + Proxy`: extension
 
 Every row under "Turned off" is hidden. On the phone: App Settings General and Diagnostics, 4 tabs, VPN Settings. On iPhone 17 Simulator with iOS 26.5, debug build, chosen by Pavel because the gates read only `Platform.isIOS`: Routing tabs, Presets, Rules, rule editor with Wi-Fi selected, URL Check, About, and the Servers menu. The phone's config has no `package_name` rule, and the stored Unknown traffic rule stays. Control Center shows the VPN as connected.
 
-Not confirmed: the camera prompt's language, since access was already granted and no prompt appeared. Send to TV opens the camera, and sending needs a TV. An OpenConnect node adds, starts and shows `ERR` on a fake server, and a real server is untested. The document's rows are corrected to match.
+The camera prompt's language was not confirmed here, since access was already granted and no prompt appeared. It was confirmed after a reinstall on 2026-11-06, §714 check 7. Send to TV opens the camera, and sending needs a TV. An OpenConnect node adds, starts and shows `ERR` on a fake server, and a real server is untested. The document's rows are corrected to match.
 
 **Memory in real use.** Median 23.4 MB, peak 36.9 MB with 186 connections and 410 goroutines. That left 13.1 MB before the limit, and it is 3.1 MB below the 40 MB where the core's OOM service arms, with its trigger at 45 MB, in the core's own binary MB. Busy browsing cost more memory than a 100 MB download did. The log's `connections` field is not Home's connection count: Home showed 26 when the log said 2, so 186 is the log's own number.
 
