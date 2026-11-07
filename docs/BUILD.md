@@ -215,6 +215,18 @@ echo 'SENTRY_DSN=https://…' > .env
 flutter build ios --release --dart-define-from-file=.env
 ```
 
+**TestFlight.** Builds go to internal testers of the GGL Projects team only, not to external testers or the App Store. iOS has its own version line, starting at `0.0.1`, and the build number goes up by one with each upload. The pubspec keeps the Android version (§065). Export signing is manual, with the Apple Distribution certificate and the App Store profiles `LxBox TestFlight` and `LxBox PacketTunnel TestFlight`, because automatic signing of distribution certificates fails with a 403 for this account. The export options file sets `method` to `app-store-connect`, `signingStyle` to `manual`, `signingCertificate` to `Apple Distribution`, `provisioningProfiles` for `com.gglprojects.lxbox` and `com.gglprojects.lxbox.PacketTunnel`, and `testFlightInternalTestingOnly` to true.
+
+```bash
+cd app
+flutter build ipa --release --build-name 0.0.1 --build-number 1 --dart-define-from-file=.env --export-options-plist <export options file>
+open build/ios/archive/Runner.xcarchive
+```
+
+In Xcode Organizer: Distribute App, Custom, App Store Connect, Upload. Tick TestFlight internal testing only, choose Manually manage signing with the same certificate and profiles, and upload. Xcode warns that `Sentry.framework` has no dSYM; the upload still goes through. Then, in App Store Connect, add the build to the internal group `Manual`. Its automatic distribution is off, so each build is added by hand.
+
+`Info.plist` sets `ITSAppUsesNonExemptEncryption` to false, so App Store Connect asks no encryption question. This records the answers given for builds 1 and 2: standard encryption algorithms, and no distribution in France. If either answer changes, remove the key and answer the questions in App Store Connect again.
+
 Warnings and errors are in `applog.txt`, in `Library/Documents` of the App Group. On Simulator, find it with `xcrun simctl get_app_container <device id> com.gglprojects.lxbox group.com.gglprojects.lxbox`. On a phone, copy it with `xcrun devicectl device copy from --domain-type appGroupDataContainer --domain-identifier group.com.gglprojects.lxbox --source Library/Documents/applog.txt`. `devicectl` can't reach files outside `Library` in an App Group. A clean start doesn't create the file.
 
 ## CI (GitHub Actions)
