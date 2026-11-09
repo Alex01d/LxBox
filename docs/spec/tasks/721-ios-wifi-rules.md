@@ -127,7 +127,8 @@ Two Wi-Fi networks, 2026-11-06, same build. A rule of `api.ipify.org` plus the h
 ### Open checks
 
 - A BSSID with a zero byte. Core matching is exact, so a rule from an Android backup with `0a:...` fails if iOS gives `a:...`. The phone's BSSID has no zero byte.
-- TestFlight build with this entitlement.
+
+TestFlight build `0.0.1 (3)` on 2026-11-09, closed: in a new rule's editor, Wi-Fi then Add current filled the chip with the real SSID and BSSID on Pavel's iPhone 15, so the entitlement survives distribution signing. The rule was discarded.
 
 ### Tests
 

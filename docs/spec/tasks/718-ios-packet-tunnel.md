@@ -330,6 +330,8 @@ A second round ran the same day on the same build, with no code change. Pavel ta
 
 All 19 checks pass.
 
+On 2026-11-09, TestFlight build `0.0.1 (3)` with core `v1.14.4-lx.33`, after `develop` was merged at `1b1c7a74`: the first Start after the update hit F30, the rebuilt config reached `Connected` in VPN mode, and `api.ipify.org` in Safari showed the node's address.
+
 Not on the list, also run through the API on the phone. `VPN + Proxy`: extension running and port 2080 answering, 200 through it. `System HTTP proxy`: Safari and iOS services connected through `sysproxy-in`. Both restored to off.
 
 ### `IOS_DISABLED_FEATURES.md` walk, 2026-11-05

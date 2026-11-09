@@ -2,7 +2,7 @@
 
 | Field | Value |
 |-------|-------|
-| Status | Checked on Simulator on `ios-app`, not merged. Not checked on the iPhone |
+| Status | Checked on Simulator and on the iPhone 15 on `ios-app`, not merged. On the iPhone, reports arrive only while the VPN is down, T1 in `docs/IOS_FINDINGS.md` |
 | Start date | 2026-11-06 |
 | End date | |
 | Commits | |
@@ -157,6 +157,16 @@ On 2026-11-06, iPhone 17 Simulator with iOS 26.5, debug builds, `sentry_flutter`
 | 7 | Pass | `flutter analyze`: no issues. `flutter test`: 7638 passed, 37 skipped, before the AppLog errors were added |
 | 8 | Pass | `mask_secrets_test`, `app_log_error_reporter_test` and `crash_reporting_mask_test` pass, and so do `automation_event_masking_test` and the existing AppLog tests. Full run after the change: `flutter analyze` no issues, `flutter test` 7657 passed, 37 skipped |
 | 9 | Pass | Temporary lines, not committed: an AppLog error with `https://sub.example.com/abc?token=x`, `1.2.3.4:443` and a UUID, and an uncaught `StateError` 10 s later. AppLog on the phone kept the raw text. Pavel saw the message as `fetch https://sub.example.com/*** via ***:443 uuid ***` with `log_source` `app`, and the `StateError` once, with no second `Uncaught async` issue |
+
+### Results on the iPhone 15, 2026-11-09
+
+TestFlight build `0.0.1 (3)`, VPN mode on Pavel's VLESS node. The Sentry project had no event from the phone in the 2 days of use before.
+
+- A subscription `https://sentry-check.invalid/sub`, added and deleted afterwards, logged `Fetch failed for https://sentry-check.invalid/***: ...` as an `app` error at 18:32:14. Sentry captured it: an envelope with the masked message, tag `log_source` `app` and release `com.gglprojects.lxbox@0.0.1+3`, written to `Library/Caches/io.sentry/.../envelopes`. Nothing reached Sentry for 15 minutes, and the envelope stayed on the phone.
+- The DSN is in the build, and `SentryCrash` has been set up since the first TestFlight launch on 2026-11-07, so Sentry starts. `dns_shield` and the route rules block no Sentry host.
+- Pavel pressed Stop, swiped the app away and opened it without Start. Within a minute the outbox was empty, and Sentry showed the issue with 2 events, the second from the subscription's retry at launch.
+
+So capture and masking work on the iPhone, and sending fails while the app's own tunnel is up. T1 in `docs/IOS_FINDINGS.md` describes the same failure of `URLSession` inside the app through the tunnel.
 
 ## Docs to update
 
