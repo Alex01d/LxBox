@@ -99,6 +99,7 @@ open build/ios/archive/Runner.xcarchive
 ## Unresolved / follow-up
 
 - Check 2 on the next upload: no encryption question.
+- The next upload carries core lx.33. A phone updated from build 1 or 2 keeps a config the new core refuses, F30 in `docs/IOS_FINDINGS.md`. After the update, tap ↻ once instead of Start, or fix F30 first.
 - §721 open check: Wi-Fi rules with the `wifi-info` entitlement in a TestFlight build.
 - §722: no check on the iPhone yet. The Sentry project should show events from the 2 days.
 - An iOS core artifact and hash in the fork's Releases, before anything wider than internal TestFlight (D6).
