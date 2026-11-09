@@ -11,8 +11,8 @@ What Android has and iOS hides is in [IOS_DISABLED_FEATURES.md](IOS_DISABLED_FEA
 | # | What happens | Cause | Found |
 |---|---|---|---|
 | T1 | A `URLSession` download inside the spike app failed with `The network connection was lost` about 1 s after the tap, every time, through a VLESS node. Safari reached the same host through the same tunnel and downloaded 100 MB. Messaging apps, TikTok and browsing then worked for 9.5 hours through L×Box's tunnel, so this looks specific to the spike. Details in `ios-spike/logs/measure-device.md` | Not found. Low priority | [§718](spec/tasks/718-ios-packet-tunnel.md) |
-| T2 | After a tunnel crash the crash banner comes one app launch later than on Android. Checked with a planted report: the banner showed after a relaunch, and by code it cannot show earlier | The extension archives a report at the next tunnel Start, and Dart reads the archive only at app launch, `main.dart:186`. Android archives at app start | §718 |
-| T3 | With core logs on, every connection logs `router: failed to search process: Not available on iOS` at INFO | `find_process: true` in the template, and iOS has no owner lookup. Changing it touches the template, a §718 non-goal | §718 |
+| T2 | A cold launch after a tunnel crash shows the crash banner at once, as on Android. Two rare cases differ. The app sat in the background during the crash: back in it, no banner until the next cold launch. By code, not run: the banner closed with ×, then Start, and the next launch shows it again for the same crash. Pavel, 2026-11-09: record only | Dart reads the reports only at app launch, `main.dart:186`. The tunnel archives its report at the next Start under a new name, and the stored stamp is `name@mtime`. On Android a crash ends the whole app, and the core archives at app start. Details in [§724](spec/tasks/724-ios-only-findings.md) | §718, §724 |
+| T3 | With core logs on, every connection logs `router: failed to search process: Not available on iOS` at INFO, while the config holds a rule set with app rules, such as `ru-direct:ru-apps` from the RU preset. Without one, the line is gone by the core's code, not run. Pavel, 2026-11-09: keep it so | §724 sets `find_process: false` on iOS. A rule set with app rules turns the lookup on in the core anyway, `route/router.go:220`, and iOS has no owner lookup | §718, §724 |
 | T4 | Local proxy only: WARP logs `failed to send data packets: address family not supported by protocol family`, 2 lines in about 4 minutes. Ping to WARP still answered. None in VPN mode | Not found. Low priority | §718 |
 
 ## Start fails, or a rule silently does nothing
@@ -65,7 +65,6 @@ All shared.
 | F21 | Host dialog helper text is clipped | §716 |
 | F22 | No singular: `1 servers`, `1 rules`, `1 domains`, `1 warnings` | §715, §716 |
 | F23 | Editors use `←`, other screens use `<` | §716 |
-| F24 | Identity row shows the Android robot beside `x-device-os: ios` | §715 |
 
 ## Needs a real iPhone
 

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../services/l10n/locale_controller.dart';
+import '../../../services/platform_features.dart';
 
 /// §118 — App Settings → Subscriptions tab. Глобальные настройки HTTP-фетча
 /// подписок: авто-обновление, кастомный User-Agent, HWID + device-meta
@@ -137,7 +138,9 @@ class SubscriptionsTab extends StatelessWidget {
             ),
           ),
           _editRow(context,
-              icon: Icons.android, label: 'x-device-os', value: deviceOs,
+              icon: PlatformFeatures.isIos ? Icons.apple : Icons.android,
+              label: 'x-device-os',
+              value: deviceOs,
               onEdit: onEditDeviceOs),
           _editRow(context,
               icon: Icons.numbers, label: 'x-ver-os', value: verOs,

@@ -810,6 +810,7 @@ Future<BuildResult?> _buildConfig({
   // (tls_fragment, mixed_case_sni) не трогают rule_set/rules.
   route['rule_set'] = ruleSets.getRuleSets();
   route['rules'] = ruleSets.getRules();
+  if (!PlatformFeatures.canFindConnectionOwner) route['find_process'] = false;
   config['route'] = route;
 
   // Корневой блок `lx` ядра (SPEC 098) пишет `config` шаблона (§709 итер. 3,

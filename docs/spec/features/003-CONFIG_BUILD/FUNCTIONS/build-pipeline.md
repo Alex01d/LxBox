@@ -20,6 +20,8 @@ API) go through it. The stages are fixed in order: each next one
 sees the result of the previous one, and healing comes after everything that can
 produce a broken reference.
 
+On iOS (§724) the built config has `route.find_process: false`, because iOS does not tell which app opened a connection.
+
 ## Parameters
 
 No knobs of its own. Stage order:
@@ -98,3 +100,4 @@ lines); values fixed by the build, to be saved; the
 | 11 | [574](../../../tasks/574-tls-fragment-yields-to-detour.md) | Released v2.25.7 | `tls.fragment` yields to an assembled `detour` |
 | 12 | [577](../../../tasks/577-authored-json-registry-reports-only.md) | Done | Authored JSON: the registry reports, does not edit |
 | 13 | [578](../../../tasks/578-tailscale-preset-template-for-each.md) | Spec. Implementation started | Nodes for `for_each` — after all gates |
+| 14 | [724](../../../tasks/724-ios-only-findings.md) | Simulator, no merge | iOS: `find_process: false` in the built config |

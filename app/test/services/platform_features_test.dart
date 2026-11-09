@@ -39,6 +39,7 @@ void main() {
       PlatformFeatures.isIosForTesting = false;
       expect(PlatformFeatures.hasAndroidSystemSettings, isTrue);
       expect(PlatformFeatures.hasPerAppRouting, isTrue);
+      expect(PlatformFeatures.canFindConnectionOwner, isTrue);
       expect(PlatformFeatures.isPresetDisabled('unknown-traffic'), isFalse);
     });
 
@@ -46,6 +47,7 @@ void main() {
       PlatformFeatures.isIosForTesting = true;
       expect(PlatformFeatures.hasAndroidSystemSettings, isFalse);
       expect(PlatformFeatures.hasPerAppRouting, isFalse);
+      expect(PlatformFeatures.canFindConnectionOwner, isFalse);
       expect(PlatformFeatures.isPresetDisabled('unknown-traffic'), isTrue);
       expect(PlatformFeatures.isPresetDisabled('bittorrent'), isFalse);
       expect(PlatformFeatures.isPresetDisabled(''), isFalse);
@@ -59,37 +61,11 @@ void main() {
     final preset = SelectableRule.fromJson((shipped['selectable_rules'] as List)
         .cast<Map<String, dynamic>>()
         .singleWhere((rule) => rule['preset_id'] == 'unknown-traffic'));
-    final template = WizardTemplate(
-      groupTemplates: GroupTemplates(
-        direction: DirectionTemplate(
-          include: const ['direct', 'auto'],
-          options: const {'interrupt_exist_connections': true},
-        ),
-        auto: AutoTemplate(
-          options: const {'url': 'https://x', 'interval': '30s'},
-        ),
-        defaultDirections: [
-          DefaultDirection(tag: 'vpn-1', label: 'vpn-1', defaultEnabled: true),
-        ],
-      ),
-      vars: const [],
-      varSections: const [],
-      config: {
-        'outbounds': [
-          {'tag': 'direct-out', 'type': 'direct'},
-        ],
-        'route': {'rules': []},
-      },
-      selectableRules: [preset],
-      dnsOptions: const {},
-      pingOptions: const {},
-      speedTestOptions: const {},
-    );
 
     Future<String> buildWithPreset() async {
       final result = await buildConfig(
         lists: const [],
-        template: template,
+        template: minimalTemplate(selectableRules: [preset]),
         settings: BuildSettings(
           enabledGroups: const {'vpn-1', kAutoOutboundTag},
           coreBuildTags: kCoreBuildTags,
@@ -115,4 +91,57 @@ void main() {
       expect(await buildWithPreset(), isNot(contains('unknown-apps')));
     });
   });
+
+  group('Process lookup in the built config', () {
+    Future<Object?> builtFindProcess() async {
+      final result = await buildConfig(
+        lists: const [],
+        template: minimalTemplate(selectableRules: const []),
+        settings: BuildSettings(
+          enabledGroups: const {'vpn-1', kAutoOutboundTag},
+          coreBuildTags: kCoreBuildTags,
+        ),
+      );
+      return (result.config['route'] as Map<String, dynamic>)['find_process'];
+    }
+
+    test('stays on Android', () async {
+      PlatformFeatures.isIosForTesting = false;
+      expect(await builtFindProcess(), isTrue);
+    });
+
+    test('is off on iOS', () async {
+      PlatformFeatures.isIosForTesting = true;
+      expect(await builtFindProcess(), isFalse);
+    });
+  });
+}
+
+WizardTemplate minimalTemplate({required List<SelectableRule> selectableRules}) {
+  return WizardTemplate(
+    groupTemplates: GroupTemplates(
+      direction: DirectionTemplate(
+        include: const ['direct', 'auto'],
+        options: const {'interrupt_exist_connections': true},
+      ),
+      auto: AutoTemplate(
+        options: const {'url': 'https://x', 'interval': '30s'},
+      ),
+      defaultDirections: [
+        DefaultDirection(tag: 'vpn-1', label: 'vpn-1', defaultEnabled: true),
+      ],
+    ),
+    vars: const [],
+    varSections: const [],
+    config: {
+      'outbounds': [
+        {'tag': 'direct-out', 'type': 'direct'},
+      ],
+      'route': {'find_process': true, 'rules': []},
+    },
+    selectableRules: selectableRules,
+    dnsOptions: const {},
+    pingOptions: const {},
+    speedTestOptions: const {},
+  );
 }

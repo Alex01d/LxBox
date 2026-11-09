@@ -44,6 +44,7 @@ A hidden setting keeps its stored value, so a backup taken on iOS still restores
 | Camera prompt language | System's own text | Our text in English, Russian or Chinese, by system language (§714 D8) |
 | File picker | A tap returns the file | A tap, then Open. Left as is (§714 D9) |
 | Sticky session by, Load balance | `process` and domain | `process` has no owner here, so the core hashes the domain alone (§716) |
+| Finding the app behind a connection | `find_process: true` from the template | The built config has `find_process: false`, since iOS gives no owner. The core still looks when a rule or rule set has app rules, such as the RU preset's `ru-apps` list or a `package_name` rule from an Android backup. Those never match here (§724) |
 | System DNS | Uses `LocalResolver` | The core's own lookup, `localDNSTransport` is nil (§716). With `local_dns_resolver` set, a node's domain name resolved through it in VPN mode on a phone (§718). The default resolver is `dns_shield`, which does not use it |
 | Device sleep | Pauses only with Tunnel sleep mode set | The core pauses when iOS reports sleep, with no setting (§718 D7) |
 | Another VPN check | From the network's VPN transport | From interfaces the system lists, so it can ask needlessly (§718 D4) |

@@ -13,6 +13,7 @@ import '../../../widgets/detour_target_picker.dart' show detourLinkDisplay;
 import '../detour_mode.dart';
 import '../subscription_detail_format.dart';
 import '../../../services/l10n/locale_controller.dart';
+import '../../../services/platform_features.dart';
 import '../../../widgets/safe_bottom.dart';
 import '../../../widgets/tls_policy_tiles.dart';
 
@@ -470,7 +471,9 @@ class SubscriptionSettingsTab extends StatelessWidget {
             ),
           ),
           _editRow(context,
-              icon: Icons.android, label: 'x-device-os', value: id.deviceOs,
+              icon: PlatformFeatures.isIos ? Icons.apple : Icons.android,
+              label: 'x-device-os',
+              value: id.deviceOs,
               onEdit: onEditIdentityDeviceOs),
           _editRow(context,
               icon: Icons.numbers, label: 'x-ver-os', value: id.verOs,
