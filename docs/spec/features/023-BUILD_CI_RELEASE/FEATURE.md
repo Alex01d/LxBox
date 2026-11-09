@@ -81,6 +81,7 @@ PRE: 01–49 = -rc.N · 50 = release · 51–98 = -hotfixN      ABI: 0 universal
 | GitHub Releases | the `release` job on a tag | our key (the `ANDROID_*` secrets; without them — the runner's temporary key, which does not install over) | the user, from the app's notice |
 | F-Droid | the catalogue sees the tag itself (`UpdateCheckMode: Tags ^v\d+\.\d+\.\d+(-hotfix\d+)?$`), builds from source at the tag's commit, including the fork core and `libcronet`, compares byte for byte with the APK from GitHub | **ours** (reproducible build, `Binaries` + `AllowedAPKSigningKeys` — irreversible) | the F-Droid client |
 | Google Play | the `google-play` job, AAB signed with the upload key | Google's key (Play App Signing) | Play |
+| TestFlight, iOS, internal testers only | built and uploaded by hand from a Mac, own version line from `0.0.1` ([723](../../tasks/723-ios-testflight-internal.md)) | GGL Projects' Apple Distribution certificate | the TestFlight app |
 
 - An APK from one channel **will not install** over another; the app knows its
   channel and points the update notice at its own store (§390).
@@ -150,6 +151,7 @@ Android TV is best-effort (§372): the manifest is compatible, there is no separ
 | 8 | [390](../../tasks/390-install-source-aware-update-notice.md) | Done | install channel, the define only on the AAB |
 | 9 | [436](../../tasks/436-google-play-upload-ci.md) | Done (first green tag run v2.25.9) | AAB upload to Play from CI with `PLAY_RELEASE_STATUS=completed`, rc is not published |
 | 10 | [486](../../tasks/486-ci-registry-tests.md) | Released v2.25.0 | registry tests are not skipped on CI |
+| 11 | [723](../../tasks/723-ios-testflight-internal.md) | iPhone 15, no merge | iOS: internal TestFlight builds, uploaded by hand, own version line |
 
 ## Watch for
 

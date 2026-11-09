@@ -20,7 +20,7 @@ On Pavel's iPhone 15, signed for development by GGL Projects, Inc.:
 
 ## Non-goals
 
-- App Store, TestFlight, or any install beyond this one iPhone.
+- App Store, TestFlight, or any install beyond this one iPhone. Internal TestFlight came later, in [§723](723-ios-testflight-internal.md).
 - Changing `wizard_template.json` or defaults to save memory. If the config does not fit, the work stops and the question goes to Pavel.
 - Tailscale, Taildrop and OpenConnect.
 - Per-app routing, boot start and notifications. iOS offers an app no way to do them, see "Differences with no choice".
@@ -260,7 +260,7 @@ All come from the tunnel existing. Most of them §711 expected.
 | 010 P11, P12 (recovery) | Restart after process death | Does not hold on iOS for now (D3) |
 | 010 core-resources, §705 | Presets 200 to 768 MB | Hidden on iOS, with the System tab (D5) |
 | §716 D2 | Wi-Fi list hidden "without a paid Apple team" | That reason goes stale. The row gets the D6 reason |
-| 021, `docs/KERNEL.md` | iOS core is dev-only and must not ship | Still true. Development signing on one iPhone ships nothing |
+| 021, `docs/KERNEL.md` | iOS core is dev-only and must not ship | Still true. Development signing on one iPhone ships nothing. Internal TestFlight builds carry the core under the exception in [§723](723-ios-testflight-internal.md) D6 |
 
 ## Risks and edge cases
 

@@ -170,7 +170,7 @@ Everything else stays `FlutterMethodNotImplemented`. Known result: Dart catches 
 - Runs `build_libbox -target apple -platform ios`, which gives device and Simulator slices.
 - Writes `app/ios/Frameworks/Libbox.xcframework` and a `.libbox.version` marker. Idempotent. Both are gitignored.
 
-**Exception to 021, stated on purpose.** 021 and `docs/KERNEL.md` require a release artifact with a `SHA256SUMS` check for production, and forbid shipping local builds in a release. This binary has no published hash and must not ship. iOS has no release, so nothing is violated today. Before any real distribution, the fork's release job needs an iOS artifact and a hash. That is the fork's decision, not an LxBox edit.
+**Exception to 021, stated on purpose.** 021 and `docs/KERNEL.md` require a release artifact with a `SHA256SUMS` check for production, and forbid shipping local builds in a release. This binary has no published hash and must not ship. iOS has no release, so nothing is violated today. Internal TestFlight builds carry this binary since [§723](723-ios-testflight-internal.md), under the exception stated there in D6. Before any distribution wider than that, the fork's release job needs an iOS artifact and a hash. That is the fork's decision, not an LxBox edit.
 
 Linking needs `-lresolv -lc++` and the `SystemConfiguration`, `Security`, `CFNetwork`, `CoreFoundation`, `Foundation` and `UIKit` frameworks, because gomobile's static framework does not carry its cgo inputs.
 

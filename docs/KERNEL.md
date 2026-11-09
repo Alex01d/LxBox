@@ -27,7 +27,7 @@ milliseconds. `startTailscaleSSHSession` is not used.
 
 ## The iOS core (§711)
 
-`scripts/build-libbox-ios.sh` builds `app/ios/Frameworks/Libbox.xcframework` locally from the same pin, `app/android/libbox.version`, with `build_libbox -target apple -platform ios`. Tag set: `sharedTags` plus `with_dhcp` and `grpcnotrace`, and `with_low_memory` on iOS, which covers `kCoreBuildTags`. It is not in git and has no published hash, so it is dev only and must not ship. The fork's release job publishes no iOS artifact today.
+`scripts/build-libbox-ios.sh` builds `app/ios/Frameworks/Libbox.xcframework` locally from the same pin, `app/android/libbox.version`, with `build_libbox -target apple -platform ios`. Tag set: `sharedTags` plus `with_dhcp` and `grpcnotrace`, and `with_low_memory` on iOS, which covers `kCoreBuildTags`. It is not in git and has no published hash, so it is for development and internal TestFlight builds only ([§723](spec/tasks/723-ios-testflight-internal.md) D6). Anything wider needs an iOS artifact and hash in the fork's Releases. The fork's release job publishes no iOS artifact today. Before each TestFlight upload, run the script: Xcode does not compare `app/ios/Frameworks/.libbox.version` with the pin.
 
 ## Where the AAR comes from
 

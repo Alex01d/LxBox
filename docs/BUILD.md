@@ -215,11 +215,14 @@ echo 'SENTRY_DSN=https://…' > .env
 flutter build ios --release --dart-define-from-file=.env
 ```
 
-**TestFlight.** Builds go to internal testers of the GGL Projects team only, not to external testers or the App Store. iOS has its own version line, starting at `0.0.1`, and the build number goes up by one with each upload. The pubspec keeps the Android version (§065). Export signing is manual, with the Apple Distribution certificate and the App Store profiles `LxBox TestFlight` and `LxBox PacketTunnel TestFlight`, because automatic signing of distribution certificates fails with a 403 for this account. The export options file sets `method` to `app-store-connect`, `signingStyle` to `manual`, `signingCertificate` to `Apple Distribution`, `provisioningProfiles` for `com.gglprojects.lxbox` and `com.gglprojects.lxbox.PacketTunnel`, and `testFlightInternalTestingOnly` to true.
+**TestFlight ([§723](spec/tasks/723-ios-testflight-internal.md)).** Builds go to internal testers of the GGL Projects team only, not to external testers or the App Store. iOS has its own version line, starting at `0.0.1`, and the build number goes up by one with each upload. The pubspec keeps the Android version (§065). Export signing is manual, with the Apple Distribution certificate and the App Store profiles `LxBox TestFlight` and `LxBox PacketTunnel TestFlight`, because automatic signing of distribution certificates fails with a 403 for this account. The export options file sets `method` to `app-store-connect`, `signingStyle` to `manual`, `signingCertificate` to `Apple Distribution`, `provisioningProfiles` for `com.gglprojects.lxbox` and `com.gglprojects.lxbox.PacketTunnel`, and `testFlightInternalTestingOnly` to true.
+
+Run `scripts/build-libbox-ios.sh` before each upload. It rebuilds the core only when the pin moved, and Xcode does not check that the framework matches the pin.
 
 ```bash
+./scripts/build-libbox-ios.sh
 cd app
-flutter build ipa --release --build-name 0.0.1 --build-number 1 --dart-define-from-file=.env --export-options-plist <export options file>
+flutter build ipa --release --build-name 0.0.1 --build-number <next> --dart-define-from-file=.env --export-options-plist <export options file>
 open build/ios/archive/Runner.xcarchive
 ```
 

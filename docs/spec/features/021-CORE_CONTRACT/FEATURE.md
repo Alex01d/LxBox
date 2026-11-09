@@ -44,7 +44,7 @@ written for contributors who bump the core or sync the contract.
 |-----|----------|-----|
 | Core pin | `v1.14.2-lx.8` | `app/android/libbox.version` — the single source |
 | AAR delivery | the fork's GitHub Releases: `libbox-<ver>.aar` + `SHA256SUMS`, hash check; the AAR is not in git | `scripts/fetch-libbox.sh`; CI — the "Fetch sing-box-lx core" step in the `android` job |
-| iOS core delivery | local build from the pin (`scripts/build-libbox-ios.sh`), no published hash, not in git | dev only, must not ship; a release needs an iOS artifact and hash in the fork's Releases (§711) |
+| iOS core delivery | local build from the pin (`scripts/build-libbox-ios.sh`), no published hash, not in git | development and internal TestFlight only (§723); anything wider needs an iOS artifact and hash in the fork's Releases (§711) |
 | AAR build tags | `with_gvisor, with_quic, with_wireguard, with_utls, with_naive_outbound, with_xhttp, with_awg, with_lx_command, with_lx_idle_suspend, with_lx_chain, with_openvpn, with_openconnect, with_tailscale` + `ts_omit_*`; **without** `with_clash_api` | baked into the core; libbox does not export them, the app keeps a mirror of the set with its own pin — the unit "the core tag pin matches `libbox.version`" is red until reconciled |
 | Core control | libbox CommandClient (push streams + unary RPC) | the Clash HTTP API is removed (§122) |
 
@@ -146,6 +146,7 @@ registry divergences (for example, [529](../../tasks/529-contract-corpus-local-r
 | 12 | [711](../../tasks/711-ios-core-in-app-no-vpn.md) | Simulator | iOS core: local dev build from the pin, explicit exception, must not ship |
 | 12 | no task — [KERNEL.md → Version history](../../../KERNEL.md#version-history-the-lxbox-relevant-parts), [CHANGELOG 2.25.8](../../../../CHANGELOG.md) | Released v2.25.8 | 1.14.2-lx.5…lx.8: `stable` sync, three MASQUE hangs, XHTTP `max_connections 3` without `xmux` (lx.6); no client change, so no task was opened — the bump is recorded by the pin, KERNEL.md and the changelog |
 | 13 | no task — KERNEL.md, [CHANGELOG 2.25.9](../../../../CHANGELOG.md) | Released v2.25.9 | 1.14.2-lx.9…lx.11: Tailscale control channel over HTTPS (SPEC 111), direct UDP path (SPEC 112), one more `stable` sync; Java surface identical to lx.8 |
+| 14 | [723](../../tasks/723-ios-testflight-internal.md) | iPhone 15, no merge | iOS core: internal TestFlight builds may carry the local build; anything wider still needs a hash |
 
 Registry revisions (460F, contract syncs, 486, 491, 529) moved to
 [025-CONTRACT_REGISTRY](../025-CONTRACT_REGISTRY/FEATURE.md).

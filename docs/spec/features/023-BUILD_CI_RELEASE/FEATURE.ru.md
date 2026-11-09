@@ -79,6 +79,7 @@ PRE: 01–49 = -rc.N · 50 = релиз · 51–98 = -hotfixN      ABI: 0 univer
 | GitHub Releases | job `release` по тегу | наш ключ (секреты `ANDROID_*`; без них — временный ключ раннера, поверх не встаёт) | пользователь по уведомлению приложения |
 | F-Droid | каталог сам видит тег (`UpdateCheckMode: Tags ^v\d+\.\d+\.\d+(-hotfix\d+)?$`), собирает из исходников на коммите тега, включая ядро форка и `libcronet`, сравнивает побайтно с APK из GitHub | **наша** (воспроизводимая сборка, `Binaries` + `AllowedAPKSigningKeys` — необратимо) | клиент F-Droid |
 | Google Play | job `google-play`, AAB подписан upload-ключом | ключ Google (Play App Signing) | Play |
+| TestFlight, iOS, только внутренние тестеры | собирается и загружается вручную с Mac, своя линия версий с `0.0.1` ([723](../../tasks/723-ios-testflight-internal.md)) | сертификат Apple Distribution GGL Projects | приложение TestFlight |
 
 - APK одного канала **не встаёт** поверх другого; приложение знает свой канал
   и ведёт уведомление об обновлении в свой магазин (§390).
@@ -146,6 +147,7 @@ Android TV — best-effort (§372): манифест совместим, отд�
 | 8 | [390](../../tasks/390-install-source-aware-update-notice.md) | Done | канал установки, define только у AAB |
 | 9 | [436](../../tasks/436-google-play-upload-ci.md) | Done (первый зелёный прогон тега v2.25.9) | заливка AAB в Play из CI с `PLAY_RELEASE_STATUS=completed`, rc не публикуется |
 | 10 | [486](../../tasks/486-ci-registry-tests.md) | Released v2.25.0 | реестровые тесты не скипаются на CI |
+| 11 | [723](../../tasks/723-ios-testflight-internal.md) | iPhone 15, без мержа | iOS: внутренние сборки TestFlight, загрузка вручную, своя линия версий |
 
 ## Следить за
 
