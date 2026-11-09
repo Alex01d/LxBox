@@ -2,7 +2,7 @@
 
 | Field | Value |
 |-------|-------|
-| Status | Done on `ios-app`, not merged. Builds `0.0.1 (1)` and `0.0.1 (2)` uploaded, installed on Pavel's iPhone 15 from TestFlight, 2 days of everyday use with no problems |
+| Status | Done on `ios-app`, not merged. Builds `0.0.1 (1)` to `0.0.1 (3)` uploaded. 1 and 2 installed on Pavel's iPhone 15 from TestFlight, 2 days of everyday use with no problems |
 | Start date | 2026-11-05 |
 | End date | 2026-11-09 |
 | Commits | `396a3be7` build(ios): declare exempt encryption and document TestFlight upload |
@@ -91,14 +91,13 @@ open build/ios/archive/Runner.xcarchive
 
 | # | Result | Notes |
 |---|---|---|
-| 1 | Pass | `0.0.1 (1)` from `a0df7d00`, then `0.0.1 (2)` |
-| 2 | Partly | Builds 1 and 2 uploaded, with the encryption questions answered by hand. Build 2 was archived at 11:34 on 2026-11-07, before `396a3be7` added the key at 11:50, so no build has checked the key yet. The next upload does |
+| 1 | Pass | `0.0.1 (1)` from `a0df7d00`, then `0.0.1 (2)`. `0.0.1 (3)` from `4a4a9a9f` on 2026-11-09, core `v1.14.4-lx.33` |
+| 2 | Pass | Builds 1 and 2 had the encryption questions answered by hand: build 2 was archived at 11:34 on 2026-11-07, before `396a3be7` added the key at 11:50. Build 3 carries the key. Pavel uploaded it on 2026-11-09, App Store Connect asked no encryption question, and the build appeared in TestFlight |
 | 3 | Pass | Pavel's iPhone 15 |
 | 4 | Pass | 2 days of everyday use by Pavel, 2026-11-07 to 2026-11-09. "looks good" |
 
 ## Unresolved / follow-up
 
-- Check 2 on the next upload: no encryption question.
 - The next upload carries core lx.33. A phone updated from build 1 or 2 keeps a config the new core refuses, F30 in `docs/IOS_FINDINGS.md`. After the update, tap ↻ once instead of Start, or fix F30 first.
 - §721 open check: Wi-Fi rules with the `wifi-info` entitlement in a TestFlight build.
 - §722: no check on the iPhone yet. The Sentry project should show events from the 2 days.
