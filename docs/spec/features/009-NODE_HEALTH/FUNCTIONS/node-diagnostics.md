@@ -32,9 +32,11 @@ and while it runs. With the tunnel (§718) in VPN mode, the check runs inside th
 | IP & location | `https://api.ip2location.io/` |
 | IP info | `https://ipinfo.io/json` |
 
-Exchange timeout — 10 s; the body is limited to 64 KiB. Entering one's own
-address is deliberately impossible: the tab must not become an HTTP client
-through other people's tunnels.
+The Endpoint field is a combo box (§725): ▾ fills in the address of a ready
+check, or one's own address can be typed — only `http://` / `https://`,
+otherwise an error under the field and Run is inactive. Changing the address
+clears the previous reply. Exchange timeout — 10 s; the body is limited to
+64 KiB.
 
 ## Inputs / Outputs
 
@@ -83,8 +85,11 @@ address, exchange time or error text.
   Network tab.".
 - Cancellation — as with the server test: a tunnel stop and backgrounding
   remove the run.
-- Below the check — the Notifications section with the node's warnings (if
-  any); the dot on the tab label is yellow, red at the error level.
+- The tab is laid out in islands (§725): the Check island; under it the
+  island of the node kind — for `direct` it is
+  [Path MTU](../../013-DIAGNOSTICS/FUNCTIONS/path-mtu.md); below, the
+  Notifications island with the node's warnings (if any); the dot on the tab
+  label is yellow, red at the error level.
 
 ## Boundaries
 
@@ -102,6 +107,7 @@ address, exchange time or error text.
 | 2 | [497](../../../tasks/497-node-notifications-tab.md) | Released v2.25.0 | Node notifications in the details |
 | 3 | [501](../../../tasks/501-diagnostics-notifications-merge.md) | Released v2.25.0 | Notifications inside the Diagnostics tab, dot on the label |
 | 4 | [546](../../../tasks/546-emitters-drop-registry-rule-copies.md) | — | Registry check in the session — by the core version of the live build |
-| 5 | [712](../../../tasks/712-ios-test-servers-and-probe-failure.md) | Simulator, no merge | iOS: the check works while the core is stopped |
-| 6 | [713](../../../tasks/713-ios-flows-from-android.md) | Simulator, no merge | iOS: the check works while the core runs |
-| 7 | [718](../../../tasks/718-ios-packet-tunnel.md) | iPhone 15, no merge | iOS: the check runs through the tunnel extension |
+| 5 | [725](../../../tasks/725-path-mtu-direct-diagnostics.md) | In progress | Islands; own Endpoint; Path MTU island on direct |
+| 6 | [712](../../../tasks/712-ios-test-servers-and-probe-failure.md) | Simulator, no merge | iOS: the check works while the core is stopped |
+| 7 | [713](../../../tasks/713-ios-flows-from-android.md) | Simulator, no merge | iOS: the check works while the core runs |
+| 8 | [718](../../../tasks/718-ios-packet-tunnel.md) | iPhone 15, no merge | iOS: the check runs through the tunnel extension |

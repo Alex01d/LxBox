@@ -168,13 +168,13 @@ class SettingsStorage {
     'proxy_port',
     'proxy_type',
     'proxy_user',
-    'quic_sniff_decoy',
-    'quic_sniff_decoy_detours',
-    'quic_sniff_decoy_outbounds',
-    'quic_sniff_decoy_send',
     'resolve_enabled',
     'resolve_strategy',
     'route_address_enable',
+    'sniff_guard_persist',
+    'sniff_guard_quic',
+    'sniff_guard_sni_mismatch',
+    'sniff_guard_tls',
     'sys_proxy',
     'sys_proxy_port',
     'tls_fragment',
@@ -265,6 +265,8 @@ class SettingsStorage {
     'last_update_check_at',
     'last_known_version',
     'dismissed_update_version',
+    // Задача 724 — последнее выбранное Направление главного экрана
+    'home_direction',
     // Краш-репорты ядра (§316)
     'shown_crash_stamp',
     // Debug API / config-lock (§031, §037)
@@ -305,6 +307,7 @@ class SettingsStorage {
     // но и в отброшенные не попадают (см. `_replaceRaw`).
     'allow_rotation', // §220 — снятие портретной фиксации
     'node_list_two_columns', // §541 — две колонки списка узлов на широком окне
+    'dynamic_color', // §735 — системные цвета (Material You)
     'app_language', // §279 — язык приложения (system|en|ru); НЕ config-var
     'region', // §425 — регион использования (auto|none|<cc>); НЕ config-var
   };
@@ -938,6 +941,14 @@ class SettingsStorage {
     return setVar('node_list_two_columns', enabled ? 'true' : 'false');
   }
 
+  /// §735 — тема из системной палитры (Material You, Android 12+). Default
+  /// false: вид приложения не меняется, пока пользователь не включит.
+  static Future<bool> getDynamicColor() async =>
+      (await getVar('dynamic_color', 'false')) == 'true';
+
+  static Future<void> setDynamicColor(bool enabled) =>
+      setVar('dynamic_color', enabled ? 'true' : 'false');
+
   /// §279 — допустимые значения `app_language`. Неизвестное (hand-edited
   /// бэкап, будущие языки) → 'system'.
   static const appLanguageValues = {'system', 'en', 'ru', 'zh'};
@@ -1013,6 +1024,14 @@ class SettingsStorage {
 
   static Future<void> setDismissedUpdateVersion(String tag) =>
       setVar('dismissed_update_version', tag);
+
+  /// Задача 724 — тег Направления, выбранного на главном экране последним.
+  /// Не config-var: в конфиг ядра не идёт, dirty не поднимает.
+  static Future<String> getHomeDirection() async =>
+      getVar('home_direction', '');
+
+  static Future<void> setHomeDirection(String tag) =>
+      setVar('home_direction', tag);
 
   // ---------------------------------------------------------------------------
   // Краш-репорты ядра (§316) — отметка «про этот краш уже сказали».

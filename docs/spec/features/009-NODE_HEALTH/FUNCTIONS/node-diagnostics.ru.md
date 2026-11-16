@@ -32,8 +32,10 @@
 | IP & location | `https://api.ip2location.io/` |
 | IP info | `https://ipinfo.io/json` |
 
-Таймаут обмена — 10 с; тело ограничено 64 КиБ. Своего адреса ввести нельзя
-намеренно: вкладка не должна стать HTTP-клиентом через чужие туннели.
+Поле Endpoint — комбобокс (§725): ▾ подставляет адрес готовой проверки, можно
+ввести свой адрес — только `http://` / `https://`, иначе ошибка под полем и Run
+неактивна. Смена адреса снимает прошлый ответ. Таймаут обмена — 10 с; тело
+ограничено 64 КиБ.
 
 ## Входы / Выходы
 
@@ -81,8 +83,10 @@
   пояснением «This node has no exit. Check devices on the Network tab.».
 - Отмена — как у проверки серверов: стоп туннеля и сворачивание снимают
   прогон.
-- Ниже проверки — секция Notifications с предупреждениями узла (если есть);
-  точка на ярлыке вкладки — жёлтая, красная при уровне error.
+- Вкладка разложена по островам (§725): остров Check; под ним остров вида
+  узла — у `direct` это [Path MTU](../../013-DIAGNOSTICS/FUNCTIONS/path-mtu.ru.md);
+  ниже — остров Notifications с предупреждениями узла (если есть); точка на
+  ярлыке вкладки — жёлтая, красная при уровне error.
 
 ## Границы
 
@@ -100,6 +104,7 @@
 | 2 | [497](../../../tasks/497-node-notifications-tab.md) | Released v2.25.0 | Уведомления узла в деталях |
 | 3 | [501](../../../tasks/501-diagnostics-notifications-merge.md) | Released v2.25.0 | Уведомления внутри вкладки Diagnostics, точка на ярлыке |
 | 4 | [546](../../../tasks/546-emitters-drop-registry-rule-copies.md) | — | Проверка реестра в сессии — по версии ядра боевой сборки |
-| 5 | [712](../../../tasks/712-ios-test-servers-and-probe-failure.md) | Simulator, без merge | iOS: проверка работает, пока ядро остановлено |
-| 6 | [713](../../../tasks/713-ios-flows-from-android.md) | Simulator, без merge | iOS: проверка работает при работающем ядре |
-| 7 | [718](../../../tasks/718-ios-packet-tunnel.md) | iPhone 15, без merge | iOS: проверка идёт через расширение туннеля |
+| 5 | [725](../../../tasks/725-path-mtu-direct-diagnostics.md) | In progress | Острова; свой Endpoint; остров Path MTU у direct |
+| 6 | [712](../../../tasks/712-ios-test-servers-and-probe-failure.md) | Simulator, без merge | iOS: проверка работает, пока ядро остановлено |
+| 7 | [713](../../../tasks/713-ios-flows-from-android.md) | Simulator, без merge | iOS: проверка работает при работающем ядре |
+| 8 | [718](../../../tasks/718-ios-packet-tunnel.md) | iPhone 15, без merge | iOS: проверка идёт через расширение туннеля |
