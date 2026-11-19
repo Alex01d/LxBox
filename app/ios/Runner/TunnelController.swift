@@ -2,7 +2,7 @@ import Foundation
 import NetworkExtension
 
 final class TunnelController {
-  private static let displayName = "L×Box"
+  private static let displayName = "GGL Tunnel"
   private static let extensionSuffix = ".PacketTunnel"
 
   var onStatusChange: ((NEVPNStatus) -> Void)?
