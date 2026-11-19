@@ -92,7 +92,15 @@ Operator's decision, 2026-07-24.
 
 ### 4. Build and release
 
-- Local build: `./scripts/build-local-apk.sh`; details — `BUILD.md`.
+- **No local APK builds** (owner's rule, 17.11.2026): agents, their subagents
+  and child sessions do not run `scripts/build-local-apk.sh`, `flutter build apk`
+  or `gradlew assemble*`. Every APK comes from CI: after the change is in
+  `develop`, `gh workflow run ci.yml --ref develop -f run_mode=build-fast -f abi=arm64-v8a`
+  → `gh run download` (artifact `android-apks-release`). Temporary `build/*`
+  branches are not pushed to origin. An emulator check therefore runs after the
+  merge, on the CI build; before the merge write «not checked on the emulator»
+  in the spec. `scripts/build-local-apk.sh` stays for the owner's own use;
+  details — `BUILD.md`.
 - Release, version in `pubspec.yaml`, build code from `scripts/version-code.sh`
   (never by hand) — `RELEASE_PROCESS.md`.
 
@@ -179,7 +187,7 @@ Owner's decision, 2026-09-18.
   - `flutter test` on the test files this task wrote or changed, plus cases that
     bear directly on the change. Not a whole `test/` directory, not the whole
     contract corpus, not all goldens.
-- Checkers (`tool/l10n/*_check.dart`, `tool/docs/parity_check.dart`,
+- Checkers (`tool/l10n/*_check.dart`, `tool/docs/parity_check.dart`, `tool/arch/boundary_check.dart`,
   `tool/check_contract_lock.dart`) are not required locally — the same `checks`
   job runs them on CI (owner's decision, 2026-09-24; ui + hardcoded take about a
   minute locally). One exception: a task that edits UI strings or the template
@@ -258,6 +266,24 @@ Owner's decision, 2026-09-24.
   clients (status / screen / profiler) separate; push to an `EventSink` only from
   the main thread, one native sink per channel, fan-out via broadcast.
 - **VPN permission.** A refusal or revoke arrives as `onRevoke` — handle it.
+- **Two processes (§747).** The app runs as `com.leadaxe.lxbox:ui` (the window,
+  Flutter) and `com.leadaxe.lxbox:bg` (the VPN service, the core, the tile, the
+  receivers). There is no process named just `com.leadaxe.lxbox`.
+  - `adb shell pidof com.leadaxe.lxbox:bg` / `…:ui`; `adb logcat --pid=$(adb shell
+    pidof com.leadaxe.lxbox:bg)`; `adb shell dumpsys meminfo com.leadaxe.lxbox:bg`;
+    `adb shell ps -A | grep lxbox` must show at most these two.
+  - Each ends itself when not needed: `:ui` after the window is finished, `:bg`
+    a few seconds after the tunnel stops with no window. A missing process is
+    not a crash; check `ApplicationExitInfo` before concluding one.
+  - A new manifest component needs `android:process` (`:ui` or `:bg`); a plugin
+    that brings a component of its own is redeclared in
+    `app/android/app/src/main/AndroidManifest.xml` with `tools:node="merge"`.
+    The Android build fails on a component without it; the map of the sides and
+    the rules are in `ARCHITECTURE.md` → “Process boundary”.
+  - Native code of the window never calls service objects directly — only
+    `BgClient` (a `BgMethods` / `BgCcMethods` method), and never from the main
+    thread. The window never loads the core: `grep libbox /proc/<pid of :ui>/maps`
+    must print nothing.
 - **Signatures.** Debug and release APKs are signed differently: `adb install -r`
   fails with `INSTALL_FAILED_UPDATE_INCOMPATIBLE`; `adb uninstall` wipes settings.
 - **`local.properties` `sdk.dir`** is rewritten by Flutter on every run — set

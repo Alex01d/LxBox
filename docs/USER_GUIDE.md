@@ -297,6 +297,15 @@ A JSON body can hold keys a `.conf` has no place for; the tab lists them
 under the text as "Not in INI". **Edit INI** makes this text the server's
 source and opens Source; the tag and the detour server stay as they are.
 
+The **Source** tab of your own server and of a folder's server shows the
+text it came from: a link, a `.conf` or JSON. Comments in JSON — `//`,
+`/* */` and `#` to the end of the line — are kept with the text: your notes
+on a server stay on Source after pasting, saving and restoring a backup.
+If you paste a whole config, only its nodes (`outbounds`, `endpoints`) are
+kept; the text is then rebuilt and has no comments. The same happens when
+the JSON text is rewritten by the app: Edit JSON on the JSON tab, the
+masquerade section, the Tailscale exit node.
+
 ### Subscription — a provider's server list that updates itself
 
 A subscription is a link from a VPN provider that stands for a whole list
@@ -1873,6 +1882,9 @@ the Add current and Manual buttons add to it.
 
 The **Automation** tab opens the VPN to commands and events of Tasker,
 MacroDroid and other apps: [Advanced user guide → Automation tab](ADVANCED_USER_GUIDE.md#automation-opens-the-vpn-to-commands-from-other-apps).
+The AI assistants section of the same tab lets an AI assistant check why an
+address does not open, route an app and switch connections:
+[AI assistants and your network](AI_ASSISTANT.md).
 
 ---
 

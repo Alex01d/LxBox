@@ -8,14 +8,16 @@ import '../models/background_mode.dart';
 import '../models/memory_limit_setting.dart';
 import '../models/parser_config.dart';
 import '../services/builder/if_engine.dart';
-import '../services/l10n/template_aware_state.dart';
 import '../services/platform_features.dart';
+import '../widgets/template_aware_state.dart';
 import '../services/settings_storage.dart';
 import '../services/template_loader.dart';
 import '../widgets/template_var_list.dart';
 import '../widgets/var_values_model.dart';
 import 'vpn_mode_tab.dart';
 import '../services/l10n/locale_controller.dart';
+import '../widgets/dpad_radio_group.dart';
+import '../widgets/focus_safe_tab_bar_view.dart';
 
 /// VPN Settings — System (`VpnService.Builder` toggles) + Core (sing-box
 /// engine vars, `chapter: 'core'`). Routing/DNS vars живут на своих экранах.
@@ -265,7 +267,7 @@ class _SettingsScreenState extends State<SettingsScreen>
             ],
           ),
         ),
-        body: TabBarView(
+        body: FocusSafeTabBarView(
           children: [
             if (showsSystemTab) _buildSystemTab(context),
             _buildCoreTab(context, template, editableVars),
@@ -362,7 +364,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                   ],
                 ),
               ),
-              RadioGroup<BackgroundMode>(
+              DpadRadioGroup<BackgroundMode>(
                 groupValue: _backgroundMode,
                 onChanged: (BackgroundMode? m) {
                   if (!_vpnLoaded) return;

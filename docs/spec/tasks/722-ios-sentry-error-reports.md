@@ -62,6 +62,7 @@ Made by Pavel on 2026-11-06.
 
 - `sentry_flutter: ^9.30.1` goes into `app/pubspec.yaml`. Version 10 needs Android `minSdk` 26, and the app supports 24, so the Android build fails with it. 9.30.1 needs 21. It brings Sentry Cocoa 8.58.4, which turns replay off on iOS 26, and the plugin turns it back on because Flutter masks the screen itself.
 - Flutter has no per-platform dependencies, so the Android APK carries the library. It never starts there: the Dart gate below is false, and the plugin's manifest removes the auto-init provider.
+- Under [§747](747-two-processes-ui-bg.md), the Android app manifest assigns the two remaining Sentry providers, `SentryPerformanceProvider` and `SentryNdkPreloadProvider`, to `:ui`.
 - The iOS pod lands in the `Runner` target only. `PacketTunnel` links no Flutter plugins.
 
 ### Start

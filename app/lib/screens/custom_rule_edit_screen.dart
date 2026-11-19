@@ -6,7 +6,7 @@ import '../models/custom_rule.dart';
 import '../models/parser_config.dart';
 import '../services/builder/preset_expand.dart' show PresetNode;
 import '../services/settings_storage.dart';
-import '../services/ui_helpers.dart';
+import '../widgets/ui_helpers.dart';
 import '../services/url_launcher.dart' as ul;
 import '../widgets/outbound_picker.dart';
 import '../widgets/wifi_entry.dart';
@@ -19,6 +19,7 @@ import 'custom_rule_edit/sections/wifi_section.dart' show WifiHint, wifiHintFrom
 import 'custom_rule_edit/tabs/params_tab.dart';
 import 'custom_rule_edit/tabs/view_tab.dart';
 import '../services/l10n/locale_controller.dart';
+import '../widgets/focus_safe_tab_bar_view.dart';
 
 /// Редактор `CustomRule` (spec §030).
 ///
@@ -428,7 +429,7 @@ class _CustomRuleEditScreenState extends State<CustomRuleEditScreen>
                 ],
               ),
             ),
-            body: TabBarView(
+            body: FocusSafeTabBarView(
               children: [
                 ParamsTab(
                   outboundOptions: widget.outboundOptions,

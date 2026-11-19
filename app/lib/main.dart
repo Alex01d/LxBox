@@ -10,8 +10,9 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'screens/home_screen.dart';
 import 'services/app_group_path_provider.dart';
 import 'services/app_log.dart';
-import 'services/app_theme_seed.dart';
+import 'widgets/app_theme_seed.dart';
 import 'services/l10n/locale_controller.dart';
+import 'services/assistant/assistant_gateway.dart';
 import 'services/automation/automation_dispatcher.dart';
 import 'services/automation/automation_sync.dart';
 import 'services/clash_log_pump.dart';
@@ -26,7 +27,7 @@ import 'services/platform_features.dart';
 import 'services/stderr_reader.dart';
 import 'services/subscription/subscription_identity.dart';
 import 'services/debug/bootstrap.dart' as debug_bootstrap;
-import 'services/nav/home_return_observer.dart';
+import 'widgets/home_return_observer.dart';
 import 'widgets/ios_edge_back_gesture.dart';
 import 'services/settings_storage.dart';
 import 'services/taildrop_tags_sync.dart' show migrateLegacyTaildropPrefs;
@@ -37,6 +38,7 @@ import 'services/workspaces/workspace_controller.dart';
 import 'services/workspaces/workspace_store.dart';
 import 'services/wifi_history_listener.dart';
 import 'widgets/mouse_drag_scroll_behavior.dart';
+import 'widgets/dpad_text_field_exit.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -179,6 +181,9 @@ void main() async {
     // LxBoxIntentReceiver → этот handler → shared action-handlers). Пассивен
     // пока receiver disabled. Подгружаем emit-gates из storage (default OFF).
     registerAutomationBridge();
+    // §750 — шлюз ассистента к Debug API (native `assistantCall`). Только
+    // приём вызова: на старте ничего не считается.
+    registerAssistantGatewayBridge();
     // §605 — вместе с гейтами выставляем receiver'ы по сохранённому тумблеру:
     // бэкап/набор прошлых версий могли развести их с системой.
     unawaited(syncAutomationFromStorage());
@@ -215,6 +220,11 @@ void main() async {
   } catch (_) {
     // Storage недоступен — остаётся дефолт (true).
   }
+  // §748 — сцену пересоздаёт импорт бэкапа: экраны поверх корня держат
+  // контроллеры прежнего HomeScreen (устаревший список, правки молча не
+  // пишутся), поэтому закрываются до пересоздания.
+  WorkspaceController.I.onExternalRemount =
+      () => _rootNavigatorKey.currentState?.popUntil((r) => r.isFirst);
   runApp(CrashReporting.wrap(const LxBoxApp()));
 }
 
@@ -404,6 +414,10 @@ class ThemeNotifier extends ChangeNotifier with WidgetsBindingObserver {
 
 final themeNotifier = ThemeNotifier();
 
+/// §748 — корневой навигатор: [WorkspaceController.onExternalRemount]
+/// закрывает экраны поверх `HomeScreen`.
+final _rootNavigatorKey = GlobalKey<NavigatorState>();
+
 class LxBoxApp extends StatelessWidget {
   const LxBoxApp({super.key});
 
@@ -420,6 +434,7 @@ class LxBoxApp extends StatelessWidget {
         // LocaleController._applyLocale (dict-reload на каждую смену); отдельного
         // per-build присваивания активного локализатора не требуется.
         return MaterialApp(
+          navigatorKey: _rootNavigatorKey,
           title: 'L×Box',
           theme: ThemeData(
             colorScheme: ColorScheme.fromSeed(seedColor: themeNotifier.seed),
@@ -435,6 +450,19 @@ class LxBoxApp extends StatelessWidget {
           themeMode: themeNotifier.mode,
           // §736 — списки тянутся и указателем-«мышью» (пульт TV, issue #220).
           scrollBehavior: const MouseDragScrollBehavior(),
+          // §746 — пульт TV уходит из любого текстового поля стрелками, когда
+          // каретка на краю; слой глубже DefaultTextEditingShortcuts.
+          builder: (context, child) {
+            final content = child ?? const SizedBox.shrink();
+            return DpadTextFieldExit(
+              child: PlatformFeatures.isIos
+                  ? IosEdgeBackGesture(
+                      observer: homeReturnObserver,
+                      child: content,
+                    )
+                  : content,
+            );
+          },
           // §279 — ВСЕГДА подаём явную локаль (effective уже резолвит
           // 'system' по языку устройства через PlatformDispatcher). Ранее
           // 'system' давал locale: null, и Flutter полагался на собственный
@@ -455,12 +483,6 @@ class LxBoxApp extends StatelessWidget {
           // §076: global observer срабатывает на возврат на home (root)
           // — auto-rebuild config'а если configDirty.
           navigatorObservers: [homeReturnObserver],
-          builder: PlatformFeatures.isIos
-              ? (context, child) => IosEdgeBackGesture(
-                    observer: homeReturnObserver,
-                    child: child!,
-                  )
-              : null,
           actions: {
             ...WidgetsApp.defaultActions,
             if (PlatformFeatures.isIos)

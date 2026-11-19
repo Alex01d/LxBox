@@ -22,8 +22,8 @@ import '../services/direction_mutations.dart';
 import '../services/error_format.dart';
 import '../services/file_export.dart';
 import '../services/file_import.dart';
-import '../services/l10n/template_aware_state.dart';
 import '../services/platform_features.dart';
+import '../widgets/template_aware_state.dart';
 import '../services/preset_nodes_view.dart';
 import '../services/preset_on_change.dart';
 import '../services/rule_display_names.dart';
@@ -32,7 +32,7 @@ import '../services/rule_transfer.dart';
 import '../services/selectable_to_custom.dart';
 import '../services/settings_storage.dart';
 import '../services/template_loader.dart';
-import '../services/ui_helpers.dart';
+import '../widgets/ui_helpers.dart';
 import '../services/url_launcher.dart';
 import '../services/utf8_decode.dart';
 import '../widgets/export_action_sheet.dart';
@@ -53,6 +53,7 @@ import 'routing_screen/widgets/routing_tabs.dart';
 import 'routing_screen/widgets/srs_status_button.dart';
 import 'tun_apps_tab.dart';
 import '../services/l10n/locale_controller.dart';
+import '../widgets/focus_safe_tab_bar_view.dart';
 
 part 'routing_screen/routing_srs_cache.dart';
 
@@ -410,7 +411,7 @@ class _RoutingScreenState extends State<RoutingScreen>
           ],
         ),
       ),
-      body: TabBarView(
+      body: FocusSafeTabBarView(
         controller: _tabController,
         children: [
           // ─── Directions: Направления (CRUD) + Auto tuning ───
