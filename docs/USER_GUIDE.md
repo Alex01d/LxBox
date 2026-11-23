@@ -290,6 +290,11 @@ schemes are rejected with a note on the entry. A uTLS fingerprint like
 `hellochrome_120` is shortened to `chrome`; an unknown one becomes `chrome`
 with a warning.
 
+A TrustTunnel subscription is the address a TrustTunnel server gives out
+(`https://user:password@host/path`): add it as any subscription URL, the login
+and password from the address are sent to the server. A `tt://` link that
+carries only such an address is added as that subscription.
+
 The **Masquerade** section of your own WireGuard or AmneziaWG server adds
 decoy packets before the handshake: the client sends packets that look like
 QUIC, DNS, STUN or SIP. Where: server screen → Settings → Masquerade.
@@ -938,6 +943,17 @@ locally, and traffic goes over IPv4. It needs no dedicated server and helps on
 networks with broken IPv6. With Fixed IP the box is inactive: the addresses
 already set the family.
 
+**Block HTTPS/SVCB records** answers HTTPS and SVCB queries for the rule's
+domains with an empty response. Chrome and other browsers take the ECH key
+from these records and hide the real site name behind a shared one such as
+`cloudflare-ech.com`; the rule then never sees its domain, and the traffic
+leaves by the default route. With the box on, the browser sends the name in
+the clear and the rule matches. The box ticks itself when you fill in
+domains; it is unavailable without a domain condition. To block these records
+for every site, add the **Block HTTPS/SVCB records** preset (Routing → Rules →
++). Apps that run their own DNS-over-HTTPS (a fixed Secure DNS provider in
+Chrome, DoH in Firefox) ask past the tunnel's DNS and are not affected.
+
 **Resolve before routing** looks up the domain's address before the rule
 picks a route, so IP rules and the address family apply. **Strategy** sets
 the family (`ipv4_only` and others); by default it follows the DNS settings.
@@ -947,8 +963,8 @@ timeout and Client subnet.
 
 Limitations the editor itself warns about:
 
-- Dedicated server and Fixed IP are unavailable with port and protocol
-  filters: they are unknown at the time of the DNS query;
+- with port, protocol or network filters the DNS options still work, but on
+  the rule's domains on any port and protocol: a DNS query carries neither;
 - with a rule-set they work only if the list contains domains: IP-only lists
   do not match DNS queries.
 
@@ -1110,23 +1126,28 @@ from the settings of whatever you assign the detour to.
 | A whole folder | Folder → **Settings** tab | All folder members |
 | One folder member | Folder → the member | This member only |
 
-The window has four sections:
+The window has five sections:
 
 - **None (direct)** — no detour;
 - **This folder** — members of the same folder; the section appears in the
   settings of a folder and of its members;
 - **Directions** — detour directions; the section appears when such
   directions exist;
+- **Replace groups** — subscriptions and folders replaced with a group by
+  Replace with a group, in any mode; the section appears when such groups
+  exist. The group of the source you are assigning the detour to is not
+  shown;
 - **Standalone servers** — standalone servers.
 
 The window does not offer servers of a subscription, members of another
-folder, auto nodes or groups. A subscription's servers change with every
+folder or auto nodes. A subscription's servers change with every
 update, and a member of another folder lives under that folder's settings;
 a detour through a rotating pool gives an unpredictable path. The Directions
 section lists only enabled directions with Use as detour. To go out through
 such a server anyway, add it as a standalone server (Copy URI in its
 long-press menu, then add the link), or select it in a direction with Use as
-detour and pick that direction.
+detour and pick that direction. To go out through a whole subscription,
+replace it with a group and pick the group in Replace groups.
 
 A subscription or folder whose servers go through intermediate links shows
 two more boxes in its Settings tab. A link is a server another server of the

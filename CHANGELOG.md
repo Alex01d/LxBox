@@ -20,10 +20,78 @@
   ([task 713](docs/spec/tasks/713-ios-flows-from-android.md)).** Autocorrect
   and smart punctuation are off in those fields.
 
+### Changed
+
+- **TrustTunnel `tt://` links by the registry ([task 717](docs/spec/tasks/717-trusttunnel-deeplink-uri.md), contract 1.1.175).**
+  The link is now read by a table: the binary container is described in the
+  protocol record of the registry, and the application no longer carries a
+  decoder written for this one format. What changed for the node: the
+  certificate name (`tls.server_name`) is always the host name of the link —
+  a custom SNI is reported and not applied, because the core has one name for
+  both and the certificate is issued for the host name; a certificate chain
+  arrives as one PEM block per certificate; the TLS profile of the link turns
+  on uTLS (Chrome, Safari, Firefox, Android), except with HTTP/3. Notices are
+  the final ones: `tt_field_unsupported` names the setting the node cannot
+  express, `tt_subscription_ignored` — a subscription address next to a
+  server, `tt_subscription_only` — a link that carries only a subscription. A link with a subscription address that is not
+  `https://` is rejected. The engine can also build a `tt://` link back from a
+  node body, byte for byte as the AdGuard encoder. Issue #194.
+  (RU: Ссылки `tt://` TrustTunnel по реестру: ссылку читает таблица — бинарный
+  контейнер описан в записи протокола реестра, отдельного декодера под этот
+  формат в приложении больше нет. Что изменилось для узла: имя сертификата
+  (`tls.server_name`) — всегда имя хоста из ссылки; свой SNI называется в
+  предупреждении и не применяется, потому что у ядра имя одно на оба смысла, а
+  сертификат выписан на имя хоста; цепочка сертификатов приезжает блоком PEM
+  на каждый сертификат; TLS-профиль ссылки включает uTLS (Chrome, Safari,
+  Firefox, Android), кроме HTTP/3. Предупреждения — финальные:
+  `tt_field_unsupported` называет настройку, которую узел выразить не может,
+  `tt_subscription_ignored` — адрес подписки рядом с сервером,
+  `tt_subscription_only` — ссылку, несущую только подписку. Ссылка с адресом подписки не `https://` отвергается. Движок
+  умеет собрать ссылку `tt://` обратно из тела узла, байт в байт как энкодер
+  AdGuard. Issue #194.)
+
+### Added
+
+- **Copy link for a TrustTunnel node from a sing-box config ([task 717](docs/spec/tasks/717-trusttunnel-deeplink-uri.md)).**
+  A `trusttunnel` node that came as an `endpoints[]` entry of a config, not as
+  a link, now gives a `tt://` link on Copy link (and in Debug API
+  `GET /nodes/link`) instead of the JSON text of the entry; the node's tag
+  becomes the name in the link. Nodes that came as a link or from a
+  TrustTunnel subscription give their original link, as before.
+  (RU: Copy link у узла TrustTunnel из конфига sing-box: узел `trusttunnel`,
+  пришедший записью `endpoints[]`, а не ссылкой, отдаёт ссылку `tt://` вместо
+  текста записи JSON — и в Debug API `GET /nodes/link`; имя в ссылке — тег
+  узла. Узлы из ссылки и из подписки TrustTunnel отдают исходную ссылку, как
+  раньше.)
+- **TrustTunnel subscriptions ([task 717](docs/spec/tasks/717-trusttunnel-deeplink-uri.md), contract 1.1.176).**
+  The address a TrustTunnel server gives out as a subscription
+  (`https://user:password@host/path`) is added as any subscription URL: the
+  server's answer becomes a `trusttunnel` node, the same one its `tt://` link
+  would give. The login and password from the address are sent to the server
+  as HTTP Basic credentials — this now works for any subscription URL with
+  credentials in it, and a password with special characters reaches the server
+  intact; the password no longer appears in the text of a download error. A
+  `tt://` link that carries only a subscription address is no longer rejected
+  when you paste it, scan it or type it in: it is added as that subscription.
+  Inside a list of links or another subscription such a link is still skipped
+  with `tt_subscription_only`.
+  (RU: Подписки TrustTunnel: адрес, который сервер TrustTunnel выдаёт как
+  подписку (`https://user:password@host/path`), добавляется как любой URL
+  подписки — ответ сервера становится узлом `trusttunnel`, тем же, что дала бы
+  его ссылка `tt://`. Логин и пароль из адреса уходят серверу как HTTP Basic —
+  теперь это работает у любого URL подписки с учётными данными, и пароль со
+  спецсимволами доходит до сервера без искажений; в текст ошибки загрузки
+  пароль больше не попадает. Ссылка `tt://`, несущая только адрес подписки,
+  при вставке, сканировании или вводе больше не отвергается: по ней
+  добавляется эта подписка. Внутри списка ссылок или чужой подписки такая
+  ссылка по-прежнему пропускается с `tt_subscription_only`.)
+
 ## [2.25.23] — 2026-11-17
 
 ### Added
 
+- **Block HTTPS/SVCB records ([task 755](docs/spec/tasks/755-block-https-svcb-records.md), [#227](https://github.com/Leadaxe/LxBox/issues/227), contract 1.1.173).** Without FakeIP, Chrome took the ECH key from the HTTPS DNS record and hid the site name behind `cloudflare-ech.com`, so a domain rule silently missed and the traffic left by the default route. A rule's DNS & Resolve section gets a **Block HTTPS/SVCB records** box: HTTPS/SVCB queries for the rule's domains get an empty answer, the browser sends the name in the clear and the rule matches. The box ticks itself when domains are filled in; it is unavailable without a domain condition; saved rules are not changed. A new preset of the same name (off by default) does it for every domain.
+  (RU: без FakeIP Chrome брал ключ ECH из HTTPS-записи DNS и прятал имя сайта за `cloudflare-ech.com` — правило по домену молча не срабатывало. В секции DNS & Resolve правила — галочка Block HTTPS/SVCB records: пустой ответ на HTTPS/SVCB-запросы доменов правила, браузер шлёт имя открыто. Ставится сама при заполнении доменов, без условия по домену недоступна, сохранённые правила не меняются. Новый одноимённый пресет (выключен по умолчанию) — то же для всех доменов.)
 - **An AI assistant can diagnose and manage the network ([task 750](docs/spec/tasks/750-ai-assistant-network-control.md)).** On Android 16+ the set of functions for system assistants grows from three to ten: an address check by stages (`checkUrl`), the external IP and country of a Direction's exit (`checkExit`), the list of a Direction's exits and switching between them, an app search, and a gateway to a part of the Debug API (`getApiHelp`, `callApi`) — rules, Directions, sources and connections. Reading and checks sit behind «AI assistant control»; changing settings needs the new «Let assistants change settings» switch (App Settings → Automation → AI assistants), off by default. Config, keys, subscription links, backups and logs stay closed. Guide: [AI assistants and your network](docs/AI_ASSISTANT.md).
   (RU: ИИ-ассистент на Android 16+ получает десять функций вместо трёх: проверку адреса по стадиям, внешний IP и страну выхода Направления, список выходов и их смену, поиск приложения и шлюз к части Debug API — правила, Направления, источники, подключения. Чтения и проверки — под «AI assistant control»; изменения настроек — под новым тумблером «Let assistants change settings», выключенным по умолчанию. Конфиг, ключи, ссылки подписок, бэкапы и логи закрыты. Гайд: [ИИ-ассистент и ваша сеть](docs/AI_ASSISTANT.ru.md).)
 - **Debug API: `/assistant/*` ([task 750](docs/spec/tasks/750-ai-assistant-network-control.md)).** New routes for an agent on a computer: network overview with work connections and their state, a Direction's exits, the address check (URL Check), the exit check, an app search, which rule catches an app, switching the exit, turning a connection on or off.
@@ -31,6 +99,8 @@
 
 ### Changed
 
+- **DNS options of a rule work with port and protocol filters ([task 755](docs/spec/tasks/755-block-https-svcb-records.md)).** Dedicated server, Fixed IP, Force IPv4 and Block HTTPS were unavailable once a rule had a port, protocol or network filter. Ports of a custom rule now sit on the routing rule instead of its rule-set (the match is the same), and the DNS options apply to the rule's domains on any port and protocol. A Force IPv4 box that was ticked on such a rule and silently did nothing now takes effect.
+  (RU: DNS-опции правила (Dedicated server, Fixed IP, Force IPv4, Block HTTPS) работают и с фильтрами по портам, протоколам и сети — на домены правила на любом порту. Порты правила стоят на маршрутном правиле, а не в его наборе; смысл тот же. Отмеченная раньше, но молча не действовавшая Force IPv4 у такого правила теперь действует.)
 - **Two processes: the tunnel and the window ([task 747](docs/spec/tasks/747-two-processes-ui-bg.md)).** The VPN service with the core runs in the `:bg` process, the window with Flutter in `:ui`; the window does not load the core at all and talks to `:bg` over a provider call and an event pipe. Closing the window ends `:ui` (VPN on: about 240 → 110 MB on the emulator); VPN off and window closed — no process left; VPN off and window open — `:bg` restarts without the core. While the VPN is on a minimised window is kept alive by the service, so background Dart work is unchanged. Cold start of the window about 1.5 s on the emulator. Checked on Android 14 and 16 emulators, not on phones; one unreproduced lost start in about a hundred attempts — the start path now leaves a trace in the log.
   (RU: сервис VPN с ядром работает в процессе `:bg`, окно с Flutter — в `:ui`; окно ядро не загружает и общается с `:bg` вызовами и каналом событий. Закрытие окна завершает `:ui` (VPN включён: примерно 240 → 110 МБ на эмуляторе); VPN выключен и окно закрыто — процессов нет; VPN выключен и окно открыто — `:bg` перезапускается без ядра. Пока VPN включён, свёрнутое окно удерживается сервисом, фоновая работа Dart не меняется. Холодный старт окна около 1,5 с на эмуляторе. Проверено на эмуляторах Android 14 и 16, на телефонах нет; один невоспроизведённый потерянный старт примерно на сто попыток — путь старта теперь пишет след в журнал.)
 - **Comments in a server's JSON are kept ([task 741](docs/spec/tasks/741-json-comments-kept-in-source.md), [#171](https://github.com/Leadaxe/LxBox/issues/171), contract 1.1.172).** A server pasted or edited as JSON keeps its `//`, `/* */` and `#` comments: the Source tab shows the text as typed after pasting, saving and restoring a backup, and the «Comments were removed.» message is gone. Comments are skipped only when the app reads the JSON; the same server with and without comments is still one server in a backup. A pasted whole config keeps only its nodes, and that text is rebuilt without comments, as before.
@@ -40,6 +110,12 @@
 
 ### Fixed
 
+- **The Detour server window offers replace groups ([task 756](docs/spec/tasks/756-detour-picker-replace-groups.md)).** A subscription or folder replaced with a group could not be picked as a detour for another server; the window now has a Replace groups section with such groups in every mode.
+  (RU: подписку или папку, свёрнутую в группу, нельзя было выбрать как detour для другого сервера; в окне Detour server появился раздел Replace groups с такими группами во всех режимах.)
+- **The «Errors (N)» row no longer hides under the navigation bar ([task 754](docs/spec/tasks/754-errors-row-under-navigation-bar.md)).** With three-button navigation the red row on the main screen was drawn under the system buttons and a tap hit the system button; the row now sits above the bar.
+  (RU: при трёхкнопочной навигации красная строка «Errors (N)» на главном рисовалась под системными кнопками, тап попадал в системную кнопку; теперь строка над панелью.)
+- **Assistant `checkUrl` / `checkExit` while the core is not up ([task 750](docs/spec/tasks/750-ai-assistant-network-control.md)).** They answer «The VPN core is not reachable yet», like `selectExit`, instead of a raw RPC error.
+  (RU: `checkUrl` и `checkExit` до того, как ядро стало доступно, отвечают «The VPN core is not reachable yet», как `selectExit`, а не сырой ошибкой RPC.)
 - **Imported backup shows up at once and is no longer lost ([task 748](docs/spec/tasks/748-backup-import-remounts-scene.md)).** After Settings → Backup → Transfer to desktop → Import, the imported servers did not appear until the app was restarted. Worse, changing anything in the server list before a restart, such as turning a server off, wrote the old list back and the imported servers were gone. The same happened after a regular restore if «Restart now» was not tapped, and after `POST /backup/import` in the Debug API. Now the app reloads its state right after the import and returns to the main screen: everything imported is visible at once and later changes keep it. The running VPN is not stopped; the config is rebuilt like after any settings change.
   (RU: после импорта LX Backup импортированные серверы не появлялись до перезапуска, а любая правка списка серверов до перезапуска (например, выключить сервер) записывала старый список — импортированное пропадало. То же у обычного restore без «Restart now» и у `POST /backup/import` Debug API. Теперь приложение сразу перечитывает состояние после импорта и возвращается на главный экран: импортированное видно и сохраняется; VPN не останавливается, конфиг пересобирается как после любой смены настроек.)
 - **Format and highlighting for a server JSON that starts with a comment ([task 749](docs/spec/tasks/749-editor-json-leading-comment.md)).** A server pasted as JSON whose first line is a comment (`// …`, `/* … */` or `# …`) keeps that comment on the Source tab since task 741, but the editor did not recognise the text as JSON: no syntax highlighting and no Format item in the ⋮ menu. Leading comments are now skipped when the editor detects the language; WireGuard `.conf` files with `#` comments are still shown as INI.

@@ -1281,6 +1281,7 @@ class _SubscriptionDetailScreenState extends State<SubscriptionDetailScreen>
       context,
       controller: widget.controller,
       directions: _directions,
+      selfSourceId: widget.entry.list.id,
     );
     if (chosen == null || !mounted) return;
     setState(() {

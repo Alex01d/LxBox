@@ -3,7 +3,9 @@ import 'dart:convert';
 
 import 'package:flutter/widgets.dart';
 
+import '../../models/codec/rule_record.dart' show ruleFromRecord;
 import '../../models/custom_rule.dart';
+import '../../models/rule_tree.dart' show ruleTreeBodyToJson;
 import '../../models/parser_config.dart';
 import '../../models/preset_rule_set.dart' show ruleSetsEnabledByVar;
 import '../../services/builder/preset_expand.dart' show PresetNode;
@@ -139,6 +141,12 @@ class CustomRuleEditController extends ChangeNotifier {
   late RuleDns? _dns;
   late RuleResolve? _resolve;
 
+  /// §755 — были ли домены в форме на прошлом keystroke: галка Block
+  /// HTTPS ставится на переходе «пусто → не пусто». Стартовое значение — из
+  /// открытого правила, поэтому сохранённое правило с доменами при открытии
+  /// галку не получает.
+  late bool _hadDomains;
+
   /// §683 — последние опции резолва: снятие «Resolve before routing» и
   /// уход с «Resolve only» не теряют Strategy/Advanced.
   RuleResolve _resolveKeep = const RuleResolve();
@@ -221,8 +229,11 @@ class CustomRuleEditController extends ChangeNotifier {
   String? get srsLastUpdatedText => _srsLastUpdatedText;
 
   /// §366 — читает sidecar-метаданные кэша для строки под полем URL.
-  Future<void> _loadSrsMeta(String id) async {
-    final meta = await RuleSetDownloader.readMeta(id);
+  /// §757 — метаданные первого набора: [cacheId] — id кэша по ссылке
+  /// (`<id>~<h8>`); нет ссылки — строки «Updated …» нет.
+  Future<void> _loadSrsMeta(String? cacheId) async {
+    if (cacheId == null) return;
+    final meta = await RuleSetDownloader.readMeta(cacheId);
     if (_disposed) return;
     final last = meta.lastUpdated;
     if (meta.failing) {
@@ -274,14 +285,22 @@ class CustomRuleEditController extends ChangeNotifier {
   /// template; правило ссылается по tag, не вводит адрес — решение №2).
   List<String> get dnsServerTags => _dnsServerTags;
 
-  /// §117 гейт: headless rule_set не выражает port/protocol (и они неизвестны
-  /// в момент DNS-запроса) → DNS-чекбокс серый при непустых ports/protocols.
-  /// Live по текущему состоянию формы.
-  bool get dnsGateBlocked =>
+  /// §755: у правила есть порт, диапазон, протокол или `network` — DNS-
+  /// опции действуют на домены правила на любом порту и протоколе (у
+  /// DNS-запроса их нет). Раньше (§117) это был гейт, серивший секцию;
+  /// теперь — только повод для подсказки. Live по текущему состоянию формы.
+  bool get dnsAppliesAnyPort =>
       norm.normalizedPorts(portCtrl.text).isNotEmpty ||
       norm.normalizedPortRanges(portRangeCtrl.text).isNotEmpty ||
       _protocols.isNotEmpty ||
       _network.isNotEmpty;
+
+  /// §757: DNS-опция включена, а DNS-зеркало правила пустое (ни одного
+  /// условия, видимого DNS-слою) — опция не действует, правило сохраняется
+  /// (⚠ в секции DNS). Live по текущему состоянию формы.
+  bool get dnsOptionsWithoutEffect =>
+      (_kind == CustomRuleKind.inline || _kind == CustomRuleKind.srs) &&
+      snapshot().dnsOptionsWithoutEffect;
 
   /// §692: секция «DNS & Resolve» видна, только когда у правила есть
   /// условие, видимое DNS-слою (зеркало [CustomRule.dnsLayerEligible]):
@@ -346,15 +365,22 @@ class CustomRuleEditController extends ChangeNotifier {
     portRangeCtrl = TextEditingController(text: r.portRanges.join('\n'));
     // ## 12 — по одному URL на строку.
     srsUrlCtrl = TextEditingController(text: r.srsUrls.join('\n'));
-    // §366 — TTL есть только у srs-правил; у прочих остаётся дефолт и в
-    // сохранение не идёт.
-    if (r is CustomRuleSrs) _srsTtlHours = r.updateIntervalHours;
-    jsonCtrl = TextEditingController(text: r.json);
+    // §366 — TTL наборов (§757 — поле правила-дерева; у inline без
+    // наборов в запись не идёт).
+    if (r is CustomRuleTree) _srsTtlHours = r.updateIntervalHours;
+    // §757 — правило-дерево, которое поля формы не выражают, открывается в
+    // JSON-режиме: текст — тело записи (`rules[].body`).
+    _openedAsTree = r is CustomRuleTree && !formEditable(r);
+    _initialJsonText = _openedAsTree
+        ? const JsonEncoder.withIndent('  ')
+            .convert(ruleTreeBodyToJson((r as CustomRuleTree).body))
+        : r.json;
+    jsonCtrl = TextEditingController(text: _initialJsonText);
     _enabled = r.enabled;
     _ipIsPrivate = r.ipIsPrivate;
     _sourceIpIsPrivate = r.sourceIpIsPrivate;
     _inbounds = r.inbounds.toSet();
-    _kind = r.kind;
+    _kind = _openedAsTree ? CustomRuleKind.json : r.kind;
     _outbound = r.outbound;
     _protocols = r.protocols.toSet();
     _network = r.network.toSet();
@@ -366,6 +392,7 @@ class CustomRuleEditController extends ChangeNotifier {
     _networkIsExpensive = r.networkIsExpensive;
     _varsValues = Map<String, String>.from(r.varsValues);
     _dns = r.dns;
+    _hadDomains = _hasDomainsInForm;
     _fixedChosen = r.dns?.fixedMode ?? false;
     _resolve = r.resolve;
     if (_resolve != null) _resolveKeep = _resolve!;
@@ -392,7 +419,7 @@ class CustomRuleEditController extends ChangeNotifier {
             cached ? SrsDownloadState.cached : SrsDownloadState.none;
         notifyListeners();
       });
-      unawaited(_loadSrsMeta(r.id)); // §366
+      unawaited(_loadSrsMeta(r.cacheIds.firstOrNull)); // §366
     }
     if (r is CustomRulePreset && preset != null) {
       _resolvePresetSrsPaths(r, preset!);
@@ -406,6 +433,44 @@ class CustomRuleEditController extends ChangeNotifier {
     // бы настройку безвозвратно). Гейт живёт в snapshot() (Save без доменов
     // → resolve отпадает) и в билдере (resolveActive); UI прячет ⚙/статус
     // через resolveEligible.
+    _autoCheckBlockHttps();
+    notifyListeners();
+  }
+
+  /// §755 — в форме inline-правила заполнено хоть одно доменное поле.
+  bool get _hasDomainsInForm =>
+      norm.normalizedDomains(domainCtrl.text).isNotEmpty ||
+      norm
+          .normalizedDomains(domainSuffixCtrl.text, stripLeadingDot: true)
+          .isNotEmpty ||
+      norm.normalizedKeywords(domainKeywordCtrl.text).isNotEmpty ||
+      norm.normalizedRegexes(domainRegexCtrl.text).isNotEmpty;
+
+  /// §755 — автогалка Block HTTPS: домены inline-правила из пустых стали
+  /// непустыми (в том числе повторно — стёрли и ввели заново). Снятая руками
+  /// галка при дальнейшем вводе в непустое поле не возвращается.
+  void _autoCheckBlockHttps() {
+    if (_kind != CustomRuleKind.inline) return;
+    final now = _hasDomainsInForm;
+    if (now && !_hadDomains && !(_dns?.blockHttps ?? false)) {
+      _dns = (_dns ?? const RuleDns()).copyWith(blockHttps: true);
+    }
+    _hadDomains = now;
+  }
+
+  /// §755 — переключатель Block HTTPS доступен: srs — всегда; inline —
+  /// при условии по домену. Live по форме.
+  bool get blockHttpsAvailable => switch (_kind) {
+        CustomRuleKind.srs => true,
+        CustomRuleKind.inline => _hasDomainsInForm,
+        _ => false,
+      };
+
+  /// §755: галка Block HTTPS/SVCB records (HTTPS/SVCB-глушилка).
+  /// Ортогональна enabled/serverTag, как Force IPv4.
+  void setBlockHttps(bool v) {
+    final next = (_dns ?? const RuleDns()).copyWith(blockHttps: v);
+    _dns = next.isEmpty ? null : next;
     notifyListeners();
   }
 
@@ -860,7 +925,7 @@ class CustomRuleEditController extends ChangeNotifier {
   /// §683 — ошибка поля Fixed IP (номер первой неразбираемой строки) или
   /// null. Только при выбранном Fixed IP; блокирует Save.
   String? get fixedIpError {
-    if (dnsAnswerMode != DnsAnswerMode.fixedIp || dnsGateBlocked) return null;
+    if (dnsAnswerMode != DnsAnswerMode.fixedIp) return null;
     final lines = fixedIpCtrl.text.split('\n');
     for (var i = 0; i < lines.length; i++) {
       final l = lines[i].trim();
@@ -881,8 +946,13 @@ class CustomRuleEditController extends ChangeNotifier {
         for (final l in _fixedIpLines)
           if (RuleDns.ipRecordType(l) != null) l,
     ];
+    // §755 — без доменов inline-правило Block HTTPS не несёт (переключатель
+    // недоступен; стёрли домены — галка не остаётся висеть в хранилище).
+    final blockHttps = (_dns?.blockHttps ?? false) &&
+        (_kind != CustomRuleKind.inline || _hasDomainsInForm);
     if (_dns == null && ips.isEmpty) return null;
-    return (_dns ?? const RuleDns()).copyWith(fixedIps: ips);
+    return (_dns ?? const RuleDns())
+        .copyWith(fixedIps: ips, blockHttps: blockHttps);
   }
 
   /// §117: выбор DNS-сервера для mirror'а (по tag из существующих).
@@ -914,7 +984,7 @@ class CustomRuleEditController extends ChangeNotifier {
     var ok = true;
     for (var i = 0; i < urls.length; i++) {
       final path = await RuleSetDownloader.download(
-          CustomRuleSrs.cacheIdAt(initial.id, i), urls[i]);
+          CustomRuleTree.cacheIdFor(initial.id, urls[i]), urls[i]);
       if (_disposed) return;
       if (path == null) {
         ok = false;
@@ -924,7 +994,7 @@ class CustomRuleEditController extends ChangeNotifier {
     _srsState = ok ? SrsDownloadState.cached : SrsDownloadState.error;
     notifyListeners();
     // §366 — обновить строку «Updated …»: метаданные записал downloader.
-    unawaited(_loadSrsMeta(initial.id));
+    unawaited(_loadSrsMeta(CustomRuleTree.cacheIdFor(initial.id, urls.first)));
   }
 
   /// Cloud-menu «Clear cached file»: удаляет локальный `.srs`, не
@@ -933,11 +1003,14 @@ class CustomRuleEditController extends ChangeNotifier {
   Future<void> clearSrsCache() async {
     // ## 12 — файлы всех наборов: и сохранённых, и набранных в поле (юзер
     // мог скачать новый список, не сохраняя правило).
-    final saved = initial.srsUrls.length;
-    final typed = parseSrsUrlsText(srsUrlCtrl.text).length;
-    final n = saved > typed ? saved : typed;
-    for (var i = 0; i < (n == 0 ? 1 : n); i++) {
-      await RuleSetDownloader.delete(CustomRuleSrs.cacheIdAt(initial.id, i));
+    // §757 — кэш по ссылке: файлы сохранённых и набранных ссылок.
+    final cacheIds = {
+      ...initial.cacheIds,
+      for (final u in parseSrsUrlsText(srsUrlCtrl.text))
+        CustomRuleTree.cacheIdFor(initial.id, u),
+    };
+    for (final c in cacheIds) {
+      await RuleSetDownloader.delete(c);
     }
     if (_disposed) return;
     _srsState = SrsDownloadState.none;
@@ -948,7 +1021,7 @@ class CustomRuleEditController extends ChangeNotifier {
 
   /// ## 12 — правило «скачано», когда есть файлы ВСЕХ его наборов.
   static Future<bool> _allSrsCached(CustomRule r) async {
-    if (r is! CustomRuleSrs || r.srsUrls.isEmpty) return false;
+    if (r.allRefs.isEmpty) return false;
     for (final cacheId in r.cacheIds) {
       if (!await RuleSetDownloader.isCached(cacheId)) return false;
     }
@@ -1067,6 +1140,8 @@ class CustomRuleEditController extends ChangeNotifier {
     final name = nameCtrl.text.trim();
     switch (_kind) {
       case CustomRuleKind.json:
+        final tree = _openedAsTree ? _treeFromJsonText(name) : null;
+        if (tree != null) return tree;
         return CustomRuleJson(
           id: initial.id,
           name: name,
@@ -1086,7 +1161,7 @@ class CustomRuleEditController extends ChangeNotifier {
         );
       case CustomRuleKind.srs:
         final wifi = _networkSnapshot();
-        return CustomRuleSrs(
+        return CustomRuleTree.flat(
           id: initial.id,
           name: name,
           enabled: _enabled,
@@ -1115,7 +1190,7 @@ class CustomRuleEditController extends ChangeNotifier {
         );
       case CustomRuleKind.inline:
         final wifi = _networkSnapshot();
-        return CustomRuleInline(
+        return CustomRuleTree.flat(
           id: initial.id,
           name: name,
           enabled: _enabled,
@@ -1144,6 +1219,8 @@ class CustomRuleEditController extends ChangeNotifier {
           outbound: _outbound,
           dns: _effectiveDns, // §683 — адреса Fixed IP из поля
           resolve: resolveEligible ? _effectiveResolve : null, // §247
+          // §757 — TTL наборов — поле правила; у inline переносится как есть.
+          updateIntervalHours: _srsTtlHours,
         );
     }
   }
@@ -1152,7 +1229,67 @@ class CustomRuleEditController extends ChangeNotifier {
   /// смену форматирования текста.
   bool isDirty() =>
       snapshot() != initial ||
-      (_kind == CustomRuleKind.json && jsonCtrl.text != initial.json);
+      (_kind == CustomRuleKind.json && jsonCtrl.text != _initialJsonText);
+
+  /// §757 — правило-дерево открыто в JSON-режиме ([formEditable] — нет).
+  bool _openedAsTree = false;
+  bool get openedAsTree => _openedAsTree;
+
+  /// Исходный текст поля JSON (тело дерева либо текст json-правила).
+  String _initialJsonText = '';
+
+  /// §757 — существующая форма редактирует правило-дерево полями, если
+  /// дерево — один простой узел без `invert`, без рукописного `rule_set`,
+  /// без ключей вне формы (`process_*`, `source_port*`), и узел либо без
+  /// `refs` (режим inline), либо с `refs` и без доменных ключей и
+  /// `ip_cidr` (режим srs). Прочее — JSON-режим.
+  static bool formEditable(CustomRuleTree r) {
+    final leaf = r.flatLeaf;
+    if (leaf == null || leaf.invert || leaf.ruleSet.isNotEmpty) return false;
+    if (!leaf.conditions.keys.every(kRuleFormFieldKeys.contains)) return false;
+    if (leaf.refs.isEmpty) return true;
+    return r.domains.isEmpty &&
+        r.domainSuffixes.isEmpty &&
+        r.domainKeywords.isEmpty &&
+        r.domainRegexes.isEmpty &&
+        r.ipCidrs.isEmpty;
+  }
+
+  /// §757 — текст JSON-режима правила-дерева снова разбирается деревом
+  /// (кодек записи, путь хранения): правило остаётся деревом с прежними
+  /// `dns` / `resolve` / TTL наборов. Не дерево — null (сохранится
+  /// json-правилом).
+  CustomRuleTree? _treeFromJsonText(String name) {
+    final Object? decoded;
+    try {
+      decoded = jsonDecode(jsonCtrl.text);
+    } on FormatException {
+      return null;
+    }
+    if (decoded is! Map) return null;
+    final init = initial;
+    if (init is! CustomRuleTree) return null;
+    final read = ruleFromRecord({
+      'kind': 'inline',
+      'id': init.id,
+      'name': name,
+      'enabled': _enabled,
+      'body': decoded.cast<String, dynamic>(),
+    }, unknownAsVerbatim: true);
+    final v = read.value;
+    if (v is! CustomRuleTree) return null;
+    return CustomRuleTree(
+      id: init.id,
+      name: name,
+      enabled: _enabled,
+      orderNum: init.orderNum,
+      root: v.root,
+      outbound: v.outbound,
+      dns: init.dns,
+      resolve: init.resolve,
+      updateIntervalHours: init.updateIntervalHours,
+    );
+  }
 
   /// §447 — единственная проверка перед сохранением: Save формы, Save в
   /// AppBar и Save из диалога несохранённых правок. `null` — сохранять можно,
