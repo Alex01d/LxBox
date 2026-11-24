@@ -219,11 +219,25 @@ flutter build ios --release --dart-define-from-file=.env
 
 Run `scripts/build-libbox-ios.sh` before each upload. It rebuilds the core only when the pin moved, and Xcode does not check that the framework matches the pin.
 
+Keep development signing enabled when archiving, even when someone else will handle distribution signing in Organizer. Do not use `--no-codesign` for this handoff: both Runner and PacketTunnel need their Network Extension and App Group entitlements in their signatures. Before handing over an archive, run `python3 scripts/check-ios-archive.py <archive>` and require a passing result. Organizer applies the Apple Distribution signature during export.
+
 ```bash
 ./scripts/build-libbox-ios.sh
 cd app
 flutter build ipa --release --build-name 0.0.1 --build-number <next> --dart-define-from-file=.env --export-options-plist <export options file>
 open build/ios/archive/Runner.xcarchive
+```
+
+For an archive-only handoff, configure Flutter first, then archive with Xcode's normal development signing. This leaves distribution signing and upload to the person using Organizer:
+
+```bash
+./scripts/build-libbox-ios.sh
+cd app
+flutter build ios --release --config-only --build-name 0.0.1 --build-number <next> --dart-define-from-file=.env
+xcodebuild -workspace ios/Runner.xcworkspace -scheme Runner -configuration Release -destination 'generic/platform=iOS' -archivePath build/ios/archive/Runner.xcarchive archive
+cd ..
+python3 scripts/check-ios-archive.py app/build/ios/archive/Runner.xcarchive
+open app/build/ios/archive/Runner.xcarchive
 ```
 
 In Xcode Organizer: Distribute App, Custom, App Store Connect, Upload. Tick TestFlight internal testing only, choose Manually manage signing with the same certificate and profiles, and upload. Xcode warns that `Sentry.framework` has no dSYM; the upload still goes through. Then, in App Store Connect, add the build to the internal group `Manual`. Its automatic distribution is off, so each build is added by hand.

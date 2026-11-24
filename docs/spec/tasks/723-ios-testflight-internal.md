@@ -57,13 +57,16 @@ Made by Pavel between 2026-11-05 and 2026-11-09.
 - `app/ios/Runner/Info.plist`: `ITSAppUsesNonExemptEncryption` false (D5).
 - `docs/BUILD.md`, Running on iOS, "TestFlight": the build command, the export options keys, the Organizer steps, the group.
 - The export options file is not in git. BUILD.md lists its keys.
+- `scripts/check-ios-archive.py`: preflight of the actual signed Runner and PacketTunnel bundles before an Organizer handoff, with project entitlements and embedded provisioning profiles checked together.
 
 ### Rules for each upload
 
 1. Run `scripts/build-libbox-ios.sh` first. It skips the build when `app/ios/Frameworks/.libbox.version` matches the pin, and rebuilds when the pin moved. Xcode does not check the marker, so a skipped run can ship an older core than the pin says.
 2. Build with `.env`, so the build has Sentry (§722).
 3. Raise `--build-number` by one. Keep `--build-name` unless Pavel names a new version.
-4. Upload, then add the build to the group `Manual` by hand. Its automatic distribution is off.
+4. Archive with development signing enabled, including when Pavel will handle distribution signing in Organizer. Do not use `--no-codesign`: the unsigned build 5 archive had no signed Network Extension entitlements in either bundle, and distribution validation rejected both with error 90525. Distribution signing remains a separate Organizer step.
+5. Before an Organizer handoff, run `python3 scripts/check-ios-archive.py <archive>`. It must verify the signatures, provisioning profiles and project entitlements of both Runner and PacketTunnel, and matching app versions and build numbers.
+6. Upload, then add the build to the group `Manual` by hand. Its automatic distribution is off.
 
 ```bash
 ./scripts/build-libbox-ios.sh
@@ -82,7 +85,9 @@ open build/ios/archive/Runner.xcarchive
 
 ## Verification
 
-1. `flutter build ipa` with the command above gives `build/ios/archive/Runner.xcarchive`, signed by GGL's Apple Distribution certificate.
+`scripts/check-ios-archive.py` rejects the unsigned build 5 archive for missing signing entitlements and accepts the replacement development-signed archive. The check reads the actual bundle signatures, not only the source `.entitlements` files.
+
+1. The archive contains development-signed Runner and PacketTunnel bundles with their required entitlements. Organizer uses GGL's Apple Distribution certificate and the configured App Store profiles for distribution signing.
 2. The upload passes and App Store Connect asks no encryption question.
 3. The build installs from TestFlight on a phone, and VPN mode reaches `Connected` through the tunnel extension.
 4. Everyday use on the phone shows no regression against the development build.
@@ -95,6 +100,12 @@ open build/ios/archive/Runner.xcarchive
 | 2 | Pass | Builds 1 and 2 had the encryption questions answered by hand: build 2 was archived at 11:34 on 2026-11-07, before `396a3be7` added the key at 11:50. Build 3 carries the key. Pavel uploaded it on 2026-11-09, App Store Connect asked no encryption question, and the build appeared in TestFlight |
 | 3 | Pass | Pavel's iPhone 15 |
 | 4 | Pass | 2 days of everyday use by Pavel, 2026-11-07 to 2026-11-09. "looks good" |
+
+### Archive handoff correction, 2026-11-24
+
+Build 5 was prepared with `--no-codesign` and Organizer distribution validation rejected both Runner and PacketTunnel with error 90525 for missing `com.apple.developer.networking.networkextension`. The entitlement files and project settings were unchanged; the unsigned archive had neither signed entitlements nor embedded provisioning profiles.
+
+The archive checker rejects build 5 and accepts the previous working development-signed build 4. Replacement `0.0.1 (6)` was archived with normal Apple Development signing, without IPA export or upload. Both bundles pass the checker and strict signature verification, include `packet-tunnel-provider`, Wi-Fi information and the shared App Group, and have matching provisioning profiles and dSYMs. The core remains `v1.14.4-lx.36`. Distribution validation and upload remain with Pavel.
 
 ## Unresolved / follow-up
 
